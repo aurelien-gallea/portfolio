@@ -1,0 +1,129 @@
+@mixin googleFonts($nom) {
+    @import url('https://fonts.googleapis.com/css2?family=' + $nom + '&display=swap');
+}
+
+@include googleFonts('Roboto:wght@200;300;400;500;700');
+@include googleFonts('Inter:wght@400;500;700');
+// modifier les couleurs de bases + dérivés
+$blue:    #C84B31; // primary  <---- cette couleur a été modifié pour profiter de tous les comportements (notamment les box-shadow sur les form-control par expl...)
+// $red:     #dc3545 ; // danger
+$yellow:  #ECDBBA ; // warning  <---- idem
+// $green:   #198754 ; // success
+$cyan:    #191919 ; // info
+
+// Option 2 : ajouter de nouvelles couleurs à B5 sans changer les comportements
+
+$color1: #C84B31;
+$color2: #ECDBBA;
+$color3: #2D4263;
+$color4: #191919;
+
+// on ajoute tout ça à B5
+$custom-colors: (
+    'color1': $color1,
+    'color2' : $color2,
+    'color3' : $color3,
+    'color4' : $color4,
+);
+
+// marges/padding <----- on rajoute un peu de marges
+$spacer: 1rem;
+$spacers: (
+    0: 0,
+    1: ($spacer * .25),
+    2: ($spacer * .50),
+    3: ($spacer * 1),
+    4: ($spacer * 1.5),
+    5: ($spacer * 3),
+    6: ($spacer * 4.5),
+    7: ($spacer * 6),  
+);
+
+// les font-sizes
+$font-size-base : 1rem;
+$h1-font-size:                $font-size-base * 2.5;
+$h2-font-size:                $font-size-base * 2;
+$h3-font-size:                $font-size-base * 1.75;
+$h4-font-size:                $font-size-base * 1.5;
+$h5-font-size:                $font-size-base * 1.25;
+$h6-font-size:                $font-size-base;
+
+$font-sizes: (
+  1: $h1-font-size,
+  2: $h2-font-size,
+  3: $h3-font-size,
+  4: $h4-font-size,
+  5: $h5-font-size,
+  6: $h6-font-size,
+  7: ($font-size-base * 0.85),
+  8: ($font-size-base * 0.60),
+  9: ($font-size-base * 0.50),
+);
+
+@import "../../node_modules/bootstrap/scss/functions";
+@import "../../node_modules/bootstrap/scss/variables";
+@import "../../node_modules/bootstrap/scss/mixins";
+
+$theme-colors: map-merge($theme-colors, $custom-colors );
+
+@import "../../node_modules/bootstrap/scss/bootstrap.scss" ;
+
+* {
+    scrollbar-width: 20px;
+   scrollbar-color: $color1 black;
+
+}
+
+*::-webkit-scrollbar {
+    background: black;
+    width: 20px;
+    height: 20px;
+    // border-radius: 50rem;
+}
+
+*::-webkit-scrollbar-thumb {
+    background: $color1;
+    border: 5px solid black;
+    min-width: 30px;
+    border-radius: 50rem;
+}
+
+
+html,body {
+    height: 100%;
+}
+
+body {
+    font-family: "Inter","Roboto", sans-serif;
+    display: flex;
+    flex-direction: column;
+}
+
+.mainContent {
+    margin-top: 71px;
+    
+}
+.maxW-input {
+    max-width: 300px;
+    border-radius: 50rem;
+    overflow: hidden;
+}
+
+.pointer:hover {
+    cursor: pointer;
+}
+
+
+
+.orange {
+    background-color: $color1;
+    color: white;
+}
+
+.orange:hover {
+    color: black;
+}
+
+.card:hover {
+    border: 2px solid $color2;
+}

@@ -1,0 +1,48 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer utilities {
+  .glass {
+    @apply bg-white/5 backdrop-blur-lg border border-white/10;
+  }
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.3); 
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(59, 130, 246, 0.5); /* blue-500 opacity */
+  border-radius: 10px;
+  border: 2px solid #050505; /* Matches background */
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(59, 130, 246, 0.8); 
+}
+
+/* Helper to completely hide scrollbar on specific elements */
+.hide-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.hide-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* Thicker horizontal scrollbar */
+.thick-scrollbar::-webkit-scrollbar {
+  height: 14px;
+}

@@ -1,0 +1,339 @@
+@import url('https://fonts.googleapis.com/css2?family=Alkalami&family=Roboto:wght@100;300;400;700&display=swap');
+* {
+    box-sizing: border-box;
+}
+html {
+    height: 100%;
+}
+body {
+    
+    margin:0;
+    padding: 0;
+    font-family: 'roboto', 'sans-serif';
+    display: flex;
+    flex-direction: column;
+}
+img {
+    height: auto;
+    width: 100%;
+    max-width: 100%;
+    display: block;
+}
+a {
+    text-decoration: none;
+    color: inherit;
+}
+h1 {
+    font-size: 2em;
+    margin-bottom: 0;
+}
+h2,h3,h4 {
+    text-align: center;
+}
+h3 {
+    padding-top: 1rem;
+}
+h4 {
+    font-weight: lighter;
+    
+}
+/* header */
+
+#bienvenue {
+   background: #0a0a0a;
+    color: #efefef; 
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    
+    
+    
+}
+#flex-header {
+    display: flex;
+    justify-content: space-between;
+    font-size: 1.5em;
+    padding-top: 0.8rem;
+    /* margin-bottom: 12rem; */
+}
+#flex-header span,
+footer span {
+    padding-left: 4rem;
+}
+#flex-header ul {
+    margin: 0;
+    padding-right: 4rem;
+}
+#flex-header li {
+    display: inline-block;
+    padding-left: 0.5rem;
+}
+.container80 {
+    width: 80%;
+    margin: 0 auto; 
+}
+/* presentation */
+#flex-presentation {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 5rem;
+    margin-bottom: 5rem;
+
+
+}
+
+#gauche-presentation {
+    width:60%;
+    text-align: justify;
+    
+    
+}
+#gauche-presentation h1 {
+    margin-bottom: 1rem;
+}
+#gauche-presentation p {
+    font-size: 1em;
+    margin-top: 0;
+}
+
+#droite-presentation {
+    width: 40%;
+    
+}
+/* projets */
+#grille {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr) ;
+    grid-auto-rows: minmax(70px, auto);
+    gap: 1.5rem;
+    
+    
+    
+}
+
+#grille h4 {
+    color: rgb(0, 0, 0); 
+    text-align: left;
+    display: inline-block;
+    padding: 0.5rem;
+    margin: 0;
+    font-size: 1.2em; 
+}
+.container-h4 {
+    background-color: #d3d0d0;
+    height: 100%;
+}
+.sous-grille {
+    border-radius: 0.3rem ;
+    min-height: 140px;
+    overflow: hidden;  
+    
+    
+}
+
+.sous-grille:hover {
+    scale: 1.06;
+    transition: 0.4s ease;
+   
+}
+.titre-projet {
+    display: flex;
+    align-items: flex-start;
+    flex-wrap: wrap;
+    height: 40px;
+    
+}
+.flex-technos {
+    display: flex;
+    align-items: center;
+    background-color: #efefef;
+    padding: 0.5rem;
+    border-radius: 0 0 0.2rem 0;
+    height: 100%;
+
+}
+.flex-technos img {
+    width: 20px;
+}
+#projet-1 {
+    background: center url(image/pendu.png);
+    background-size: cover ;
+}
+#projet-2 {
+    background: center url(image/bmi.jpg);
+    background-size: cover;
+}
+#projet-3 {
+    background: url(image/appel-de-l-hiver.png);
+    background-size: cover;
+    
+}
+#projet-4 {
+    background: center url(image/meteo.jpg);
+    background-size: cover;
+}
+#projet-5 {
+    background:center url(image/fansite.jpg);
+    background-size: cover;
+}
+#projet-6 {
+    background:center url(image/morpion-vignette.jpg);
+    background-size: cover;
+}
+#projet-7 {
+    background:center url(image/gofastnews-vignette.png);
+    background-size: cover;
+}
+#projet-8 {
+    background:center url(image/pkmn-finder.jpg);
+    background-size: cover;
+}
+#projet-9 {
+    background: center url(image/diablo4.jpg);
+    background-size: cover;
+}
+#projet-10 {
+    background: center url(image/react-to-do.jpg);
+    background-size: cover;
+}
+#projet-11 {
+    background: center url(image/oclock.jpg);
+    background-size: cover;
+}
+#projet-12 {
+    background: center url(image/danypiano.jpg);
+    background-size: cover;
+}
+#projet-13 {
+    background: center url(image/cinetech.jpg);
+    background-size: cover;
+}
+#projet-14 {
+    background: center url(image/boutique-en-ligne.jpg);
+    background-size: cover;
+}
+#projet-15 {
+    background: center url(image/fournil-des-2-freres.png);
+    background-size: cover;
+}
+#contact {
+    text-align: center;
+}
+#contact a {
+    display: inline-block;
+    margin-bottom: 5rem;
+    background-color: #0a0a0a;
+    color: #efefef;
+    font-size: 0.8em;
+    padding: 1% 2%;
+}
+footer {
+    border-top: 0.1em solid #0a0a0a ;
+    padding:1rem 0;
+}
+a:hover {
+    color: orange;
+}
+
+.sous-grille:hover {
+    filter: inherit;
+}
+/* page jump start */
+#jump-start {
+    background:url(image/points.png), center url(image/jump-start.png) ;
+    height: 100vh;
+    background-size: cover;
+    color: #efefef;
+    text-shadow: 2px 2px 2px rgba(0,0,0,0.6);
+    
+    
+}
+
+#jump-start-title {
+    width: 80%; 
+    display: flex;
+    align-items: center;
+    height: calc(100vh - 50px);
+    
+}
+#filtre img {
+    position: absolute;
+    z-index: 1;
+    
+}
+#lipsum {
+    flex-grow: 1;
+    margin-top: 10vh;
+    text-align: justify;
+    
+}
+/* page IMC */
+/* utilisation de tailwindcss */
+
+@media all and (max-width:1130px) {
+    #grille {
+        grid-template-columns: 1fr 1fr;
+    }
+}
+@media all and (max-width:730px) {
+   #flex-header {
+    margin-bottom: 0;
+   }
+    #flex-presentation {
+        padding:2rem 0 4rem 0;
+        margin-top:0;
+        
+    }
+    .container-IMC {
+        width: 100%;
+        border-radius: 0;   
+     }
+}
+@media all and (max-width:600px) {
+    #flex-header {
+        margin-bottom: 1rem;
+        font-size: 1em;
+    }
+    #flex-presentation {
+        flex-wrap: wrap-reverse;
+        gap:0;
+        
+    }
+    #droite-presentation,
+    #gauche-presentation {
+        width: 70%;
+    }
+    #droite-presentation img {
+        width: 50%;
+        
+    }
+    #droite-presentation {
+        display: flex;
+        justify-content: flex-end;
+    }
+    #grille {
+        grid-template-columns: 1fr;
+        width: 85vw;
+        margin: 0 auto;
+    }
+    .container80 {
+        width: 95%;
+        margin: 0 auto;
+    }
+    #flex-header {
+        padding: 0.8rem 1rem 0 1rem;
+    }
+    #flex-header span {
+       padding-left: 0;
+        
+    }
+    #flex-header ul {
+        padding-right: 0;
+        text-align: right;
+        
+
+    }
+   
+}

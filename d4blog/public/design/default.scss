@@ -1,0 +1,124 @@
+
+@font-face {
+    font-family: DiabloHeavy;
+    src: url(../fonts/Diablo\ Heavy.ttf);
+}
+
+@font-face {
+    font-family: DiabloLight;
+    src: url(../fonts/DiabloLight.ttf);
+}
+
+@font-face {
+    font-family: "Old Fenris";
+    src: url("//db.onlinewebfonts.com/t/ce7ee1905f939d4e0f4cfcb3470c4d4e.eot");
+    src: url("//db.onlinewebfonts.com/t/ce7ee1905f939d4e0f4cfcb3470c4d4e.eot?#iefix") format("embedded-opentype"), url("//db.onlinewebfonts.com/t/ce7ee1905f939d4e0f4cfcb3470c4d4e.woff2") format("woff2"), url("//db.onlinewebfonts.com/t/ce7ee1905f939d4e0f4cfcb3470c4d4e.woff") format("woff"), url("//db.onlinewebfonts.com/t/ce7ee1905f939d4e0f4cfcb3470c4d4e.ttf") format("truetype"), url("//db.onlinewebfonts.com/t/ce7ee1905f939d4e0f4cfcb3470c4d4e.svg#Old Fenris") format("svg"); 
+}
+
+// modifier les couleurs de bases + dérivés
+$blue:    #770200 ; // primary  <---- cette couleur a été modifié pour profiter de tous les comportements (notamment les box-shadow sur les form-control par expl...)
+$red:     #dc3545 ; // danger
+$yellow:  #0c0504 ; // warning  <---- idem
+$green:   #198754 ; // success
+$cyan:    #0dcaf0 ; // info
+
+// Option 2 : ajouter de nouvelles couleurs à B5 sans changer les comportements
+// notre palette de couleur diabolique 
+$color1: #770200;
+$color2: #c5c5c5;
+$color3: #6e797f;
+$color4: #0c0504;
+
+// on ajoute tout ça à B5
+$custom-colors: (
+    'color1': $color1,
+    'color2' : $color2,
+    'color3' : $color3,
+    'color4' : $color4,
+);
+
+// marges/padding <----- on rajoute un peu de marges
+$spacer: 1rem;
+$spacers: (
+    0: 0,
+    1: ($spacer * .25),
+    2: ($spacer * .50),
+    3: ($spacer * 1),
+    4: ($spacer * 1.5),
+    5: ($spacer * 3),
+    6: ($spacer * 4.5),
+    7: ($spacer * 6),
+    
+    
+);
+
+// les font-sizes
+$font-size-base : 1rem;
+$h1-font-size:                $font-size-base * 2.5;
+$h2-font-size:                $font-size-base * 2;
+$h3-font-size:                $font-size-base * 1.75;
+$h4-font-size:                $font-size-base * 1.5;
+$h5-font-size:                $font-size-base * 1.25;
+$h6-font-size:                $font-size-base;
+
+$font-sizes: (
+  1: $h1-font-size,
+  2: $h2-font-size,
+  3: $h3-font-size,
+  4: $h4-font-size,
+  5: $h5-font-size,
+  6: $h6-font-size,
+  7: ($font-size-base * 0.85),
+  8: ($font-size-base * 0.60),
+  9: ($font-size-base * 0.50),
+);
+
+@import "../../vendor/node_modules/bootstrap/scss/functions";
+@import "../../vendor/node_modules/bootstrap/scss/variables";
+@import "../../vendor/node_modules/bootstrap/scss/mixins";
+
+
+$theme-colors: map-merge($theme-colors, $custom-colors );
+
+@import "../../vendor/node_modules/bootstrap/scss/bootstrap.scss" ;
+
+
+html,body {
+    height: 100%;
+}
+
+body{ 
+    background: #0b0c11 url(../src/img/bg.webp) no-repeat 50% top;
+    font-family: "Old Fenris", Arial, Helvetica, sans-serif;
+}
+
+h1,h2,h3,.btn,.label,.alert {
+    font-family: DiabloLight, "cursive", 'Times New Roman', Times, serif;
+}
+h1,h2,h3,h4,h5,h6 {
+    color: $color1;
+}
+.containerCenter {
+    margin-top: 22vh;
+}
+
+.clip-photo {
+    clip-path: circle(40%);
+}
+
+.maxW-input {
+    max-width: 550px;
+    border-radius: 50rem;
+    overflow: hidden;
+}
+// Permet de gerer les text trop long sur un tableaux
+// Conserve une taille equivalente pour tous les colonnes.
+// utilise pour utiliser la classe  .text-truncate
+
+.table {
+    table-layout: fixed;
+}
+
+.vh-10 {
+    height: 10vh;
+}

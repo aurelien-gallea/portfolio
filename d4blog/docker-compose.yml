@@ -1,0 +1,42 @@
+version: '3.8'
+
+services:
+
+  db-service:
+    image: mysql:8.0
+    command: --default-authentication-plugin=mysql_native_password
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+    volumes:
+      - type: volume
+        source: blogDB
+        target: /var/lib/mysql
+    ports:
+      - "3301:3306"
+
+  phpmyadmin-service:
+    image: phpmyadmin:latest
+    container_name: phpmyadmin_dev_interface
+    restart: always
+    depends_on:
+      - db-service
+    ports:
+      - "8080:80"
+    environment:
+      PMA_HOST: db-service
+
+  mailer-service:
+    image: schickling/mailcatcher
+    container_name: mailer_dev_interface
+    ports: ["1025", "1080"]
+    networks:
+      - dev_network
+
+networks:
+  dev_network:
+
+volumes:
+  blogDB: 
+    external: true
+

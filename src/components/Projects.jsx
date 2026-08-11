@@ -1,5 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
+import { Link } from 'react-router-dom';
 import './Projects.css';
 
 const projectsData = [
@@ -7,34 +8,31 @@ const projectsData = [
     id: 13,
     title: 'CineTech',
     link: '/cinetech-react/',
-    image: '/image/cinetech.jpg',
+    image: './image/cinetech.jpg',
   },
   {
     id: 8,
     title: 'Pokémon Finder',
     link: '/pkmnfinder/',
-    image: '/image/pikachu.avif',
+    image: './image/pikachu.avif',
   },
   {
     id: 12,
     title: 'DanyPiano',
     link: 'https://danypiano.fr',
-    image: '/image/danypiano.jpg',
+    image: './image/danypiano.jpg',
   },
   {
     id: 1,
     title: 'Le Pendu',
     link: 'https://eclatdevweb.github.io/projet-passerelle-1/',
-    image: '/image/pendu.png',
+    image: './image/pendu.png',
   }
 ];
 
 const ProjectCard = ({ project, index }) => {
-  return (
-    <motion.a 
-      href={project.link} 
-      target={project.link.startsWith('http') ? "_blank" : "_self"}
-      rel="noreferrer"
+  const cardContent = (
+    <motion.div 
       className="project-card"
       style={{ textDecoration: 'none' }}
       initial={{ opacity: 0, y: 30 }}
@@ -49,7 +47,21 @@ const ProjectCard = ({ project, index }) => {
       <div className="project-info">
         <h4>{project.title}</h4>
       </div>
-    </motion.a>
+    </motion.div>
+  );
+
+  if (project.link.startsWith('http')) {
+    return (
+      <a href={project.link} target="_blank" rel="noreferrer" style={{ textDecoration: 'none' }}>
+        {cardContent}
+      </a>
+    );
+  }
+
+  return (
+    <Link to={project.link} style={{ textDecoration: 'none' }}>
+      {cardContent}
+    </Link>
   );
 };
 

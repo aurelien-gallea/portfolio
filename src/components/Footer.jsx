@@ -9,7 +9,7 @@ const Footer = () => {
       color: 'var(--text-secondary)'
     }}>
       <div className="container">
-        <span>{new Date().getFullYear()} © Aurelien Gallea</span>
+        <span>{new Date().getFullYear()} © Aurélien Gallea</span>
       </div>
     </footer>
   );

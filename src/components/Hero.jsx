@@ -26,7 +26,7 @@ const Hero = () => {
           transition={{ duration: 0.8, delay: 0.2 }}
         >
           <div className="avatar-wrapper">
-            <img src="./image/moi.png" alt="Aurelien Gallea" className="avatar" />
+            <img src="./image/moi.png" alt="Aurélien Gallea" className="avatar" />
             <div className="avatar-glow"></div>
           </div>
         </motion.div>

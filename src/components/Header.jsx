@@ -5,7 +5,7 @@ const Header = () => {
   return (
     <header className="header glass">
       <div className="container header-content">
-        <span className="logo">Aurelien Gallea</span>
+        <span className="logo">Aurélien Gallea</span>
         <nav>
           <ul>
             <li><a href="#">Accueil</a></li>

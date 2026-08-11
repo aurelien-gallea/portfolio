@@ -1,21 +1,18 @@
 import React from 'react';
-import Header from './components/Header';
-import Hero from './components/Hero';
-import Projects from './components/Projects';
-import Contact from './components/Contact';
-import Footer from './components/Footer';
+import { HashRouter, Routes, Route } from 'react-router-dom';
+import PortfolioApp from './PortfolioApp';
+import CinetechApp from './cinetech/App';
+import PkmnApp from './pkmnfinder/App';
 
 function App() {
   return (
-    <div className="app-container">
-      <Header />
-      <main>
-        <Hero />
-        <Projects />
-        <Contact />
-      </main>
-      <Footer />
-    </div>
+    <HashRouter>
+      <Routes>
+        <Route path="/*" element={<PortfolioApp />} />
+        <Route path="/cinetech-react/*" element={<CinetechApp />} />
+        <Route path="/pkmnfinder/*" element={<PkmnApp />} />
+      </Routes>
+    </HashRouter>
   );
 }
 

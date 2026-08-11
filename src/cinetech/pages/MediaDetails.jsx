@@ -46,9 +46,10 @@ const MediaDetails = ({ type }) => {
     <div className="min-h-screen pt-32 pb-12 px-6 max-w-7xl mx-auto">
       <button 
         onClick={() => navigate(-1)} 
-        className="mb-8 flex items-center gap-2 text-gray-400 hover:text-white transition-colors"
+        className="mb-8 inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-white/10 hover:bg-white/20 text-gray-300 hover:text-white border border-white/10 backdrop-blur-md transition-all duration-300 shadow-lg group cursor-pointer"
       >
-        <ArrowLeft size={20} /> Retour
+        <ArrowLeft size={18} className="group-hover:-translate-x-1 transition-transform" />
+        <span className="font-medium text-sm">Retour</span>
       </button>
 
       <div className="flex flex-col md:flex-row gap-12">

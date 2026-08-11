@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { BrowserRouter, Routes, Route, Link } from 'react-router-dom';
+import { Routes, Route, Link } from 'react-router-dom';
 import { Film, Tv, Users, Star, LogIn, Loader2 } from 'lucide-react';
 import { getTrendingMovies } from './api/tmdb';
 import { authAPI } from './api/backend';
+import './index.css';
 
 import MediaCard from './components/MediaCard';
 import Navbar from './components/Navbar';
@@ -75,23 +76,21 @@ function App() {
   }, []);
 
   return (
-    <BrowserRouter>
-      <div className="min-h-screen bg-[#050505] text-white selection:bg-blue-500 selection:text-white">
-        <Navbar user={user} />
-        <Routes>
-          <Route path="/" element={<Home />} />
-          <Route path="/movies" element={<Movies />} />
-          <Route path="/movies/:id" element={<MediaDetails type="movie" />} />
-          <Route path="/series" element={<Series />} />
-          <Route path="/series/:id" element={<MediaDetails type="tv" />} />
-          <Route path="/actors" element={<Actors />} />
-          <Route path="/actors/:id" element={<MediaDetails type="person" />} />
-          <Route path="/search" element={<Search />} />
-          <Route path="/favorites" element={<div className="pt-32 text-center text-xl text-gray-400">Favoris en construction...</div>} />
-          <Route path="/login" element={<Auth />} />
-        </Routes>
-      </div>
-    </BrowserRouter>
+    <div className="min-h-screen bg-[#050505] text-white selection:bg-blue-500 selection:text-white">
+      <Navbar user={user} />
+      <Routes>
+        <Route path="" element={<Home />} />
+        <Route path="movies" element={<Movies />} />
+        <Route path="movies/:id" element={<MediaDetails type="movie" />} />
+        <Route path="series" element={<Series />} />
+        <Route path="series/:id" element={<MediaDetails type="tv" />} />
+        <Route path="actors" element={<Actors />} />
+        <Route path="actors/:id" element={<MediaDetails type="person" />} />
+        <Route path="search" element={<Search />} />
+        <Route path="favorites" element={<div className="pt-32 text-center text-xl text-gray-400">Favoris en construction...</div>} />
+        <Route path="login" element={<Auth />} />
+      </Routes>
+    </div>
   );
 }
 

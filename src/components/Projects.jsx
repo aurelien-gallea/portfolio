@@ -10,10 +10,10 @@ const projectsData = [
     image: '/image/cinetech.jpg',
   },
   {
-    id: 9,
-    title: 'Diablo 4 Blog',
-    link: '/d4blog/index.php',
-    image: '/image/diablo4.jpg',
+    id: 8,
+    title: 'Pokémon Finder',
+    link: '/pkmnfinder/',
+    image: '/image/pikachu.avif',
   },
   {
     id: 12,
@@ -22,22 +22,10 @@ const projectsData = [
     image: '/image/danypiano.jpg',
   },
   {
-    id: 8,
-    title: 'Pkmn Finder',
-    link: '/pkmnfinder/index.php',
-    image: '/image/pkmn-finder.jpg',
-  },
-  {
     id: 1,
     title: 'Le Pendu',
     link: 'https://eclatdevweb.github.io/projet-passerelle-1/',
     image: '/image/pendu.png',
-  },
-  {
-    id: 4,
-    title: 'Appli Météo',
-    link: '/appli-meteo.php',
-    image: '/image/meteo.jpg',
   }
 ];
 

@@ -9,7 +9,7 @@ const MediaCard = ({ item, type }) => {
 
   // TMDB renvoie 'media_type' dans les recherches multi, sinon on utilise 'type' passé en prop
   const mediaType = item.media_type || type || (item.title ? 'movie' : (item.name && item.known_for ? 'person' : 'tv'));
-  const linkPath = `/${mediaType === 'person' ? 'actors' : mediaType === 'tv' ? 'series' : 'movies'}/${item.id}`;
+  const linkPath = `/cinetech-react/${mediaType === 'person' ? 'actors' : mediaType === 'tv' ? 'series' : 'movies'}/${item.id}`;
 
   return (
     <Link to={linkPath} className="glass rounded-xl overflow-hidden hover:scale-105 transition-transform duration-300 relative group cursor-pointer shadow-lg block">

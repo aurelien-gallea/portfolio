@@ -416,162 +416,233 @@ const GameCanvas = ({
         onVictory({ kills: s.kills });
       }
 
-      // 5. RENDERING
+      // 5. RENDERING (NO DARKNESS FOG - FULL VISIBILITY)
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-      // Floor tiles
-      ctx.fillStyle = '#18181c';
+      // Floor tiles (Textured Wooden/Stone floor)
+      ctx.fillStyle = '#1c1917';
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
       // Grid Lines
-      ctx.strokeStyle = '#222228';
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.04)';
       ctx.lineWidth = 1;
-      for (let x = 0; x < canvas.width; x += 60) {
+      for (let x = 0; x < canvas.width; x += 50) {
         ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); ctx.stroke();
       }
-      for (let y = 0; y < canvas.height; y += 60) {
+      for (let y = 0; y < canvas.height; y += 50) {
         ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke();
       }
 
-      // Draw Pickups
-      s.pickups.filter(p => !p.collected).forEach(p => {
-        ctx.fillStyle = p.type === 'medkit' ? '#22c55e' : '#eab308';
+      // Draw Persistent Blood Splatters
+      s.particles.filter(p => p.life <= 0.1).forEach(p => {
+        ctx.fillStyle = 'rgba(127, 29, 29, 0.6)';
         ctx.beginPath();
-        ctx.arc(p.x, p.y, 10, 0, Math.PI * 2);
+        ctx.arc(p.x, p.y, p.size || 4, 0, Math.PI * 2);
+        ctx.fill();
+      });
+
+      // Draw Pickups (Medkit & Ammo Boxes with icons/glowing borders)
+      s.pickups.filter(p => !p.collected).forEach(p => {
+        ctx.save();
+        ctx.translate(p.x, p.y);
+        ctx.fillStyle = p.type === 'medkit' ? '#22c55e' : '#eab308';
+        ctx.shadowColor = p.type === 'medkit' ? '#22c55e' : '#eab308';
+        ctx.shadowBlur = 12;
+        ctx.beginPath();
+        ctx.arc(0, 0, 12, 0, Math.PI * 2);
         ctx.fill();
         ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 2;
         ctx.stroke();
+
+        // Label
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 9px monospace';
+        ctx.textAlign = 'center';
+        ctx.fillText(p.type === 'medkit' ? '+SOIN' : '+BALLES', 0, 20);
+        ctx.restore();
       });
 
       // Draw Key
       if (!s.keyItem.collected) {
+        ctx.save();
+        ctx.translate(s.keyItem.x, s.keyItem.y);
         ctx.fillStyle = '#f59e0b';
+        ctx.shadowColor = '#f59e0b';
+        ctx.shadowBlur = 15;
         ctx.beginPath();
-        ctx.arc(s.keyItem.x, s.keyItem.y, 12, 0, Math.PI * 2);
+        ctx.arc(0, 0, 14, 0, Math.PI * 2);
         ctx.fill();
         ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 2;
         ctx.stroke();
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 10px monospace';
+        ctx.textAlign = 'center';
+        ctx.fillText('CLÉ', 0, 24);
+        ctx.restore();
       }
 
       // Draw Exit Door
+      ctx.save();
       ctx.fillStyle = s.exitDoor.locked ? '#dc2626' : '#16a34a';
+      ctx.shadowColor = s.exitDoor.locked ? '#dc2626' : '#16a34a';
+      ctx.shadowBlur = 15;
       ctx.fillRect(s.exitDoor.x, s.exitDoor.y, s.exitDoor.width, s.exitDoor.height);
+      ctx.fillStyle = '#ffffff';
+      ctx.font = 'bold 12px monospace';
+      ctx.textAlign = 'center';
+      ctx.fillText(s.exitDoor.locked ? 'PORTE VERROUILLÉE' : 'SORTIE ESPACE !', s.exitDoor.x + 40, s.exitDoor.y - 8);
+      ctx.restore();
 
-      // Draw Walls
-      ctx.fillStyle = '#374151';
+      // Draw Walls (Solid Textured Barriers)
       s.walls.forEach(w => {
+        ctx.fillStyle = '#292524';
         ctx.fillRect(w.x, w.y, w.w, w.h);
-        ctx.strokeStyle = '#4b5563';
+        ctx.strokeStyle = '#78716c';
+        ctx.lineWidth = 2;
         ctx.strokeRect(w.x, w.y, w.w, w.h);
       });
 
-      // Draw Bullets
-      ctx.fillStyle = '#fef08a';
+      // Draw Bullet Tracers (Crystal Clear Trajectories)
       s.bullets.forEach(b => {
-        ctx.beginPath();
-        ctx.arc(b.x, b.y, 3, 0, Math.PI * 2);
-        ctx.fill();
-      });
-
-      // Draw Zombies
-      s.zombies.forEach(z => {
         ctx.save();
-        ctx.translate(z.x, z.y);
-        ctx.fillStyle = '#15803d'; // Zombie Green
+        ctx.strokeStyle = '#fef08a';
+        ctx.lineWidth = 3;
+        ctx.shadowColor = '#eab308';
+        ctx.shadowBlur = 8;
         ctx.beginPath();
-        ctx.arc(0, 0, z.radius, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.strokeStyle = '#000000';
+        ctx.moveTo(b.x - b.vx * 2, b.y - b.vy * 2);
+        ctx.lineTo(b.x, b.y);
         ctx.stroke();
 
-        // Zombie Eyes
-        ctx.fillStyle = '#ef4444';
+        ctx.fillStyle = '#ffffff';
         ctx.beginPath();
-        ctx.arc(4, -4, 3, 0, Math.PI * 2);
-        ctx.arc(4, 4, 3, 0, Math.PI * 2);
+        ctx.arc(b.x, b.y, 4, 0, Math.PI * 2);
         ctx.fill();
         ctx.restore();
       });
 
-      // 5. DYNAMIC FLASHLIGHT & DARKNESS FOG
-      ctx.save();
-      ctx.fillStyle = 'rgba(5, 5, 8, 0.92)'; // Dark Fog
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      // Draw Animated Zombie Sprites
+      s.zombies.forEach((z, idx) => {
+        ctx.save();
+        ctx.translate(z.x, z.y);
+        const zAngle = z.state === 'chase' ? Math.atan2(s.player.y - z.y, s.player.x - z.x) : z.patrolAngle;
+        ctx.rotate(zAngle);
 
-      // Cutout Flashlight Cone from Fog
-      ctx.globalCompositeOperation = 'destination-out';
-      ctx.beginPath();
-      ctx.moveTo(s.player.x, s.player.y);
-      ctx.arc(
-        s.player.x, 
-        s.player.y, 
-        480, 
-        s.player.angle - 0.45, 
-        s.player.angle + 0.45
-      );
-      ctx.closePath();
-      ctx.fill();
+        const walkWobble = Math.sin(now * 0.01 + idx) * 4;
 
-      // Small ambient cutout around player
-      ctx.beginPath();
-      ctx.arc(s.player.x, s.player.y, 65, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.restore();
+        // Zombie Shadow
+        ctx.fillStyle = 'rgba(0,0,0,0.4)';
+        ctx.beginPath(); ctx.ellipse(0, 0, 18, 14, 0, 0, Math.PI * 2); ctx.fill();
 
-      // 6. FLASHLIGHT BEAM GLOW OVERLAY
+        // Zombie Outstretched Arms
+        ctx.fillStyle = '#15803d';
+        ctx.fillRect(4 + walkWobble, -12, 16, 5); // Right Arm
+        ctx.fillRect(4 - walkWobble, 7, 16, 5);  // Left Arm
+
+        // Zombie Hands / Claws
+        ctx.fillStyle = '#86efac';
+        ctx.beginPath();
+        ctx.arc(20 + walkWobble, -10, 3, 0, Math.PI * 2);
+        ctx.arc(20 - walkWobble, 9, 3, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Zombie Shoulders & Torso (Tattered clothes)
+        ctx.fillStyle = '#166534';
+        ctx.beginPath();
+        ctx.arc(0, 0, 15, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = '#052e16';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+
+        // Zombie Head
+        ctx.fillStyle = '#4ade80';
+        ctx.beginPath();
+        ctx.arc(-2, 0, 10, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Glowing Red Eyes
+        ctx.fillStyle = '#ef4444';
+        ctx.shadowColor = '#ef4444';
+        ctx.shadowBlur = 8;
+        ctx.beginPath();
+        ctx.arc(4, -4, 2.5, 0, Math.PI * 2);
+        ctx.arc(4, 4, 2.5, 0, Math.PI * 2);
+        ctx.fill();
+
+        // HP Bar above zombie
+        ctx.restore();
+        ctx.fillStyle = 'rgba(0,0,0,0.6)';
+        ctx.fillRect(z.x - 16, z.y - 26, 32, 5);
+        ctx.fillStyle = '#ef4444';
+        ctx.fillRect(z.x - 16, z.y - 26, (z.hp / 60) * 32, 5);
+      });
+
+      // Draw Animated Player SWAT/Survivor Sprite
       ctx.save();
       ctx.translate(s.player.x, s.player.y);
       ctx.rotate(s.player.angle);
 
-      const beamGradient = ctx.createRadialGradient(0, 0, 10, 0, 0, 480);
-      beamGradient.addColorStop(0, 'rgba(254, 240, 138, 0.35)');
-      beamGradient.addColorStop(0.5, 'rgba(253, 224, 71, 0.15)');
-      beamGradient.addColorStop(1, 'rgba(250, 204, 21, 0)');
+      const pLegWobble = (dx !== 0 || dy !== 0) ? Math.sin(now * 0.015) * 6 : 0;
 
-      ctx.fillStyle = beamGradient;
-      ctx.beginPath();
-      ctx.moveTo(0, 0);
-      ctx.arc(0, 0, 480, -0.45, 0.45);
-      ctx.closePath();
-      ctx.fill();
-      ctx.restore();
+      // Player Shadow
+      ctx.fillStyle = 'rgba(0,0,0,0.5)';
+      ctx.beginPath(); ctx.ellipse(0, 0, 20, 15, 0, 0, Math.PI * 2); ctx.fill();
 
-      // 7. DRAW PLAYER CHARACTER (ALWAYS BRIGHT & ON TOP)
-      ctx.save();
-      ctx.translate(s.player.x, s.player.y);
-      ctx.rotate(s.player.angle);
-      
-      // Player Outer Glow / Shadow
-      ctx.shadowColor = '#3b82f6';
-      ctx.shadowBlur = 10;
+      // Legs
+      ctx.fillStyle = '#1e293b';
+      ctx.fillRect(-10 + pLegWobble, -12, 10, 6);
+      ctx.fillRect(-10 - pLegWobble, 6, 10, 6);
 
-      // Player Body
+      // Boots
+      ctx.fillStyle = '#0f172a';
+      ctx.fillRect(-12 + pLegWobble, -13, 5, 8);
+      ctx.fillRect(-12 - pLegWobble, 5, 5, 8);
+
+      // Body Armor / Vest
       ctx.fillStyle = '#2563eb';
       ctx.beginPath();
-      ctx.arc(0, 0, s.player.radius, 0, Math.PI * 2);
+      ctx.arc(0, 0, 16, 0, Math.PI * 2);
       ctx.fill();
       ctx.strokeStyle = '#60a5fa';
-      ctx.lineWidth = 3;
+      ctx.lineWidth = 2.5;
       ctx.stroke();
 
-      // Head / Helmet
+      // Backpack
       ctx.fillStyle = '#1e3a8a';
+      ctx.fillRect(-16, -9, 8, 18);
+
+      // Helmet / Head
+      ctx.fillStyle = '#0f172a';
       ctx.beginPath();
-      ctx.arc(-2, 0, 9, 0, Math.PI * 2);
+      ctx.arc(-2, 0, 10, 0, Math.PI * 2);
       ctx.fill();
 
-      // Gun / Weapon Barrel & Flashlight Lens
+      // Hands & Weapon Barrel
       const activeW = s.player.weapons[s.player.activeWeaponIndex];
-      ctx.fillStyle = '#0f172a';
-      ctx.fillRect(8, 3, activeW.id === 'shotgun' ? 20 : 14, 6);
+      ctx.fillStyle = '#475569';
+      ctx.fillRect(8, 2, activeW.id === 'shotgun' ? 22 : 15, 6);
       
-      // Flashlight Lens Tip
-      ctx.fillStyle = '#fef08a';
-      ctx.beginPath();
-      ctx.arc(18, -6, 4, 0, Math.PI * 2);
-      ctx.fill();
+      // Weapon Tip Glow
+      ctx.fillStyle = '#94a3b8';
+      ctx.fillRect(activeW.id === 'shotgun' ? 28 : 22, 1, 4, 8);
 
       ctx.restore();
+
+      // Draw Active Blood Particles
+      s.particles.filter(p => p.life > 0.1).forEach(p => {
+        p.x += p.vx;
+        p.y += p.vy;
+        p.life -= 0.02;
+        ctx.fillStyle = p.color;
+        ctx.globalAlpha = Math.max(0, p.life);
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, 3, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.globalAlpha = 1.0;
+      });
 
       animationFrameId = requestAnimationFrame(render);
     };

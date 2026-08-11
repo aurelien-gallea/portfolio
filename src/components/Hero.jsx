@@ -15,7 +15,7 @@ const Hero = () => {
           <h1>Software Product Engineer</h1>
           <p>
             Spécialisé en <strong>Angular</strong>, <strong>React</strong>, <strong>ASP.NET</strong> et <strong>Développement IA</strong>.<br/>
-            À l'aise avec divers modèles (<strong>ChatGPT</strong>, <strong>Claude</strong>, <strong>Gemini</strong>, <strong>Mistral</strong>) et passionné par la conception de produits & <strong>automatisations</strong>.
+            À l'aise avec divers modèles (<strong>ChatGPT</strong>, <strong>Claude</strong>, <strong>Gemini</strong>, <strong>Mistral</strong>) et passionné par les <strong>automatisations (Workflows & Agents IA)</strong>.
           </p>
         </motion.div>
         

@@ -493,60 +493,82 @@ const GameCanvas = ({
         ctx.restore();
       });
 
-      // Draw Player
-      ctx.save();
-      ctx.translate(s.player.x, s.player.y);
-      ctx.rotate(s.player.angle);
-      
-      // Body
-      ctx.fillStyle = '#3b82f6';
-      ctx.beginPath();
-      ctx.arc(0, 0, s.player.radius, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.strokeStyle = '#ffffff';
-      ctx.stroke();
-
-      // Gun / Hands
-      ctx.fillStyle = '#1e293b';
-      ctx.fillRect(8, 4, 14, 5);
-      ctx.restore();
-
-      // Draw Blood Particles
-      s.particles.forEach(p => {
-        p.x += p.vx;
-        p.y += p.vy;
-        p.life -= 0.02;
-        ctx.fillStyle = p.color;
-        ctx.globalAlpha = Math.max(0, p.life);
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, 3, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.globalAlpha = 1.0;
-      });
-      s.particles = s.particles.filter(p => p.life > 0);
-
-      // 6. DYNAMIC FLASHLIGHT & DARKNESS FOG
+      // 5. DYNAMIC FLASHLIGHT & DARKNESS FOG
       ctx.save();
       ctx.fillStyle = 'rgba(5, 5, 8, 0.92)'; // Dark Fog
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-      // Cutout Flashlight Cone
+      // Cutout Flashlight Cone from Fog
       ctx.globalCompositeOperation = 'destination-out';
       ctx.beginPath();
       ctx.moveTo(s.player.x, s.player.y);
       ctx.arc(
         s.player.x, 
         s.player.y, 
-        420, 
+        480, 
         s.player.angle - 0.45, 
         s.player.angle + 0.45
       );
       ctx.closePath();
       ctx.fill();
 
-      // Small ambient light around player
+      // Small ambient cutout around player
       ctx.beginPath();
-      ctx.arc(s.player.x, s.player.y, 60, 0, Math.PI * 2);
+      ctx.arc(s.player.x, s.player.y, 65, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+
+      // 6. FLASHLIGHT BEAM GLOW OVERLAY
+      ctx.save();
+      ctx.translate(s.player.x, s.player.y);
+      ctx.rotate(s.player.angle);
+
+      const beamGradient = ctx.createRadialGradient(0, 0, 10, 0, 0, 480);
+      beamGradient.addColorStop(0, 'rgba(254, 240, 138, 0.35)');
+      beamGradient.addColorStop(0.5, 'rgba(253, 224, 71, 0.15)');
+      beamGradient.addColorStop(1, 'rgba(250, 204, 21, 0)');
+
+      ctx.fillStyle = beamGradient;
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.arc(0, 0, 480, -0.45, 0.45);
+      ctx.closePath();
+      ctx.fill();
+      ctx.restore();
+
+      // 7. DRAW PLAYER CHARACTER (ALWAYS BRIGHT & ON TOP)
+      ctx.save();
+      ctx.translate(s.player.x, s.player.y);
+      ctx.rotate(s.player.angle);
+      
+      // Player Outer Glow / Shadow
+      ctx.shadowColor = '#3b82f6';
+      ctx.shadowBlur = 10;
+
+      // Player Body
+      ctx.fillStyle = '#2563eb';
+      ctx.beginPath();
+      ctx.arc(0, 0, s.player.radius, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = '#60a5fa';
+      ctx.lineWidth = 3;
+      ctx.stroke();
+
+      // Head / Helmet
+      ctx.fillStyle = '#1e3a8a';
+      ctx.beginPath();
+      ctx.arc(-2, 0, 9, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Gun / Weapon Barrel & Flashlight Lens
+      const activeW = s.player.weapons[s.player.activeWeaponIndex];
+      ctx.fillStyle = '#0f172a';
+      ctx.fillRect(8, 3, activeW.id === 'shotgun' ? 20 : 14, 6);
+      
+      // Flashlight Lens Tip
+      ctx.fillStyle = '#fef08a';
+      ctx.beginPath();
+      ctx.arc(18, -6, 4, 0, Math.PI * 2);
       ctx.fill();
 
       ctx.restore();

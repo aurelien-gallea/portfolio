@@ -37,7 +37,7 @@ const GameCanvas = ({
     pits: [],
     walls: [],
     exitDoor: { x: 1400, y: 850, width: 80, height: 20, locked: true },
-    keyItem: { x: 1350, y: 150, width: 24, height: 24, collected: false },
+    keyItem: { x: 1480, y: 220, width: 24, height: 24, collected: false },
     hasKey: false,
     kills: 0,
     timeElapsed: 0,
@@ -245,33 +245,54 @@ const GameCanvas = ({
       { x: 1070, y: 480, w: 180, h: 20 },
     ];
 
-    // Spawn Pit Traps (-10 HP & Repop at Start: 150, 850)
+    // Spawn Pit Traps (-10 HP & Repop at Start: 150, 850) - Well clear of all walls
     s.pits = [
-      { id: 1, x: 300, y: 300, radius: 24 },
-      { id: 2, x: 550, y: 500, radius: 26 },
-      { id: 3, x: 900, y: 300, radius: 24 },
-      { id: 4, x: 1200, y: 750, radius: 28 },
-      { id: 5, x: 1450, y: 400, radius: 24 },
-      { id: 6, x: 500, y: 800, radius: 26 },
+      { id: 1, x: 180, y: 280, radius: 24 },
+      { id: 2, x: 520, y: 520, radius: 26 },
+      { id: 3, x: 880, y: 350, radius: 24 },
+      { id: 4, x: 1200, y: 720, radius: 28 },
+      { id: 5, x: 1480, y: 650, radius: 24 },
+      { id: 6, x: 520, y: 820, radius: 26 },
     ];
 
-    // Spawn Pickups
+    // Spawn Pickups - Well clear of all walls
     s.pickups = [
-      { id: 1, type: 'ammo_handgun', x: 200, y: 200, amount: 12 },
-      { id: 2, type: 'medkit', x: 550, y: 120, amount: 40 },
+      { id: 1, type: 'ammo_handgun', x: 180, y: 200, amount: 12 },
+      { id: 2, type: 'medkit', x: 520, y: 120, amount: 40 },
       { id: 3, type: 'ammo_handgun', x: 880, y: 500, amount: 12 },
       { id: 4, type: 'medkit', x: 1200, y: 850, amount: 40 },
-      { id: 5, type: 'ammo_handgun', x: 1450, y: 250, amount: 12 },
+      { id: 5, type: 'ammo_handgun', x: 1480, y: 350, amount: 12 },
     ];
 
-    // Spawn Zombies based on difficulty
+    // Spawning Safety Validation helper
+    const isSafeFromWalls = (x, y, radius = 16, margin = 45) => {
+      const safeR = radius + margin;
+      return s.walls.every(w => (
+        x + safeR < w.x ||
+        x - safeR > w.x + w.w ||
+        y + safeR < w.y ||
+        y - safeR > w.y + w.h
+      ));
+    };
+
+    // Spawn Zombies safely away from walls and player starting point
     const zombieCount = difficulty === 'hard' ? 18 : difficulty === 'easy' ? 8 : 12;
     s.zombies = [];
     for (let i = 0; i < zombieCount; i++) {
+      let zx = 500, zy = 200, safe = false;
+      let attempts = 0;
+      while (!safe && attempts < 150) {
+        attempts++;
+        zx = 250 + Math.random() * 1250;
+        zy = 80 + Math.random() * 840;
+        if (Math.hypot(zx - 150, zy - 850) > 280 && isSafeFromWalls(zx, zy, 16, 45)) {
+          safe = true;
+        }
+      }
       s.zombies.push({
         id: i,
-        x: 450 + Math.random() * 1000,
-        y: 100 + Math.random() * 800,
+        x: zx,
+        y: zy,
         radius: 16,
         hp: 60,
         speed: 1.2 + Math.random() * 0.8,
@@ -428,30 +449,34 @@ const GameCanvas = ({
               if (Math.random() < 0.02) z.patrolAngle = Math.random() * Math.PI * 2;
             }
 
-            // Zombie Wall Collisions (Prevents zombies from walking through walls)
+            // Zombie Wall Collisions (Prevents zombies from clipping or sticking to walls)
             const nzx = z.x + zdx;
             const nzy = z.y + zdy;
-            let canZMoveX = true;
-            let canZMoveY = true;
 
             s.walls.forEach(w => {
-              if (nzx + z.radius > w.x && nzx - z.radius < w.x + w.w &&
-                  z.y + z.radius > w.y && z.y - z.radius < w.y + w.h) {
-                canZMoveX = false;
-              }
-              if (z.x + z.radius > w.x && z.x - z.radius < w.x + w.w &&
-                  nzy + z.radius > w.y && nzy - z.radius < w.y + w.h) {
-                canZMoveY = false;
+              const margin = z.radius + 6;
+              if (nzx > w.x - margin && nzx < w.x + w.w + margin &&
+                  nzy > w.y - margin && nzy < w.y + w.h + margin) {
+                // Push zombie out along nearest open axis
+                const overlapL = nzx - (w.x - margin);
+                const overlapR = (w.x + w.w + margin) - nzx;
+                const overlapT = nzy - (w.y - margin);
+                const overlapB = (w.y + w.h + margin) - nzy;
+                const minOverlap = Math.min(overlapL, overlapR, overlapT, overlapB);
+
+                if (minOverlap === overlapL) zdx = (w.x - margin) - z.x;
+                else if (minOverlap === overlapR) zdx = (w.x + w.w + margin) - z.x;
+                else if (minOverlap === overlapT) zdy = (w.y - margin) - z.y;
+                else if (minOverlap === overlapB) zdy = (w.y + w.h + margin) - z.y;
+
+                if (z.state !== 'chase') {
+                  z.patrolAngle = Math.random() * Math.PI * 2;
+                }
               }
             });
 
-            if (canZMoveX) z.x = nzx;
-            if (canZMoveY) z.y = nzy;
-
-            // If zombie hits a wall while patrolling, pick a new angle
-            if (!canZMoveX || !canZMoveY) {
-              z.patrolAngle = Math.random() * Math.PI * 2;
-            }
+            z.x += zdx;
+            z.y += zdy;
           });
 
           // 4. PICKUPS & OBJECTIVES

@@ -449,34 +449,31 @@ const GameCanvas = ({
               if (Math.random() < 0.02) z.patrolAngle = Math.random() * Math.PI * 2;
             }
 
-            // Zombie Wall Collisions (Prevents zombies from clipping or sticking to walls)
+            // Zombie Wall Collisions (Prevents zombies from walking through walls)
             const nzx = z.x + zdx;
             const nzy = z.y + zdy;
+            let canZMoveX = true;
+            let canZMoveY = true;
 
             s.walls.forEach(w => {
-              const margin = z.radius + 6;
-              if (nzx > w.x - margin && nzx < w.x + w.w + margin &&
-                  nzy > w.y - margin && nzy < w.y + w.h + margin) {
-                // Push zombie out along nearest open axis
-                const overlapL = nzx - (w.x - margin);
-                const overlapR = (w.x + w.w + margin) - nzx;
-                const overlapT = nzy - (w.y - margin);
-                const overlapB = (w.y + w.h + margin) - nzy;
-                const minOverlap = Math.min(overlapL, overlapR, overlapT, overlapB);
-
-                if (minOverlap === overlapL) zdx = (w.x - margin) - z.x;
-                else if (minOverlap === overlapR) zdx = (w.x + w.w + margin) - z.x;
-                else if (minOverlap === overlapT) zdy = (w.y - margin) - z.y;
-                else if (minOverlap === overlapB) zdy = (w.y + w.h + margin) - z.y;
-
-                if (z.state !== 'chase') {
-                  z.patrolAngle = Math.random() * Math.PI * 2;
-                }
+              if (nzx + z.radius > w.x && nzx - z.radius < w.x + w.w &&
+                  z.y + z.radius > w.y && z.y - z.radius < w.y + w.h) {
+                canZMoveX = false;
+              }
+              if (z.x + z.radius > w.x && z.x - z.radius < w.x + w.w &&
+                  nzy + z.radius > w.y && nzy - z.radius < w.y + w.h) {
+                canZMoveY = false;
               }
             });
 
-            z.x += zdx;
-            z.y += zdy;
+            if (canZMoveX) z.x = nzx;
+            if (canZMoveY) z.y = nzy;
+
+            if (!canZMoveX || !canZMoveY) {
+              if (z.state !== 'chase') {
+                z.patrolAngle = Math.random() * Math.PI * 2;
+              }
+            }
           });
 
           // 4. PICKUPS & OBJECTIVES

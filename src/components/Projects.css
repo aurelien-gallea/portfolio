@@ -36,6 +36,10 @@
   .projects-grid {
     grid-template-columns: repeat(4, 1fr);
   }
+
+  .projects-grid > *:last-child:nth-child(4n + 1) {
+    grid-column: 2 / 4;
+  }
 }
 
 .project-card {

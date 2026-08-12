@@ -16,10 +16,6 @@ const Contact = () => {
           viewport={{ once: true }}
           transition={{ duration: 0.6 }}
         >
-          <h2 className="contact-title">Contact</h2>
-          <p className="contact-description">
-            Un projet, une question ou une opportunité ? N'hésitez pas à m'envoyer un message !
-          </p>
 
           <div className="contact-actions">
             <a 

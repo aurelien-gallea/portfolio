@@ -9,7 +9,7 @@ const Header = () => {
         <nav>
           <ul>
             <li><a href="#">Accueil</a></li>
-            <li><a href="mailto:aurelien.gallea@gmail.com?subject=demande de renseignements">Contactez-moi</a></li>
+            <li><a href="#contact">Contact</a></li>
           </ul>
         </nav>
       </div>

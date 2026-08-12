@@ -201,12 +201,16 @@ const GameCanvas = ({
 
     const s = stateRef.current;
 
-    // Reset Game State
+    // Reset Game State based on Difficulty
+    const startingReserve = difficulty === 'hard' ? 12 : difficulty === 'easy' ? 48 : 36;
+    const playerSpeed = difficulty === 'hard' ? 3.7 : difficulty === 'easy' ? 3.2 : 3.5;
+
     s.player.hp = 100;
     s.player.x = 150;
     s.player.y = 850;
     s.player.weapons[0].magAmmo = 12;
-    s.player.weapons[0].reserveAmmo = 36;
+    s.player.weapons[0].reserveAmmo = startingReserve;
+    s.playerSpeed = playerSpeed;
     s.hasKey = false;
     s.keyItem.collected = false;
     s.exitDoor.locked = true;
@@ -245,15 +249,21 @@ const GameCanvas = ({
       { x: 1070, y: 480, w: 180, h: 20 },
     ];
 
-    // Spawn Pit Traps (-10 HP & Repop at Start: 150, 850) - Well clear of all walls
-    s.pits = [
+    // Spawn Pit Traps based on difficulty (Easy: 3, Normal: 6, Hard: 10)
+    const allPits = [
       { id: 1, x: 180, y: 280, radius: 24 },
       { id: 2, x: 520, y: 520, radius: 26 },
       { id: 3, x: 880, y: 350, radius: 24 },
       { id: 4, x: 1200, y: 720, radius: 28 },
       { id: 5, x: 1480, y: 650, radius: 24 },
       { id: 6, x: 520, y: 820, radius: 26 },
+      { id: 7, x: 880, y: 150, radius: 24 },
+      { id: 8, x: 1200, y: 300, radius: 26 },
+      { id: 9, x: 350, y: 480, radius: 24 },
+      { id: 10, x: 900, y: 800, radius: 26 }
     ];
+    const pitCount = difficulty === 'hard' ? 10 : difficulty === 'easy' ? 3 : 6;
+    s.pits = allPits.slice(0, pitCount);
 
     // Spawn Pickups - Well clear of all walls
     s.pickups = [
@@ -275,8 +285,8 @@ const GameCanvas = ({
       ));
     };
 
-    // Spawn Zombies safely away from walls and player starting point
-    const zombieCount = difficulty === 'hard' ? 18 : difficulty === 'easy' ? 8 : 12;
+    // Spawn Zombies based on difficulty (Easy: 6, Normal: 12, Hard: 20)
+    const zombieCount = difficulty === 'hard' ? 20 : difficulty === 'easy' ? 6 : 12;
     s.zombies = [];
     for (let i = 0; i < zombieCount; i++) {
       let zx = 500, zy = 200, safe = false;
@@ -289,13 +299,21 @@ const GameCanvas = ({
           safe = true;
         }
       }
+
+      // Zombie Speed by difficulty
+      const zSpeed = difficulty === 'hard'
+        ? (2.2 + Math.random() * 1.0)
+        : difficulty === 'easy'
+          ? (1.0 + Math.random() * 0.4)
+          : (1.4 + Math.random() * 0.7);
+
       s.zombies.push({
         id: i,
         x: zx,
         y: zy,
         radius: 16,
         hp: 60,
-        speed: 1.2 + Math.random() * 0.8,
+        speed: zSpeed,
         state: 'patrol',
         patrolAngle: Math.random() * Math.PI * 2,
         lastGrowl: 0
@@ -342,7 +360,7 @@ const GameCanvas = ({
         let dy = 0;
         if (!s.isEnded) {
           // 1. UPDATE PLAYER
-          const speed = 3.5;
+          const speed = s.playerSpeed || 3.5;
 
           if (s.keys['w'] || s.keys['z'] || s.keys['arrowup']) dy -= 1;
           if (s.keys['s'] || s.keys['arrowdown']) dy += 1;

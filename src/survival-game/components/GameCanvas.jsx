@@ -16,17 +16,15 @@ const GameCanvas = ({
   // Map & Game State Ref (to avoid closure stale state in rAF)
   const stateRef = useRef({
     player: {
-      x: 200,
-      y: 200,
+      x: 150,
+      y: 850,
       radius: 16,
       angle: 0,
       hp: 100,
       maxHp: 100,
       activeWeaponIndex: 0,
       weapons: [
-        { id: 'handgun', name: 'Pistolet 9mm', magAmmo: 12, magCapacity: 12, reserveAmmo: 24, maxReserve: 48, damage: 30, sound: 'playHandgun' },
-        { id: 'shotgun', name: 'Shotgun', magAmmo: 6, magCapacity: 6, reserveAmmo: 12, maxReserve: 24, damage: 25, sound: 'playShotgun' },
-        { id: 'knife', name: 'Couteau', magAmmo: 0, magCapacity: 0, reserveAmmo: 0, maxReserve: 0, damage: 45, sound: 'playKnife' }
+        { id: 'handgun', name: 'Pistolet 9mm', magAmmo: 12, magCapacity: 12, reserveAmmo: 36, maxReserve: 72, damage: 35, sound: 'playHandgun' }
       ]
     },
     keys: {},
@@ -36,13 +34,13 @@ const GameCanvas = ({
     particles: [],
     slashes: [],
     pickups: [],
+    pits: [],
     walls: [],
     exitDoor: { x: 1400, y: 850, width: 80, height: 20, locked: true },
     keyItem: { x: 1350, y: 150, width: 24, height: 24, collected: false },
     hasKey: false,
     kills: 0,
-    timeElapsed: 0,
-    lastKnifeSlash: 0
+    timeElapsed: 0
   });
 
   // Handle Mobile Fire Trigger
@@ -205,15 +203,13 @@ const GameCanvas = ({
     s.player.x = 150;
     s.player.y = 850;
     s.player.weapons[0].magAmmo = 12;
-    s.player.weapons[0].reserveAmmo = 24;
-    s.player.weapons[1].magAmmo = 6;
-    s.player.weapons[1].reserveAmmo = 12;
+    s.player.weapons[0].reserveAmmo = 36;
     s.hasKey = false;
     s.keyItem.collected = false;
     s.exitDoor.locked = true;
     s.kills = 0;
 
-    // Build Mansion Walls (Spacious layout with 360-degree open traversal corridors)
+    // Build Mansion Walls (Rich maze layout with strategic open corridors)
     s.walls = [
       // Outer boundaries
       { x: 0, y: 0, w: 1600, h: 20 },
@@ -221,29 +217,47 @@ const GameCanvas = ({
       { x: 0, y: 0, w: 20, h: 1000 },
       { x: 1580, y: 0, w: 20, h: 1000 },
       
-      // Vertical Partition 1 (x: 400) - Openings at top (y:20-200), middle (y:400-550), and bottom (y:750-980)
-      { x: 400, y: 200, w: 20, h: 200 },
-      { x: 400, y: 550, w: 20, h: 200 },
+      // Vertical Partition 1 (x: 350)
+      { x: 350, y: 150, w: 20, h: 300 },
+      { x: 350, y: 600, w: 20, h: 250 },
 
-      // Vertical Partition 2 (x: 800) - Openings at top (y:20-180), middle (y:380-540), and bottom (y:740-980)
-      { x: 800, y: 180, w: 20, h: 200 },
-      { x: 800, y: 540, w: 20, h: 200 },
+      // Vertical Partition 2 (x: 700)
+      { x: 700, y: 20, w: 20, h: 280 },
+      { x: 700, y: 450, w: 20, h: 350 },
 
-      // Vertical Partition 3 (x: 1200) - Openings at top (y:20-200), middle (y:450-600), and bottom (y:800-980)
-      { x: 1200, y: 200, w: 20, h: 250 },
-      { x: 1200, y: 600, w: 20, h: 200 },
+      // Vertical Partition 3 (x: 1050)
+      { x: 1050, y: 200, w: 20, h: 320 },
+      { x: 1050, y: 650, w: 20, h: 280 },
 
-      // Horizontal dividers with wide gaps
-      { x: 420, y: 350, w: 230, h: 20 },  // Gap at x:650-800
-      { x: 820, y: 650, w: 230, h: 20 },  // Gap at x:1050-1200
+      // Vertical Partition 4 (x: 1350)
+      { x: 1350, y: 100, w: 20, h: 300 },
+      { x: 1350, y: 550, w: 20, h: 300 },
+
+      // Horizontal dividers
+      { x: 20, y: 480, w: 220, h: 20 },
+      { x: 370, y: 320, w: 200, h: 20 },
+      { x: 720, y: 220, w: 210, h: 20 },
+      { x: 720, y: 700, w: 210, h: 20 },
+      { x: 1070, y: 480, w: 180, h: 20 },
+    ];
+
+    // Spawn Pit Traps (-10 HP & Repop at Start: 150, 850)
+    s.pits = [
+      { id: 1, x: 300, y: 300, radius: 24 },
+      { id: 2, x: 550, y: 500, radius: 26 },
+      { id: 3, x: 900, y: 300, radius: 24 },
+      { id: 4, x: 1200, y: 750, radius: 28 },
+      { id: 5, x: 1450, y: 400, radius: 24 },
+      { id: 6, x: 500, y: 800, radius: 26 },
     ];
 
     // Spawn Pickups
     s.pickups = [
-      { id: 1, type: 'ammo_handgun', x: 250, y: 250, amount: 12 },
-      { id: 2, type: 'ammo_shotgun', x: 600, y: 150, amount: 6 },
-      { id: 3, type: 'medkit', x: 950, y: 850, amount: 40 },
-      { id: 4, type: 'ammo_handgun', x: 1050, y: 350, amount: 12 },
+      { id: 1, type: 'ammo_handgun', x: 200, y: 200, amount: 12 },
+      { id: 2, type: 'medkit', x: 550, y: 120, amount: 40 },
+      { id: 3, type: 'ammo_handgun', x: 880, y: 500, amount: 12 },
+      { id: 4, type: 'medkit', x: 1200, y: 850, amount: 40 },
+      { id: 5, type: 'ammo_handgun', x: 1450, y: 250, amount: 12 },
     ];
 
     // Spawn Zombies based on difficulty
@@ -441,12 +455,31 @@ const GameCanvas = ({
           sounds.playPickup();
           if (p.type === 'ammo_handgun') {
             s.player.weapons[0].reserveAmmo = Math.min(s.player.weapons[0].maxReserve, s.player.weapons[0].reserveAmmo + p.amount);
-          } else if (p.type === 'ammo_shotgun') {
-            s.player.weapons[1].reserveAmmo = Math.min(s.player.weapons[1].maxReserve, s.player.weapons[1].reserveAmmo + p.amount);
           } else if (p.type === 'medkit') {
             s.player.hp = Math.min(s.player.maxHp, s.player.hp + p.amount);
           }
           onPlayerUpdate({ ...s.player });
+        }
+      });
+
+      // Pit Traps Check (Teleport to start & -10 HP)
+      s.pits.forEach(pit => {
+        const dist = Math.hypot(s.player.x - pit.x, s.player.y - pit.y);
+        if (dist < s.player.radius + pit.radius - 4) {
+          s.player.hp = Math.max(0, s.player.hp - 10);
+          onPlayerUpdate({ ...s.player });
+
+          // Particles
+          createBloodParticles(pit.x, pit.y, 14, '#ef4444');
+          createBloodParticles(150, 850, 10, '#38bdf8');
+
+          // Repop at start
+          s.player.x = 150;
+          s.player.y = 850;
+
+          if (s.player.hp <= 0) {
+            onGameOver({ kills: s.kills });
+          }
         }
       });
 
@@ -486,6 +519,39 @@ const GameCanvas = ({
         ctx.beginPath();
         ctx.arc(p.x, p.y, p.size || 4, 0, Math.PI * 2);
         ctx.fill();
+      });
+
+      // Draw Pit Holes / Traps
+      s.pits.forEach(pit => {
+        ctx.save();
+        ctx.translate(pit.x, pit.y);
+
+        // Danger aura
+        ctx.strokeStyle = '#ef4444';
+        ctx.lineWidth = 2.5;
+        ctx.shadowColor = '#ef4444';
+        ctx.shadowBlur = 10;
+        ctx.beginPath();
+        ctx.arc(0, 0, pit.radius + 3, 0, Math.PI * 2);
+        ctx.stroke();
+
+        // Dark Abyssal Void Hole
+        ctx.fillStyle = '#050508';
+        ctx.beginPath();
+        ctx.arc(0, 0, pit.radius, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.strokeStyle = '#7f1d1d';
+        ctx.lineWidth = 3;
+        ctx.stroke();
+
+        // Hazard Label
+        ctx.fillStyle = '#f87171';
+        ctx.font = 'bold 9px monospace';
+        ctx.textAlign = 'center';
+        ctx.fillText('PIÈGE', 0, 3);
+
+        ctx.restore();
       });
 
       // Draw Pickups (Medkit & Ammo Boxes with icons/glowing borders)

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowLeft, Play, RefreshCw, Skull, Trophy, ShieldAlert, Zap, Volume2 } from 'lucide-react';
+import { ArrowLeft, Play, RefreshCw, Skull, Trophy, ShieldAlert } from 'lucide-react';
 import GameCanvas from './components/GameCanvas';
 import HUD from './components/HUD';
 import MobileControls from './components/MobileControls';
@@ -9,15 +9,14 @@ const SurvivalGameApp = () => {
   const [gameState, setGameState] = useState('menu'); // 'menu', 'playing', 'gameover', 'victory'
   const [difficulty, setDifficulty] = useState('normal');
   const [stats, setStats] = useState({ kills: 0 });
+  const [restartKey, setRestartKey] = useState(0);
 
   const [playerData, setPlayerData] = useState({
     hp: 100,
     maxHp: 100,
     activeWeaponIndex: 0,
     weapons: [
-      { id: 'handgun', name: 'Pistolet 9mm', magAmmo: 12, reserveAmmo: 24 },
-      { id: 'shotgun', name: 'Shotgun', magAmmo: 6, reserveAmmo: 12 },
-      { id: 'knife', name: 'Couteau', magAmmo: 0, reserveAmmo: 0 }
+      { id: 'handgun', name: 'Pistolet 9mm', magAmmo: 12, reserveAmmo: 36 }
     ]
   });
 
@@ -25,9 +24,9 @@ const SurvivalGameApp = () => {
   const [mobileMove, setMobileMove] = useState({ x: 0, y: 0 });
   const [mobileFireTrigger, setMobileFireTrigger] = useState(0);
   const [mobileReloadTrigger, setMobileReloadTrigger] = useState(0);
-  const [mobileKnifeTrigger, setMobileKnifeTrigger] = useState(0);
 
   const handleStartGame = () => {
+    setRestartKey(prev => prev + 1);
     setGameState('playing');
   };
 
@@ -67,7 +66,7 @@ const SurvivalGameApp = () => {
               ZOMBIE RULES
             </h1>
             <p className="text-gray-400 text-sm md:text-lg max-w-xl mx-auto leading-relaxed">
-              Infiltrer le manoir infesté. Gérer vos munitions avec précision, orientez votre lampe torche dans le noir et survivez à la horde.
+              Infiltrez le labyrinthe infesté. Évitez les pièges au sol (-10 HP + repop au départ), gérez vos munitions et trouvez la clé de sortie !
             </p>
 
             {/* Difficulty Selector */}
@@ -101,15 +100,15 @@ const SurvivalGameApp = () => {
             <div>
               <p className="text-white font-bold mb-1">🎮 Contrôles PC :</p>
               <p>• ZQSD / Flèches : Déplacement</p>
-              <p>• Souris : Viser & Clic Tirer</p>
-              <p>• 1 / 2 / 3 : Changer d'arme (Couteau, Pistolet, Pompe)</p>
+              <p>• Souris : Viser & Clic Tirer (Pistolet 9mm)</p>
               <p>• R : Recharger le chargeur</p>
+              <p>• ⚠️ Attention aux trous (-10 HP + retour départ)</p>
             </div>
             <div>
               <p className="text-white font-bold mb-1">📱 Contrôles Smartphone :</p>
               <p>• Joystick virtuel gauche : Déplacement 360°</p>
-              <p>• Bouton Rouge : Tirer / Attaquer</p>
-              <p>• Boutons rapides : Couteau & Rechargement</p>
+              <p>• Bouton Rouge : Tirer au Pistolet</p>
+              <p>• Bouton Bleu : Recharger</p>
             </div>
           </div>
         </div>
@@ -128,6 +127,7 @@ const SurvivalGameApp = () => {
 
           {/* Game Canvas Engine */}
           <GameCanvas
+            key={restartKey}
             difficulty={difficulty}
             onGameOver={handleGameOver}
             onVictory={handleVictory}
@@ -135,7 +135,6 @@ const SurvivalGameApp = () => {
             mobileMove={mobileMove}
             mobileFireTrigger={mobileFireTrigger}
             mobileReloadTrigger={mobileReloadTrigger}
-            mobileKnifeTrigger={mobileKnifeTrigger}
           />
 
           {/* HUD Overlay */}
@@ -143,7 +142,6 @@ const SurvivalGameApp = () => {
             player={playerData}
             hasKey={playerData.hasKey}
             onReload={() => setMobileReloadTrigger(prev => prev + 1)}
-            onWeaponChange={(idx) => setPlayerData(prev => ({ ...prev, activeWeaponIndex: idx }))}
           />
 
           {/* Mobile Touch Overlay */}
@@ -151,8 +149,6 @@ const SurvivalGameApp = () => {
             onMove={setMobileMove}
             onFire={() => setMobileFireTrigger(prev => prev + 1)}
             onReload={() => setMobileReloadTrigger(prev => prev + 1)}
-            onQuickKnife={() => setMobileKnifeTrigger(prev => prev + 1)}
-            onNextWeapon={() => setPlayerData(prev => ({ ...prev, activeWeaponIndex: (prev.activeWeaponIndex + 1) % prev.weapons.length }))}
           />
         </div>
       )}
@@ -176,13 +172,13 @@ const SurvivalGameApp = () => {
             <div className="flex gap-4">
               <button
                 onClick={() => setGameState('menu')}
-                className="flex-1 bg-white/10 hover:bg-white/20 text-white font-bold py-3 rounded-xl transition-colors border border-white/10 text-sm"
+                className="flex-1 bg-white/10 hover:bg-white/20 text-white font-bold py-3 rounded-xl transition-colors border border-white/10 text-sm cursor-pointer"
               >
                 Menu
               </button>
               <button
                 onClick={handleStartGame}
-                className="flex-1 bg-red-600 hover:bg-red-700 text-white font-bold py-3 rounded-xl transition-colors text-sm shadow-lg shadow-red-600/30 flex items-center justify-center gap-2"
+                className="flex-1 bg-red-600 hover:bg-red-700 text-white font-bold py-3 rounded-xl transition-colors text-sm shadow-lg shadow-red-600/30 flex items-center justify-center gap-2 cursor-pointer"
               >
                 <RefreshCw size={16} /> Réessayer
               </button>
@@ -210,13 +206,13 @@ const SurvivalGameApp = () => {
             <div className="flex gap-4">
               <button
                 onClick={() => setGameState('menu')}
-                className="flex-1 bg-white/10 hover:bg-white/20 text-white font-bold py-3 rounded-xl transition-colors border border-white/10 text-sm"
+                className="flex-1 bg-white/10 hover:bg-white/20 text-white font-bold py-3 rounded-xl transition-colors border border-white/10 text-sm cursor-pointer"
               >
                 Menu
               </button>
               <button
                 onClick={handleStartGame}
-                className="flex-1 bg-green-600 hover:bg-green-700 text-white font-bold py-3 rounded-xl transition-colors text-sm shadow-lg shadow-green-600/30"
+                className="flex-1 bg-green-600 hover:bg-green-700 text-white font-bold py-3 rounded-xl transition-colors text-sm shadow-lg shadow-green-600/30 cursor-pointer"
               >
                 Rejouer
               </button>

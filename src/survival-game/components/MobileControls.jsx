@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { Crosshair, RefreshCw, Shield, Swords } from 'lucide-react';
+import { Crosshair, RefreshCw } from 'lucide-react';
 
-const MobileControls = ({ onMove, onFire, onReload, onQuickKnife, onNextWeapon }) => {
+const MobileControls = ({ onMove, onFire, onReload }) => {
   const [joystickPos, setJoystickPos] = useState({ x: 0, y: 0 });
   const [activeTouch, setActiveTouch] = useState(false);
 
@@ -62,20 +62,11 @@ const MobileControls = ({ onMove, onFire, onReload, onQuickKnife, onNextWeapon }
       {/* Right Touch Action Buttons */}
       <div className="flex flex-col gap-3 items-end pointer-events-auto">
         <div className="flex gap-3">
-          {/* Quick Knife */}
-          <button
-            onTouchStart={(e) => { e.preventDefault(); onQuickKnife(); }}
-            onClick={onQuickKnife}
-            className="w-12 h-12 rounded-full bg-stone-800/80 border border-stone-500 text-stone-200 flex items-center justify-center active:scale-95 shadow-lg"
-          >
-            <Swords size={20} />
-          </button>
-
           {/* Reload */}
           <button
             onTouchStart={(e) => { e.preventDefault(); onReload(); }}
             onClick={onReload}
-            className="w-12 h-12 rounded-full bg-blue-900/80 border border-blue-500 text-blue-200 flex items-center justify-center active:scale-95 shadow-lg"
+            className="w-12 h-12 rounded-full bg-blue-900/80 border border-blue-500 text-blue-200 flex items-center justify-center active:scale-95 shadow-lg cursor-pointer"
           >
             <RefreshCw size={20} />
           </button>
@@ -85,7 +76,7 @@ const MobileControls = ({ onMove, onFire, onReload, onQuickKnife, onNextWeapon }
         <button
           onTouchStart={(e) => { e.preventDefault(); onFire(); }}
           onClick={onFire}
-          className="w-20 h-20 rounded-full bg-gradient-to-br from-red-600 to-red-800 border-2 border-red-400 text-white flex items-center justify-center active:scale-90 shadow-2xl shadow-red-600/40"
+          className="w-20 h-20 rounded-full bg-gradient-to-br from-red-600 to-red-800 border-2 border-red-400 text-white flex items-center justify-center active:scale-90 shadow-2xl shadow-red-600/40 cursor-pointer"
         >
           <Crosshair size={32} />
         </button>

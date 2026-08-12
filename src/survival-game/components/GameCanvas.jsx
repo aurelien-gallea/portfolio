@@ -189,6 +189,44 @@ const GameCanvas = ({
     }
   };
 
+  const triggerEnd = (type) => {
+    const s = stateRef.current;
+    if (s.isEnded) return;
+    s.isEnded = true;
+
+    const diffMultiplier = difficulty === 'hard' ? 2.5 : difficulty === 'easy' ? 1.0 : 1.5;
+    const killScore = s.kills * 100;
+    const isVictory = type === 'victory';
+    const victoryBonus = isVictory ? 1000 : 0;
+    const hpBonus = Math.max(0, Math.round(s.player.hp * 10));
+    const rawScore = killScore + victoryBonus + hpBonus;
+    const finalScore = Math.round(rawScore * diffMultiplier);
+
+    const prevHighScore = parseInt(localStorage.getItem('zombie_game_highscore') || '0', 10);
+    const isNewRecord = finalScore > prevHighScore;
+    if (isNewRecord) {
+      localStorage.setItem('zombie_game_highscore', finalScore.toString());
+    }
+
+    const payload = {
+      kills: s.kills,
+      score: finalScore,
+      rawScore,
+      killScore,
+      victoryBonus,
+      hpBonus,
+      multiplier: diffMultiplier,
+      isNewRecord,
+      highScore: Math.max(prevHighScore, finalScore)
+    };
+
+    if (isVictory) {
+      onVictory(payload);
+    } else {
+      onGameOver(payload);
+    }
+  };
+
   // Setup Map & Loop
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -217,62 +255,37 @@ const GameCanvas = ({
     s.kills = 0;
     s.isEnded = false;
 
-    // Build Mansion Walls (Rich maze layout with strategic open corridors)
-    s.walls = [
-      // Outer boundaries
-      { x: 0, y: 0, w: 1600, h: 20 },
-      { x: 0, y: 980, w: 1600, h: 20 },
-      { x: 0, y: 0, w: 20, h: 1000 },
-      { x: 1580, y: 0, w: 20, h: 1000 },
-      
-      // Vertical Partition 1 (x: 350)
-      { x: 350, y: 150, w: 20, h: 300 },
-      { x: 350, y: 600, w: 20, h: 250 },
+    // Build Mansion Walls Procedurally (Random layout with guaranteed corridor gaps)
+    const generateWalls = () => {
+      const wList = [
+        { x: 0, y: 0, w: 1600, h: 20 },
+        { x: 0, y: 980, w: 1600, h: 20 },
+        { x: 0, y: 0, w: 20, h: 1000 },
+        { x: 1580, y: 0, w: 20, h: 1000 },
+      ];
 
-      // Vertical Partition 2 (x: 700)
-      { x: 700, y: 20, w: 20, h: 280 },
-      { x: 700, y: 450, w: 20, h: 350 },
+      // Random Vertical Partition Columns
+      const columns = [350, 700, 1050, 1350];
+      columns.forEach(colX => {
+        const gapY = 180 + Math.floor(Math.random() * 400);
+        const gapH = 220; // 220px open gap
+        wList.push({ x: colX, y: 20, w: 20, h: gapY - 20 });
+        wList.push({ x: colX, y: gapY + gapH, w: 20, h: 980 - (gapY + gapH) });
+      });
 
-      // Vertical Partition 3 (x: 1050)
-      { x: 1050, y: 200, w: 20, h: 320 },
-      { x: 1050, y: 650, w: 20, h: 280 },
+      // Random Horizontal Dividers
+      wList.push(
+        { x: 20, y: 480, w: 220, h: 20 },
+        { x: 370, y: 300 + Math.floor(Math.random() * 120), w: 180, h: 20 },
+        { x: 720, y: 200 + Math.floor(Math.random() * 120), w: 200, h: 20 },
+        { x: 720, y: 680 + Math.floor(Math.random() * 100), w: 200, h: 20 },
+        { x: 1070, y: 450 + Math.floor(Math.random() * 120), w: 180, h: 20 }
+      );
 
-      // Vertical Partition 4 (x: 1350)
-      { x: 1350, y: 100, w: 20, h: 300 },
-      { x: 1350, y: 550, w: 20, h: 300 },
+      return wList;
+    };
 
-      // Horizontal dividers
-      { x: 20, y: 480, w: 220, h: 20 },
-      { x: 370, y: 320, w: 200, h: 20 },
-      { x: 720, y: 220, w: 210, h: 20 },
-      { x: 720, y: 700, w: 210, h: 20 },
-      { x: 1070, y: 480, w: 180, h: 20 },
-    ];
-
-    // Spawn Pit Traps based on difficulty (Easy: 3, Normal: 6, Hard: 10)
-    const allPits = [
-      { id: 1, x: 180, y: 280, radius: 24 },
-      { id: 2, x: 520, y: 520, radius: 26 },
-      { id: 3, x: 880, y: 350, radius: 24 },
-      { id: 4, x: 1200, y: 720, radius: 28 },
-      { id: 5, x: 1480, y: 650, radius: 24 },
-      { id: 6, x: 520, y: 820, radius: 26 },
-      { id: 7, x: 880, y: 150, radius: 24 },
-      { id: 8, x: 1200, y: 300, radius: 26 },
-      { id: 9, x: 350, y: 480, radius: 24 },
-      { id: 10, x: 900, y: 800, radius: 26 }
-    ];
-    const pitCount = difficulty === 'hard' ? 10 : difficulty === 'easy' ? 3 : 6;
-    s.pits = allPits.slice(0, pitCount);
-
-    // Spawn Pickups - Well clear of all walls
-    s.pickups = [
-      { id: 1, type: 'ammo_handgun', x: 180, y: 200, amount: 12 },
-      { id: 2, type: 'medkit', x: 520, y: 120, amount: 40 },
-      { id: 3, type: 'ammo_handgun', x: 880, y: 500, amount: 12 },
-      { id: 4, type: 'medkit', x: 1200, y: 850, amount: 40 },
-      { id: 5, type: 'ammo_handgun', x: 1480, y: 350, amount: 12 },
-    ];
+    s.walls = generateWalls();
 
     // Spawning Safety Validation helper
     const isSafeFromWalls = (x, y, radius = 16, margin = 45) => {
@@ -284,6 +297,55 @@ const GameCanvas = ({
         y - safeR > w.y + w.h
       ));
     };
+
+    // Random Key Location (Pick 1 of 4 candidate room locations)
+    const keyCandidates = [
+      { x: 1480, y: 220 },
+      { x: 880, y: 150 },
+      { x: 1200, y: 450 },
+      { x: 520, y: 180 }
+    ];
+    const chosenKey = keyCandidates[Math.floor(Math.random() * keyCandidates.length)];
+    s.keyItem.x = chosenKey.x;
+    s.keyItem.y = chosenKey.y;
+    s.keyItem.collected = false;
+
+    // Spawn Pit Traps Procedurally (Easy: 3, Normal: 6, Hard: 10)
+    const pitCount = difficulty === 'hard' ? 10 : difficulty === 'easy' ? 3 : 6;
+    s.pits = [];
+    for (let i = 0; i < pitCount; i++) {
+      let px = 500, py = 500, safe = false, attempts = 0;
+      while (!safe && attempts < 150) {
+        attempts++;
+        px = 150 + Math.random() * 1350;
+        py = 100 + Math.random() * 800;
+        if (Math.hypot(px - 150, py - 850) > 240 && Math.hypot(px - s.keyItem.x, py - s.keyItem.y) > 100 && isSafeFromWalls(px, py, 26, 45)) {
+          safe = true;
+        }
+      }
+      s.pits.push({ id: i + 1, x: px, y: py, radius: 24 + Math.floor(Math.random() * 4) });
+    }
+
+    // Spawn Pickups Procedurally
+    s.pickups = [];
+    for (let i = 0; i < 5; i++) {
+      let px = 400, py = 400, safe = false, attempts = 0;
+      while (!safe && attempts < 150) {
+        attempts++;
+        px = 150 + Math.random() * 1350;
+        py = 100 + Math.random() * 800;
+        if (Math.hypot(px - 150, py - 850) > 200 && isSafeFromWalls(px, py, 14, 40)) {
+          safe = true;
+        }
+      }
+      s.pickups.push({
+        id: i + 1,
+        type: i < 3 ? 'ammo_handgun' : 'medkit',
+        x: px,
+        y: py,
+        amount: i < 3 ? 12 : 40
+      });
+    }
 
     // Spawn Zombies based on difficulty (Easy: 6, Normal: 12, Hard: 20)
     const zombieCount = difficulty === 'hard' ? 20 : difficulty === 'easy' ? 6 : 12;
@@ -421,7 +483,12 @@ const GameCanvas = ({
                 z.hp -= b.damage;
                 b.range = 0;
                 createBloodParticles(z.x, z.y, 6);
-                if (z.hp <= 0) s.kills++;
+                if (z.hp <= 0) {
+                  s.kills++;
+                  const diffMultiplier = difficulty === 'hard' ? 2.5 : difficulty === 'easy' ? 1.0 : 1.5;
+                  const liveScore = Math.round((s.kills * 100) * diffMultiplier);
+                  onPlayerUpdate({ ...s.player, score: liveScore, kills: s.kills, multiplier: diffMultiplier });
+                }
               }
             });
           });
@@ -454,10 +521,11 @@ const GameCanvas = ({
               // Damage player on contact
               if (distToPlayer < s.player.radius + z.radius) {
                 s.player.hp -= 0.5;
-                onPlayerUpdate({ ...s.player });
+                const diffMultiplier = difficulty === 'hard' ? 2.5 : difficulty === 'easy' ? 1.0 : 1.5;
+                const liveScore = Math.round((s.kills * 100) * diffMultiplier);
+                onPlayerUpdate({ ...s.player, score: liveScore, kills: s.kills, multiplier: diffMultiplier });
                 if (s.player.hp <= 0 && !s.isEnded) {
-                  s.isEnded = true;
-                  onGameOver({ kills: s.kills });
+                  triggerEnd('gameover');
                 }
               }
             } else {
@@ -513,7 +581,9 @@ const GameCanvas = ({
             const dist = Math.hypot(s.player.x - pit.x, s.player.y - pit.y);
             if (dist < s.player.radius + pit.radius - 4) {
               s.player.hp = Math.max(0, s.player.hp - 10);
-              onPlayerUpdate({ ...s.player });
+              const diffMultiplier = difficulty === 'hard' ? 2.5 : difficulty === 'easy' ? 1.0 : 1.5;
+              const liveScore = Math.round((s.kills * 100) * diffMultiplier);
+              onPlayerUpdate({ ...s.player, score: liveScore, kills: s.kills, multiplier: diffMultiplier });
 
               // Particles
               createBloodParticles(pit.x, pit.y, 14, '#ef4444');
@@ -524,8 +594,7 @@ const GameCanvas = ({
               s.player.y = 850;
 
               if (s.player.hp <= 0 && !s.isEnded) {
-                s.isEnded = true;
-                onGameOver({ kills: s.kills });
+                triggerEnd('gameover');
               }
             }
           });
@@ -540,8 +609,7 @@ const GameCanvas = ({
 
           // Exit Door Check (Victory)
           if (!s.isEnded && s.hasKey && Math.hypot(s.player.x - (s.exitDoor.x + 40), s.player.y - s.exitDoor.y) < 45) {
-            s.isEnded = true;
-            onVictory({ kills: s.kills });
+            triggerEnd('victory');
           }
         }
 

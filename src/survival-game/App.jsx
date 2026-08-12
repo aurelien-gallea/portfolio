@@ -40,6 +40,8 @@ const SurvivalGameApp = () => {
     setGameState('victory');
   };
 
+  const highScore = parseInt(localStorage.getItem('zombie_game_highscore') || '0', 10);
+
   return (
     <div className="relative w-full h-screen bg-[#050508] text-white selection:bg-red-600 selection:text-white overflow-hidden font-sans">
       
@@ -66,22 +68,33 @@ const SurvivalGameApp = () => {
               ZOMBIE RULES
             </h1>
             <p className="text-gray-400 text-sm md:text-lg max-w-xl mx-auto leading-relaxed">
-              Infiltrez le labyrinthe infesté. Évitez les pièges au sol (-10 HP + repop au départ), gérez vos munitions et trouvez la clé de sortie !
+              Infiltrez le labyrinthe généré aléatoirement. Évitez les pièges, éliminez la horde et trouvez la clé de sortie !
             </p>
+
+            {/* High Score Badge */}
+            {highScore > 0 && (
+              <div className="inline-flex items-center gap-2 px-5 py-2 rounded-full bg-yellow-500/10 border border-yellow-500/30 text-yellow-400 font-mono text-sm font-bold shadow-lg shadow-yellow-500/10 animate-pulse">
+                <Trophy size={18} /> MEILLEUR SCORE : {highScore} PTS
+              </div>
+            )}
 
             {/* Difficulty Selector */}
             <div className="flex justify-center gap-3 py-2">
-              {['easy', 'normal', 'hard'].map(d => (
+              {[
+                { id: 'easy', label: 'Recrue (1.0x)', desc: 'Facile' },
+                { id: 'normal', label: 'Survivant (1.5x)', desc: 'Moyen' },
+                { id: 'hard', label: 'Cauchemar (2.5x)', desc: 'Difficile' }
+              ].map(d => (
                 <button
-                  key={d}
-                  onClick={() => setDifficulty(d)}
+                  key={d.id}
+                  onClick={() => setDifficulty(d.id)}
                   className={`px-5 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-all border ${
-                    difficulty === d 
+                    difficulty === d.id 
                       ? 'bg-red-600 text-white border-red-400 shadow-lg shadow-red-600/30 scale-105' 
                       : 'bg-white/5 text-gray-400 border-white/10 hover:bg-white/10'
                   }`}
                 >
-                  {d === 'easy' ? 'Recrue (Facile)' : d === 'normal' ? 'Survivant (Moyen)' : 'Cauchemar (Difficile)'}
+                  {d.label}
                 </button>
               ))}
             </div>
@@ -102,7 +115,6 @@ const SurvivalGameApp = () => {
               <p>• ZQSD / Flèches : Déplacement</p>
               <p>• Souris : Viser & Clic Tirer (Pistolet 9mm)</p>
               <p>• R : Recharger le chargeur</p>
-              <p>• ⚠️ Attention aux trous (-10 HP + retour départ)</p>
             </div>
             <div>
               <p className="text-white font-bold mb-1">📱 Contrôles Smartphone :</p>
@@ -141,6 +153,9 @@ const SurvivalGameApp = () => {
           <HUD
             player={playerData}
             hasKey={playerData.hasKey}
+            score={playerData.score || 0}
+            kills={playerData.kills || 0}
+            multiplier={playerData.multiplier || (difficulty === 'hard' ? 2.5 : difficulty === 'easy' ? 1.0 : 1.5)}
             onReload={() => setMobileReloadTrigger(prev => prev + 1)}
           />
 
@@ -165,8 +180,29 @@ const SurvivalGameApp = () => {
               <p className="text-gray-400 text-sm mt-2">La horde a eu raison de vous dans les ténèbres.</p>
             </div>
 
-            <div className="bg-black/60 p-4 rounded-xl border border-white/10 font-mono text-sm">
-              <p className="text-gray-400">Zombies éliminés : <span className="text-yellow-400 font-bold">{stats.kills}</span></p>
+            {/* Score Breakdown Card */}
+            <div className="bg-black/70 p-5 rounded-2xl border border-white/10 font-mono text-xs space-y-2 text-left">
+              <div className="flex justify-between text-gray-400">
+                <span>Zombies éliminés ({stats.kills || 0}) :</span>
+                <span className="text-yellow-400 font-bold">+{stats.killScore || 0} pts</span>
+              </div>
+              <div className="flex justify-between text-gray-400">
+                <span>Bonus Santé :</span>
+                <span className="text-green-400 font-bold">+{stats.hpBonus || 0} pts</span>
+              </div>
+              <div className="flex justify-between text-gray-400 border-t border-white/10 pt-2">
+                <span>Multiplicateur Difficulté :</span>
+                <span className="text-orange-400 font-bold">{stats.multiplier || 1}x</span>
+              </div>
+              <div className="flex justify-between text-white text-base font-black border-t border-white/20 pt-2">
+                <span>SCORE FINAL :</span>
+                <span className="text-yellow-400">{stats.score || 0} PTS</span>
+              </div>
+              {stats.isNewRecord && (
+                <div className="mt-2 text-center text-xs font-bold text-yellow-400 animate-bounce pt-1">
+                  🏆 NOUVEAU RECORD PERSONNEL !
+                </div>
+              )}
             </div>
 
             <div className="flex gap-4">
@@ -199,8 +235,33 @@ const SurvivalGameApp = () => {
               <p className="text-gray-300 text-sm mt-2">Vous avez trouvé la clé et fui le manoir sain et sauf !</p>
             </div>
 
-            <div className="bg-black/60 p-4 rounded-xl border border-white/10 font-mono text-sm">
-              <p className="text-gray-400">Zombies éliminés : <span className="text-green-400 font-bold">{stats.kills}</span></p>
+            {/* Score Breakdown Card */}
+            <div className="bg-black/70 p-5 rounded-2xl border border-white/10 font-mono text-xs space-y-2 text-left">
+              <div className="flex justify-between text-gray-400">
+                <span>Zombies éliminés ({stats.kills || 0}) :</span>
+                <span className="text-yellow-400 font-bold">+{stats.killScore || 0} pts</span>
+              </div>
+              <div className="flex justify-between text-gray-400">
+                <span>Bonus Évasion :</span>
+                <span className="text-green-400 font-bold">+{stats.victoryBonus || 1000} pts</span>
+              </div>
+              <div className="flex justify-between text-gray-400">
+                <span>Bonus Santé RESTANTE :</span>
+                <span className="text-green-400 font-bold">+{stats.hpBonus || 0} pts</span>
+              </div>
+              <div className="flex justify-between text-gray-400 border-t border-white/10 pt-2">
+                <span>Multiplicateur Difficulté :</span>
+                <span className="text-orange-400 font-bold">{stats.multiplier || 1}x</span>
+              </div>
+              <div className="flex justify-between text-white text-base font-black border-t border-white/20 pt-2">
+                <span>SCORE FINAL :</span>
+                <span className="text-yellow-400">{stats.score || 0} PTS</span>
+              </div>
+              {stats.isNewRecord && (
+                <div className="mt-2 text-center text-xs font-bold text-yellow-400 animate-bounce pt-1">
+                  🏆 NOUVEAU RECORD PERSONNEL !
+                </div>
+              )}
             </div>
 
             <div className="flex gap-4">

@@ -1,7 +1,7 @@
 import React from 'react';
 import { RefreshCw, Key } from 'lucide-react';
 
-const HUD = ({ player, onReload, hasKey }) => {
+const HUD = ({ player, onReload, hasKey, score = 0, kills = 0, multiplier = 1.0 }) => {
   const hpPercent = (player.hp / player.maxHp) * 100;
   
   let statusText = 'FINE';
@@ -20,8 +20,8 @@ const HUD = ({ player, onReload, hasKey }) => {
 
   return (
     <div className="absolute inset-0 pointer-events-none z-30 p-4 md:p-6 flex flex-col justify-between select-none">
-      {/* Top Bar: ECG Status & Objective */}
-      <div className="flex justify-between items-start gap-4">
+      {/* Top Bar: ECG Status & Objective & Live Score */}
+      <div className="flex flex-wrap justify-between items-start gap-4">
         {/* ECG Monitor (Resident Evil style) */}
         <div className={`flex items-center gap-3 px-4 py-2.5 rounded-2xl border backdrop-blur-md ${statusColor} shadow-xl`}>
           <div className="relative w-8 h-8 flex items-center justify-center">
@@ -35,8 +35,17 @@ const HUD = ({ player, onReload, hasKey }) => {
           </div>
         </div>
 
+        {/* Live Score Pill */}
+        <div className="bg-black/70 border border-yellow-500/30 backdrop-blur-md px-5 py-2.5 rounded-2xl flex items-center gap-3 shadow-xl">
+          <span className="text-xl">⭐</span>
+          <div>
+            <p className="text-[10px] text-yellow-400 font-mono tracking-wider uppercase font-bold">SCORE ({multiplier}x)</p>
+            <p className="text-lg font-black font-mono text-white">{score} <span className="text-xs text-gray-400 font-normal">pts</span></p>
+          </div>
+        </div>
+
         {/* Objective Badge */}
-        <div className="bg-black/60 border border-white/10 backdrop-blur-md px-4 py-2 rounded-2xl flex items-center gap-2 text-xs font-mono text-gray-300 shadow-lg">
+        <div className="bg-black/60 border border-white/10 backdrop-blur-md px-4 py-2.5 rounded-2xl flex items-center gap-2 text-xs font-mono text-gray-300 shadow-lg">
           <Key className={hasKey ? "text-yellow-400 animate-bounce" : "text-gray-500"} size={16} />
           <span>{hasKey ? "Clé récupérée ! Allez à la sortie !" : "Objectif : Trouver la clé de sortie"}</span>
         </div>

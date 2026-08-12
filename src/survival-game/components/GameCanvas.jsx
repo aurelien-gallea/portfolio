@@ -42,8 +42,14 @@ const GameCanvas = ({
     hasKey: false,
     kills: 0,
     timeElapsed: 0,
-    isEnded: false
+    isEnded: false,
+    isPaused: false
   });
+
+  // Sync isPaused prop to ref to avoid closure stale state
+  useEffect(() => {
+    stateRef.current.isPaused = isPaused;
+  }, [isPaused]);
 
   // Handle Mobile Fire Trigger
   useEffect(() => {
@@ -62,7 +68,7 @@ const GameCanvas = ({
 
   const reloadWeapon = () => {
     const s = stateRef.current;
-    if (s.isEnded) return;
+    if (s.isEnded || s.isPaused) return;
     const w = s.player.weapons[s.player.activeWeaponIndex];
     if (w.id === 'knife' || w.reserveAmmo <= 0 || w.magAmmo === w.magCapacity) return;
 
@@ -119,7 +125,7 @@ const GameCanvas = ({
 
   const shootWeapon = () => {
     const s = stateRef.current;
-    if (s.isEnded) return;
+    if (s.isEnded || s.isPaused) return;
     const w = s.player.weapons[s.player.activeWeaponIndex];
 
     if (w.id === 'knife') {
@@ -288,13 +294,13 @@ const GameCanvas = ({
 
     s.walls = generateWalls();
 
-    // Random Exit Door Location (Pick 1 of 5 perimeter positions)
+    // Random Exit Door Location (Pick 1 of 4 outer wall positions)
     const doorCandidates = [
-      { x: 1400, y: 980, width: 80, height: 20, locked: true },
-      { x: 1400, y: 0, width: 80, height: 20, locked: true },
-      { x: 1580, y: 480, width: 20, height: 80, locked: true },
-      { x: 760, y: 0, width: 80, height: 20, locked: true },
-      { x: 200, y: 0, width: 80, height: 20, locked: true }
+      { x: 1350, y: 975, w: 120, h: 25, side: 'bottom', locked: true },
+      { x: 1350, y: 0, w: 120, h: 25, side: 'top', locked: true },
+      { x: 1575, y: 440, w: 25, h: 120, side: 'right', locked: true },
+      { x: 740, y: 0, w: 120, h: 25, side: 'top', locked: true },
+      { x: 180, y: 0, w: 120, h: 25, side: 'top', locked: true }
     ];
     s.exitDoor = doorCandidates[Math.floor(Math.random() * doorCandidates.length)];
     const isSafeFromWalls = (x, y, radius = 16, margin = 45) => {
@@ -429,7 +435,7 @@ const GameCanvas = ({
         const now = Date.now();
         let dx = 0;
         let dy = 0;
-        if (!s.isEnded && !isPaused) {
+        if (!s.isEnded && !stateRef.current.isPaused) {
           // 1. UPDATE PLAYER
           const speed = s.playerSpeed || 3.5;
 
@@ -617,9 +623,9 @@ const GameCanvas = ({
           }
 
           // Exit Door Check (Victory)
-          const doorCenterX = s.exitDoor.x + s.exitDoor.width / 2;
-          const doorCenterY = s.exitDoor.y + s.exitDoor.height / 2;
-          if (!s.isEnded && s.hasKey && Math.hypot(s.player.x - doorCenterX, s.player.y - doorCenterY) < 55) {
+          const doorCX = s.exitDoor.x + (s.exitDoor.w || 80) / 2;
+          const doorCY = s.exitDoor.y + (s.exitDoor.h || 20) / 2;
+          if (!s.isEnded && s.hasKey && Math.hypot(s.player.x - doorCX, s.player.y - doorCY) < 55) {
             triggerEnd('victory');
           }
         }
@@ -801,23 +807,68 @@ const GameCanvas = ({
         ctx.restore();
       }
 
-      // Draw Exit Door
+      // Draw Exit Door (Highly Visible 3D Reinforced Door & Light Beacon)
       ctx.save();
-      ctx.fillStyle = s.exitDoor.locked ? '#dc2626' : '#16a34a';
-      ctx.shadowColor = s.exitDoor.locked ? '#dc2626' : '#16a34a';
-      ctx.shadowBlur = 15;
-      ctx.fillRect(s.exitDoor.x, s.exitDoor.y, s.exitDoor.width, s.exitDoor.height);
+      const door = s.exitDoor;
+      const isLocked = door.locked;
+      const dw = door.w || 80;
+      const dh = door.h || 20;
+      const dcx = door.x + dw / 2;
+      const dcy = door.y + dh / 2;
 
-      const doorCenterX = s.exitDoor.x + s.exitDoor.width / 2;
-      const doorCenterY = s.exitDoor.y + s.exitDoor.height / 2;
-      ctx.fillStyle = '#ffffff';
-      ctx.font = 'bold 10px monospace';
+      // 1. Directional Light Beam spill onto the floor
+      const beamGrad = ctx.createRadialGradient(dcx, dcy, 10, dcx, dcy, 140);
+      beamGrad.addColorStop(0, isLocked ? 'rgba(239, 68, 68, 0.45)' : 'rgba(34, 197, 94, 0.65)');
+      beamGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+      ctx.fillStyle = beamGrad;
+      ctx.beginPath();
+      ctx.arc(dcx, dcy, 140, 0, Math.PI * 2);
+      ctx.fill();
+
+      // 2. Door Outer Frame & Glow
+      ctx.fillStyle = isLocked ? '#7f1d1d' : '#14532d';
+      ctx.shadowColor = isLocked ? '#ef4444' : '#22c55e';
+      ctx.shadowBlur = 25;
+      ctx.fillRect(door.x - 3, door.y - 3, dw + 6, dh + 6);
+
+      // 3. Double Metallic Doors
+      ctx.fillStyle = '#1c1917';
+      ctx.fillRect(door.x, door.y, dw, dh);
+
+      // Metallic border inner line
+      ctx.strokeStyle = isLocked ? '#f87171' : '#4ade80';
+      ctx.lineWidth = 2.5;
+      ctx.strokeRect(door.x + 2, door.y + 2, dw - 4, dh - 4);
+
+      // Metallic Door Handles
+      ctx.fillStyle = isLocked ? '#ef4444' : '#facc15';
+      ctx.shadowBlur = 8;
+      if (dw > dh) {
+        ctx.fillRect(dcx - 15, dcy - 3, 10, 6);
+        ctx.fillRect(dcx + 5, dcy - 3, 10, 6);
+      } else {
+        ctx.fillRect(dcx - 3, dcy - 15, 6, 10);
+        ctx.fillRect(dcx - 3, dcy + 5, 6, 10);
+      }
+
+      // 4. Large Pulsing Floating Neon Sign ("🔒 SORTIE" / "🔓 SORTIE !")
+      const signY = door.y <= 30 ? door.y + dh + 20 : door.y - 12;
+      const signX = door.x >= 1550 ? door.x - 45 : dcx;
+
+      ctx.fillStyle = 'rgba(5, 5, 8, 0.9)';
+      ctx.strokeStyle = isLocked ? '#ef4444' : '#22c55e';
+      ctx.lineWidth = 2;
+      ctx.shadowBlur = 15;
+      ctx.beginPath();
+      ctx.roundRect(signX - 45, signY - 12, 90, 22, 10);
+      ctx.fill();
+      ctx.stroke();
+
+      ctx.fillStyle = isLocked ? '#f87171' : '#4ade80';
+      ctx.font = 'bold 11px monospace';
       ctx.textAlign = 'center';
-      ctx.fillText(
-        s.exitDoor.locked ? '🔒 SORTIE' : '🔓 SORTIE !', 
-        doorCenterX, 
-        s.exitDoor.y < 40 ? doorCenterY + 22 : doorCenterY - 10
-      );
+      ctx.fillText(isLocked ? '🔒 SORTIE' : '🔓 SORTIE !', signX, signY + 3);
+
       ctx.restore();
 
       // Draw Walls (Solid Textured Barriers)

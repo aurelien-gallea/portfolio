@@ -65,21 +65,24 @@ const MobileControls = ({ onMove, onFire, onReload }) => {
   };
 
   return (
-    <div className="absolute inset-0 pointer-events-none z-40 flex justify-between items-end p-6 select-none md:hidden touch-none overflow-hidden">
-      {/* Left Virtual Joystick */}
+    <div className="absolute inset-0 pointer-events-none z-40 flex justify-between items-end p-4 md:p-6 select-none touch-none overflow-hidden">
+      {/* Left Virtual Joystick - Bottom Left */}
       <div 
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
         onTouchCancel={handleTouchEnd}
-        className="w-32 h-32 rounded-full bg-white/10 border-2 border-white/20 backdrop-blur-sm pointer-events-auto relative flex items-center justify-center shadow-2xl touch-none"
+        className="w-28 h-28 md:w-32 md:h-32 rounded-full bg-black/60 border-2 border-yellow-500/50 backdrop-blur-md pointer-events-auto relative flex items-center justify-center shadow-[0_0_20px_rgba(234,179,8,0.3)] touch-none"
       >
+        <div className="absolute inset-2 rounded-full border border-dashed border-yellow-500/30 pointer-events-none" />
         <div 
-          className="w-14 h-14 rounded-full bg-gradient-to-br from-yellow-400 to-amber-600 shadow-lg border border-yellow-200 pointer-events-none transition-transform duration-75"
+          className="w-12 h-12 md:w-14 md:h-14 rounded-full bg-gradient-to-br from-yellow-400 to-amber-600 shadow-xl border-2 border-white pointer-events-none transition-transform duration-75 flex items-center justify-center text-black font-black text-[10px]"
           style={{
             transform: `translate(${joystickPos.x}px, ${joystickPos.y}px)`
           }}
-        />
+        >
+          🕹️
+        </div>
       </div>
 
       {/* Right Touch Action Buttons */}

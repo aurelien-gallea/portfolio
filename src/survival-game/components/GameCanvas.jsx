@@ -46,9 +46,12 @@ const GameCanvas = ({
     isPaused: false
   });
 
-  // Sync isPaused prop to ref to avoid closure stale state
+  // Sync isPaused prop to ref to avoid closure stale state & clear keys on pause
   useEffect(() => {
     stateRef.current.isPaused = isPaused;
+    if (isPaused && stateRef.current) {
+      stateRef.current.keys = {};
+    }
   }, [isPaused]);
 
   // Handle Mobile Fire Trigger

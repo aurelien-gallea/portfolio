@@ -1,20 +1,14 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { Crosshair, RefreshCw } from 'lucide-react';
 
 const MobileControls = ({ onMove, onFire, onReload }) => {
   const [joystickPos, setJoystickPos] = useState({ x: 0, y: 0 });
-  const [activeTouch, setActiveTouch] = useState(false);
+  const touchIdRef = useRef(null);
+  const joystickBoundsRef = useRef(null);
 
-  const handleTouchStart = (e) => {
-    setActiveTouch(true);
-    handleTouchMove(e);
-  };
-
-  const handleTouchMove = (e) => {
-    const touch = e.touches[0];
-    const target = e.currentTarget.getBoundingClientRect();
-    const centerX = target.left + target.width / 2;
-    const centerY = target.top + target.height / 2;
+  const updateJoystick = (touch, rect) => {
+    const centerX = rect.left + rect.width / 2;
+    const centerY = rect.top + rect.height / 2;
 
     const dx = touch.clientX - centerX;
     const dy = touch.clientY - centerY;
@@ -36,20 +30,49 @@ const MobileControls = ({ onMove, onFire, onReload }) => {
     });
   };
 
-  const handleTouchEnd = () => {
-    setActiveTouch(false);
-    setJoystickPos({ x: 0, y: 0 });
-    onMove({ x: 0, y: 0 });
+  const handleTouchStart = (e) => {
+    e.preventDefault();
+    if (touchIdRef.current !== null) return;
+    const touch = e.changedTouches[0];
+    touchIdRef.current = touch.identifier;
+    const rect = e.currentTarget.getBoundingClientRect();
+    joystickBoundsRef.current = rect;
+    updateJoystick(touch, rect);
+  };
+
+  const handleTouchMove = (e) => {
+    e.preventDefault();
+    if (touchIdRef.current === null || !joystickBoundsRef.current) return;
+    for (let i = 0; i < e.changedTouches.length; i++) {
+      if (e.changedTouches[i].identifier === touchIdRef.current) {
+        updateJoystick(e.changedTouches[i], joystickBoundsRef.current);
+        break;
+      }
+    }
+  };
+
+  const handleTouchEnd = (e) => {
+    e.preventDefault();
+    if (touchIdRef.current === null) return;
+    for (let i = 0; i < e.changedTouches.length; i++) {
+      if (e.changedTouches[i].identifier === touchIdRef.current) {
+        touchIdRef.current = null;
+        setJoystickPos({ x: 0, y: 0 });
+        onMove({ x: 0, y: 0 });
+        break;
+      }
+    }
   };
 
   return (
-    <div className="absolute inset-0 pointer-events-none z-40 flex justify-between items-end p-6 select-none md:hidden">
+    <div className="absolute inset-0 pointer-events-none z-40 flex justify-between items-end p-6 select-none md:hidden touch-none overflow-hidden">
       {/* Left Virtual Joystick */}
       <div 
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
-        className="w-32 h-32 rounded-full bg-white/10 border-2 border-white/20 backdrop-blur-sm pointer-events-auto relative flex items-center justify-center shadow-2xl"
+        onTouchCancel={handleTouchEnd}
+        className="w-32 h-32 rounded-full bg-white/10 border-2 border-white/20 backdrop-blur-sm pointer-events-auto relative flex items-center justify-center shadow-2xl touch-none"
       >
         <div 
           className="w-14 h-14 rounded-full bg-gradient-to-br from-yellow-400 to-amber-600 shadow-lg border border-yellow-200 pointer-events-none transition-transform duration-75"
@@ -60,13 +83,13 @@ const MobileControls = ({ onMove, onFire, onReload }) => {
       </div>
 
       {/* Right Touch Action Buttons */}
-      <div className="flex flex-col gap-3 items-end pointer-events-auto">
+      <div className="flex flex-col gap-3 items-end pointer-events-auto touch-none">
         <div className="flex gap-3">
           {/* Reload */}
           <button
             onTouchStart={(e) => { e.preventDefault(); onReload(); }}
             onClick={onReload}
-            className="w-12 h-12 rounded-full bg-blue-900/80 border border-blue-500 text-blue-200 flex items-center justify-center active:scale-95 shadow-lg cursor-pointer"
+            className="w-12 h-12 rounded-full bg-blue-900/80 border border-blue-500 text-blue-200 flex items-center justify-center active:scale-95 shadow-lg cursor-pointer touch-none"
           >
             <RefreshCw size={20} />
           </button>
@@ -76,7 +99,7 @@ const MobileControls = ({ onMove, onFire, onReload }) => {
         <button
           onTouchStart={(e) => { e.preventDefault(); onFire(); }}
           onClick={onFire}
-          className="w-20 h-20 rounded-full bg-gradient-to-br from-red-600 to-red-800 border-2 border-red-400 text-white flex items-center justify-center active:scale-90 shadow-2xl shadow-red-600/40 cursor-pointer"
+          className="w-20 h-20 rounded-full bg-gradient-to-br from-red-600 to-red-800 border-2 border-red-400 text-white flex items-center justify-center active:scale-90 shadow-2xl shadow-red-600/40 cursor-pointer touch-none"
         >
           <Crosshair size={32} />
         </button>

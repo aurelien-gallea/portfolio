@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowLeft, Play, RefreshCw, Skull, Trophy, ShieldAlert } from 'lucide-react';
+import { ArrowLeft, Play, RefreshCw, Skull, Trophy, ShieldAlert, Smartphone } from 'lucide-react';
 import GameCanvas from './components/GameCanvas';
 import HUD from './components/HUD';
 import MobileControls from './components/MobileControls';
@@ -10,6 +10,23 @@ const SurvivalGameApp = () => {
   const [difficulty, setDifficulty] = useState('normal');
   const [stats, setStats] = useState({ kills: 0 });
   const [restartKey, setRestartKey] = useState(0);
+  const [isPortraitMobile, setIsPortraitMobile] = useState(false);
+
+  useEffect(() => {
+    const checkOrientation = () => {
+      const isMobile = window.innerWidth <= 1024;
+      const isPortrait = window.innerHeight > window.innerWidth;
+      setIsPortraitMobile(isMobile && isPortrait);
+    };
+
+    checkOrientation();
+    window.addEventListener('resize', checkOrientation);
+    window.addEventListener('orientationchange', checkOrientation);
+    return () => {
+      window.removeEventListener('resize', checkOrientation);
+      window.removeEventListener('orientationchange', checkOrientation);
+    };
+  }, []);
 
   const [playerData, setPlayerData] = useState({
     hp: 100,
@@ -43,7 +60,20 @@ const SurvivalGameApp = () => {
   const highScore = parseInt(localStorage.getItem('zombie_game_highscore') || '0', 10);
 
   return (
-    <div className="relative w-full h-screen bg-[#050508] text-white selection:bg-red-600 selection:text-white overflow-hidden font-sans">
+    <div className="fixed inset-0 w-full h-full bg-[#050508] text-white selection:bg-red-600 selection:text-white overflow-hidden font-sans touch-none">
+      
+      {/* MOBILE PORTRAIT ORIENTATION PROMPT OVERLAY */}
+      {isPortraitMobile && (
+        <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center p-6 bg-black/95 text-center backdrop-blur-2xl touch-none">
+          <div className="w-20 h-20 rounded-3xl bg-red-600/20 text-red-500 flex items-center justify-center border border-red-500/40 animate-pulse mb-6">
+            <Smartphone size={44} className="rotate-90 animate-bounce" />
+          </div>
+          <h2 className="text-2xl font-black text-white tracking-wider mb-2">MODE PAYSAGE REQUIS</h2>
+          <p className="text-gray-400 text-xs max-w-xs leading-relaxed font-mono">
+            Pour jouer dans les meilleures conditions, veuillez pivoter votre smartphone à l'horizontale 🔄
+          </p>
+        </div>
+      )}
       
       {/* MENU SCREEN */}
       {gameState === 'menu' && (

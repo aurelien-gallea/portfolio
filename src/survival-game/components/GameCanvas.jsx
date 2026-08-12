@@ -338,10 +338,10 @@ const GameCanvas = ({
       // Main Game Engine Loop (60 FPS)
       const render = () => {
         const now = Date.now();
+        let dx = 0;
+        let dy = 0;
         if (!s.isEnded) {
           // 1. UPDATE PLAYER
-          let dx = 0;
-          let dy = 0;
           const speed = 3.5;
 
           if (s.keys['w'] || s.keys['z'] || s.keys['arrowup']) dy -= 1;

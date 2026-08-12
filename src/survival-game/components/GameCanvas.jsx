@@ -34,6 +34,7 @@ const GameCanvas = ({
     zombies: [],
     bullets: [],
     particles: [],
+    slashes: [],
     pickups: [],
     walls: [],
     exitDoor: { x: 1400, y: 850, width: 80, height: 20, locked: true },
@@ -75,34 +76,44 @@ const GameCanvas = ({
   const performKnifeSlash = () => {
     const s = stateRef.current;
     const now = Date.now();
-    if (now - s.lastKnifeSlash < 400) return;
+    if (now - s.lastKnifeSlash < 300) return;
     s.lastKnifeSlash = now;
 
     sounds.playKnife();
 
-    // Knife Arc Hitbox
     const px = s.player.x;
     const py = s.player.y;
     const angle = s.player.angle;
 
+    // Add slash visual effect arc
+    if (!s.slashes) s.slashes = [];
+    s.slashes.push({
+      x: px,
+      y: py,
+      angle: angle,
+      life: 1.0
+    });
+
     s.zombies.forEach(z => {
       const dx = z.x - px;
       const dy = z.y - py;
-      const dist = Math.sqrt(dx * dx + dy * dy);
+      const dist = Math.hypot(dx, dy);
       const zAngle = Math.atan2(dy, dx);
       let angleDiff = Math.abs(angle - zAngle);
       if (angleDiff > Math.PI) angleDiff = Math.PI * 2 - angleDiff;
 
-      if (dist < 70 && angleDiff < 1.0) {
-        z.hp -= 45;
-        createBloodParticles(z.x, z.y, 8);
+      // Hit range: within 90px in 140deg cone, or touching distance (<45px)
+      if ((dist < 90 && angleDiff < 1.25) || dist < 45) {
+        z.hp -= 60;
+        z.state = 'chase';
+        createBloodParticles(z.x, z.y, 10);
         if (z.hp <= 0) {
           s.kills++;
         }
       }
     });
 
-    createBloodParticles(px + Math.cos(angle) * 30, py + Math.sin(angle) * 30, 3, '#aaaaaa');
+    createBloodParticles(px + Math.cos(angle) * 35, py + Math.sin(angle) * 35, 4, '#e2e8f0');
   };
 
   const shootWeapon = () => {
@@ -202,7 +213,7 @@ const GameCanvas = ({
     s.exitDoor.locked = true;
     s.kills = 0;
 
-    // Build Mansion Walls
+    // Build Mansion Walls (Spacious layout with 360-degree open traversal corridors)
     s.walls = [
       // Outer boundaries
       { x: 0, y: 0, w: 1600, h: 20 },
@@ -210,13 +221,21 @@ const GameCanvas = ({
       { x: 0, y: 0, w: 20, h: 1000 },
       { x: 1580, y: 0, w: 20, h: 1000 },
       
-      // Rooms & Corridors
-      { x: 400, y: 20, w: 20, h: 650 },
-      { x: 400, y: 750, w: 20, h: 250 },
-      { x: 800, y: 200, w: 20, h: 800 },
-      { x: 1200, y: 20, w: 20, h: 700 },
-      { x: 400, y: 400, w: 400, h: 20 },
-      { x: 800, y: 600, w: 400, h: 20 },
+      // Vertical Partition 1 (x: 400) - Openings at top (y:20-200), middle (y:400-550), and bottom (y:750-980)
+      { x: 400, y: 200, w: 20, h: 200 },
+      { x: 400, y: 550, w: 20, h: 200 },
+
+      // Vertical Partition 2 (x: 800) - Openings at top (y:20-180), middle (y:380-540), and bottom (y:740-980)
+      { x: 800, y: 180, w: 20, h: 200 },
+      { x: 800, y: 540, w: 20, h: 200 },
+
+      // Vertical Partition 3 (x: 1200) - Openings at top (y:20-200), middle (y:450-600), and bottom (y:800-980)
+      { x: 1200, y: 200, w: 20, h: 250 },
+      { x: 1200, y: 600, w: 20, h: 200 },
+
+      // Horizontal dividers with wide gaps
+      { x: 420, y: 350, w: 230, h: 20 },  // Gap at x:650-800
+      { x: 820, y: 650, w: 230, h: 20 },  // Gap at x:1050-1200
     ];
 
     // Spawn Pickups
@@ -358,12 +377,15 @@ const GameCanvas = ({
         const distToPlayer = Math.hypot(s.player.x - z.x, s.player.y - z.y);
 
         // Vision check
-        if (distToPlayer < 300) z.state = 'chase';
+        if (distToPlayer < 350) z.state = 'chase';
+
+        let zdx = 0;
+        let zdy = 0;
 
         if (z.state === 'chase') {
           const zAngle = Math.atan2(s.player.y - z.y, s.player.x - z.x);
-          z.x += Math.cos(zAngle) * z.speed;
-          z.y += Math.sin(zAngle) * z.speed;
+          zdx = Math.cos(zAngle) * z.speed;
+          zdy = Math.sin(zAngle) * z.speed;
 
           // Sound growl
           if (now - z.lastGrowl > 5000 && Math.random() < 0.05) {
@@ -381,9 +403,34 @@ const GameCanvas = ({
           }
         } else {
           // Patrol random movement
-          z.x += Math.cos(z.patrolAngle) * (z.speed * 0.3);
-          z.y += Math.sin(z.patrolAngle) * (z.speed * 0.3);
+          zdx = Math.cos(z.patrolAngle) * (z.speed * 0.3);
+          zdy = Math.sin(z.patrolAngle) * (z.speed * 0.3);
           if (Math.random() < 0.02) z.patrolAngle = Math.random() * Math.PI * 2;
+        }
+
+        // Zombie Wall Collisions (Prevents zombies from walking through walls)
+        const nzx = z.x + zdx;
+        const nzy = z.y + zdy;
+        let canZMoveX = true;
+        let canZMoveY = true;
+
+        s.walls.forEach(w => {
+          if (nzx + z.radius > w.x && nzx - z.radius < w.x + w.w &&
+              z.y + z.radius > w.y && z.y - z.radius < w.y + w.h) {
+            canZMoveX = false;
+          }
+          if (z.x + z.radius > w.x && z.x - z.radius < w.x + w.w &&
+              nzy + z.radius > w.y && nzy - z.radius < w.y + w.h) {
+            canZMoveY = false;
+          }
+        });
+
+        if (canZMoveX) z.x = nzx;
+        if (canZMoveY) z.y = nzy;
+
+        // If zombie hits a wall while patrolling, pick a new angle
+        if (!canZMoveX || !canZMoveY) {
+          z.patrolAngle = Math.random() * Math.PI * 2;
         }
       });
 
@@ -523,6 +570,35 @@ const GameCanvas = ({
         ctx.restore();
       });
 
+      // Draw Knife Slash Arc Effects
+      if (s.slashes) {
+        s.slashes.forEach(slash => {
+          slash.life -= 0.12;
+          ctx.save();
+          ctx.translate(slash.x, slash.y);
+          ctx.rotate(slash.angle);
+
+          ctx.strokeStyle = '#38bdf8';
+          ctx.shadowColor = '#0ea5e9';
+          ctx.shadowBlur = 15;
+          ctx.lineWidth = 4;
+          ctx.globalAlpha = Math.max(0, slash.life);
+
+          ctx.beginPath();
+          ctx.arc(0, 0, 55, -0.8, 0.8);
+          ctx.stroke();
+
+          ctx.strokeStyle = '#ffffff';
+          ctx.lineWidth = 2.5;
+          ctx.beginPath();
+          ctx.arc(0, 0, 52, -0.6, 0.6);
+          ctx.stroke();
+
+          ctx.restore();
+        });
+        s.slashes = s.slashes.filter(slash => slash.life > 0);
+      }
+
       // Draw Animated Zombie Sprites
       s.zombies.forEach((z, idx) => {
         ctx.save();
@@ -622,12 +698,25 @@ const GameCanvas = ({
 
       // Hands & Weapon Barrel
       const activeW = s.player.weapons[s.player.activeWeaponIndex];
-      ctx.fillStyle = '#475569';
-      ctx.fillRect(8, 2, activeW.id === 'shotgun' ? 22 : 15, 6);
-      
-      // Weapon Tip Glow
-      ctx.fillStyle = '#94a3b8';
-      ctx.fillRect(activeW.id === 'shotgun' ? 28 : 22, 1, 4, 8);
+      if (activeW.id === 'knife') {
+        ctx.fillStyle = '#1e293b';
+        ctx.fillRect(8, 2, 8, 4); // handle
+        ctx.fillStyle = '#e2e8f0';
+        ctx.shadowColor = '#38bdf8';
+        ctx.shadowBlur = 8;
+        ctx.beginPath();
+        ctx.moveTo(16, 2);
+        ctx.lineTo(30, 4);
+        ctx.lineTo(16, 6);
+        ctx.closePath();
+        ctx.fill();
+      } else {
+        ctx.fillStyle = '#475569';
+        ctx.fillRect(8, 2, activeW.id === 'shotgun' ? 22 : 15, 6);
+        
+        ctx.fillStyle = '#94a3b8';
+        ctx.fillRect(activeW.id === 'shotgun' ? 28 : 22, 1, 4, 8);
+      }
 
       ctx.restore();
 

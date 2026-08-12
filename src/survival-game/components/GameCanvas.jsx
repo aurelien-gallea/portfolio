@@ -632,21 +632,54 @@ const GameCanvas = ({
           ctx.textAlign = 'center';
           ctx.fillText('+SOIN', 0, 24);
         } else {
-          // Ammo Box
-          ctx.fillStyle = '#eab308';
+          // Ammo Box with Bullet Icons
+          ctx.fillStyle = '#854d0e';
           ctx.shadowColor = '#eab308';
-          ctx.shadowBlur = 12;
+          ctx.shadowBlur = 15;
           ctx.beginPath();
-          ctx.arc(0, 0, 12, 0, Math.PI * 2);
+          ctx.arc(0, 0, 14, 0, Math.PI * 2);
           ctx.fill();
-          ctx.strokeStyle = '#ffffff';
+          ctx.strokeStyle = '#fde047';
           ctx.lineWidth = 2;
           ctx.stroke();
 
-          ctx.fillStyle = '#ffffff';
+          // 2 Brass Bullet Cartridges Vector Icons
+          ctx.shadowBlur = 0;
+
+          // Bullet 1 (Left)
+          // Casing (Brass)
+          ctx.fillStyle = '#eab308';
+          ctx.fillRect(-5, -2, 4, 10);
+          // Tip (Pointed copper tip)
+          ctx.fillStyle = '#f97316';
+          ctx.beginPath();
+          ctx.moveTo(-5, -2);
+          ctx.lineTo(-3, -7);
+          ctx.lineTo(-1, -2);
+          ctx.fill();
+
+          // Bullet 2 (Right)
+          // Casing (Brass)
+          ctx.fillStyle = '#eab308';
+          ctx.fillRect(1, -2, 4, 10);
+          // Tip (Pointed copper tip)
+          ctx.fillStyle = '#f97316';
+          ctx.beginPath();
+          ctx.moveTo(1, -2);
+          ctx.lineTo(3, -7);
+          ctx.lineTo(5, -2);
+          ctx.fill();
+
+          // Shiny metallic highlights
+          ctx.fillStyle = '#fef08a';
+          ctx.fillRect(-4, -1, 1, 8);
+          ctx.fillRect(2, -1, 1, 8);
+
+          // Label
+          ctx.fillStyle = '#fde047';
           ctx.font = 'bold 9px monospace';
           ctx.textAlign = 'center';
-          ctx.fillText('+BALLES', 0, 20);
+          ctx.fillText('+BALLES', 0, 24);
         }
 
         ctx.restore();

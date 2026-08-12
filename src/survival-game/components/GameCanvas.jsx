@@ -40,7 +40,8 @@ const GameCanvas = ({
     keyItem: { x: 1350, y: 150, width: 24, height: 24, collected: false },
     hasKey: false,
     kills: 0,
-    timeElapsed: 0
+    timeElapsed: 0,
+    isEnded: false
   });
 
   // Handle Mobile Fire Trigger
@@ -60,6 +61,7 @@ const GameCanvas = ({
 
   const reloadWeapon = () => {
     const s = stateRef.current;
+    if (s.isEnded) return;
     const w = s.player.weapons[s.player.activeWeaponIndex];
     if (w.id === 'knife' || w.reserveAmmo <= 0 || w.magAmmo === w.magCapacity) return;
 
@@ -116,6 +118,7 @@ const GameCanvas = ({
 
   const shootWeapon = () => {
     const s = stateRef.current;
+    if (s.isEnded) return;
     const w = s.player.weapons[s.player.activeWeaponIndex];
 
     if (w.id === 'knife') {
@@ -208,6 +211,7 @@ const GameCanvas = ({
     s.keyItem.collected = false;
     s.exitDoor.locked = true;
     s.kills = 0;
+    s.isEnded = false;
 
     // Build Mansion Walls (Rich maze layout with strategic open corridors)
     s.walls = [
@@ -310,191 +314,196 @@ const GameCanvas = ({
 
     let animationFrameId;
 
-    // Main Game Engine Loop (60 FPS)
-    const render = () => {
-      // 1. UPDATE PLAYER
-      let dx = 0;
-      let dy = 0;
-      const speed = 3.5;
+      // Main Game Engine Loop (60 FPS)
+      const render = () => {
+        if (!s.isEnded) {
+          // 1. UPDATE PLAYER
+          let dx = 0;
+          let dy = 0;
+          const speed = 3.5;
 
-      if (s.keys['w'] || s.keys['z'] || s.keys['arrowup']) dy -= 1;
-      if (s.keys['s'] || s.keys['arrowdown']) dy += 1;
-      if (s.keys['a'] || s.keys['q'] || s.keys['arrowleft']) dx -= 1;
-      if (s.keys['d'] || s.keys['arrowright']) dx += 1;
+          if (s.keys['w'] || s.keys['z'] || s.keys['arrowup']) dy -= 1;
+          if (s.keys['s'] || s.keys['arrowdown']) dy += 1;
+          if (s.keys['a'] || s.keys['q'] || s.keys['arrowleft']) dx -= 1;
+          if (s.keys['d'] || s.keys['arrowright']) dx += 1;
 
-      if (mobileMove.x !== 0 || mobileMove.y !== 0) {
-        dx = mobileMove.x;
-        dy = mobileMove.y;
-      }
-
-      if (dx !== 0 || dy !== 0) {
-        const len = Math.hypot(dx, dy);
-        const nx = s.player.x + (dx / len) * speed;
-        const ny = s.player.y + (dy / len) * speed;
-
-        // Wall collisions
-        let canMoveX = true;
-        let canMoveY = true;
-        s.walls.forEach(w => {
-          if (nx + s.player.radius > w.x && nx - s.player.radius < w.x + w.w &&
-              s.player.y + s.player.radius > w.y && s.player.y - s.player.radius < w.y + w.h) {
-            canMoveX = false;
-          }
-          if (s.player.x + s.player.radius > w.x && s.player.x - s.player.radius < w.x + w.w &&
-              ny + s.player.radius > w.y && ny - s.player.radius < w.y + w.h) {
-            canMoveY = false;
-          }
-        });
-
-        if (canMoveX) s.player.x = nx;
-        if (canMoveY) s.player.y = ny;
-      }
-
-      // Player Aim Angle
-      if (mobileMove.x !== 0 || mobileMove.y !== 0) {
-        s.player.angle = Math.atan2(mobileMove.y, mobileMove.x);
-      } else {
-        s.player.angle = Math.atan2(s.mouse.y - s.player.y, s.mouse.x - s.player.x);
-      }
-
-      // 2. UPDATE BULLETS
-      s.bullets.forEach((b, idx) => {
-        b.x += b.vx;
-        b.y += b.vy;
-        b.range -= Math.hypot(b.vx, b.vy);
-
-        // Bullet wall collisions
-        s.walls.forEach(w => {
-          if (b.x > w.x && b.x < w.x + w.w && b.y > w.y && b.y < w.y + w.h) {
-            b.range = 0;
-          }
-        });
-
-        // Bullet zombie hit
-        s.zombies.forEach(z => {
-          if (Math.hypot(z.x - b.x, z.y - b.y) < z.radius) {
-            z.hp -= b.damage;
-            b.range = 0;
-            createBloodParticles(z.x, z.y, 6);
-            if (z.hp <= 0) s.kills++;
-          }
-        });
-      });
-      s.bullets = s.bullets.filter(b => b.range > 0);
-
-      // Remove Dead Zombies
-      s.zombies = s.zombies.filter(z => z.hp > 0);
-
-      // 3. UPDATE ZOMBIES & AI
-      const now = Date.now();
-      s.zombies.forEach(z => {
-        const distToPlayer = Math.hypot(s.player.x - z.x, s.player.y - z.y);
-
-        // Vision check
-        if (distToPlayer < 350) z.state = 'chase';
-
-        let zdx = 0;
-        let zdy = 0;
-
-        if (z.state === 'chase') {
-          const zAngle = Math.atan2(s.player.y - z.y, s.player.x - z.x);
-          zdx = Math.cos(zAngle) * z.speed;
-          zdy = Math.sin(zAngle) * z.speed;
-
-          // Sound growl
-          if (now - z.lastGrowl > 5000 && Math.random() < 0.05) {
-            sounds.playZombieGrowl();
-            z.lastGrowl = now;
+          if (mobileMove.x !== 0 || mobileMove.y !== 0) {
+            dx = mobileMove.x;
+            dy = mobileMove.y;
           }
 
-          // Damage player on contact
-          if (distToPlayer < s.player.radius + z.radius) {
-            s.player.hp -= 0.5;
-            onPlayerUpdate({ ...s.player });
-            if (s.player.hp <= 0) {
-              onGameOver({ kills: s.kills });
+          if (dx !== 0 || dy !== 0) {
+            const len = Math.hypot(dx, dy);
+            const nx = s.player.x + (dx / len) * speed;
+            const ny = s.player.y + (dy / len) * speed;
+
+            // Wall collisions
+            let canMoveX = true;
+            let canMoveY = true;
+            s.walls.forEach(w => {
+              if (nx + s.player.radius > w.x && nx - s.player.radius < w.x + w.w &&
+                  s.player.y + s.player.radius > w.y && s.player.y - s.player.radius < w.y + w.h) {
+                canMoveX = false;
+              }
+              if (s.player.x + s.player.radius > w.x && s.player.x - s.player.radius < w.x + w.w &&
+                  ny + s.player.radius > w.y && ny - s.player.radius < w.y + w.h) {
+                canMoveY = false;
+              }
+            });
+
+            if (canMoveX) s.player.x = nx;
+            if (canMoveY) s.player.y = ny;
+          }
+
+          // Player Aim Angle
+          if (mobileMove.x !== 0 || mobileMove.y !== 0) {
+            s.player.angle = Math.atan2(mobileMove.y, mobileMove.x);
+          } else {
+            s.player.angle = Math.atan2(s.mouse.y - s.player.y, s.mouse.x - s.player.x);
+          }
+
+          // 2. UPDATE BULLETS
+          s.bullets.forEach((b, idx) => {
+            b.x += b.vx;
+            b.y += b.vy;
+            b.range -= Math.hypot(b.vx, b.vy);
+
+            // Bullet wall collisions
+            s.walls.forEach(w => {
+              if (b.x > w.x && b.x < w.x + w.w && b.y > w.y && b.y < w.y + w.h) {
+                b.range = 0;
+              }
+            });
+
+            // Bullet zombie hit
+            s.zombies.forEach(z => {
+              if (Math.hypot(z.x - b.x, z.y - b.y) < z.radius) {
+                z.hp -= b.damage;
+                b.range = 0;
+                createBloodParticles(z.x, z.y, 6);
+                if (z.hp <= 0) s.kills++;
+              }
+            });
+          });
+          s.bullets = s.bullets.filter(b => b.range > 0);
+
+          // Remove Dead Zombies
+          s.zombies = s.zombies.filter(z => z.hp > 0);
+
+          // 3. UPDATE ZOMBIES & AI
+          const now = Date.now();
+          s.zombies.forEach(z => {
+            const distToPlayer = Math.hypot(s.player.x - z.x, s.player.y - z.y);
+
+            // Vision check
+            if (distToPlayer < 350) z.state = 'chase';
+
+            let zdx = 0;
+            let zdy = 0;
+
+            if (z.state === 'chase') {
+              const zAngle = Math.atan2(s.player.y - z.y, s.player.x - z.x);
+              zdx = Math.cos(zAngle) * z.speed;
+              zdy = Math.sin(zAngle) * z.speed;
+
+              // Sound growl
+              if (now - z.lastGrowl > 5000 && Math.random() < 0.05) {
+                sounds.playZombieGrowl();
+                z.lastGrowl = now;
+              }
+
+              // Damage player on contact
+              if (distToPlayer < s.player.radius + z.radius) {
+                s.player.hp -= 0.5;
+                onPlayerUpdate({ ...s.player });
+                if (s.player.hp <= 0 && !s.isEnded) {
+                  s.isEnded = true;
+                  onGameOver({ kills: s.kills });
+                }
+              }
+            } else {
+              // Patrol random movement
+              zdx = Math.cos(z.patrolAngle) * (z.speed * 0.3);
+              zdy = Math.sin(z.patrolAngle) * (z.speed * 0.3);
+              if (Math.random() < 0.02) z.patrolAngle = Math.random() * Math.PI * 2;
             }
+
+            // Zombie Wall Collisions (Prevents zombies from walking through walls)
+            const nzx = z.x + zdx;
+            const nzy = z.y + zdy;
+            let canZMoveX = true;
+            let canZMoveY = true;
+
+            s.walls.forEach(w => {
+              if (nzx + z.radius > w.x && nzx - z.radius < w.x + w.w &&
+                  z.y + z.radius > w.y && z.y - z.radius < w.y + w.h) {
+                canZMoveX = false;
+              }
+              if (z.x + z.radius > w.x && z.x - z.radius < w.x + w.w &&
+                  nzy + z.radius > w.y && nzy - z.radius < w.y + w.h) {
+                canZMoveY = false;
+              }
+            });
+
+            if (canZMoveX) z.x = nzx;
+            if (canZMoveY) z.y = nzy;
+
+            // If zombie hits a wall while patrolling, pick a new angle
+            if (!canZMoveX || !canZMoveY) {
+              z.patrolAngle = Math.random() * Math.PI * 2;
+            }
+          });
+
+          // 4. PICKUPS & OBJECTIVES
+          s.pickups.forEach(p => {
+            if (!p.collected && Math.hypot(s.player.x - p.x, s.player.y - p.y) < 30) {
+              p.collected = true;
+              sounds.playPickup();
+              if (p.type === 'ammo_handgun') {
+                s.player.weapons[0].reserveAmmo = Math.min(s.player.weapons[0].maxReserve, s.player.weapons[0].reserveAmmo + p.amount);
+              } else if (p.type === 'medkit') {
+                s.player.hp = Math.min(s.player.maxHp, s.player.hp + p.amount);
+              }
+              onPlayerUpdate({ ...s.player });
+            }
+          });
+
+          // Pit Traps Check (Teleport to start & -10 HP)
+          s.pits.forEach(pit => {
+            const dist = Math.hypot(s.player.x - pit.x, s.player.y - pit.y);
+            if (dist < s.player.radius + pit.radius - 4) {
+              s.player.hp = Math.max(0, s.player.hp - 10);
+              onPlayerUpdate({ ...s.player });
+
+              // Particles
+              createBloodParticles(pit.x, pit.y, 14, '#ef4444');
+              createBloodParticles(150, 850, 10, '#38bdf8');
+
+              // Repop at start
+              s.player.x = 150;
+              s.player.y = 850;
+
+              if (s.player.hp <= 0 && !s.isEnded) {
+                s.isEnded = true;
+                onGameOver({ kills: s.kills });
+              }
+            }
+          });
+
+          // Key Pickup Check
+          if (!s.keyItem.collected && Math.hypot(s.player.x - s.keyItem.x, s.player.y - s.keyItem.y) < 35) {
+            s.keyItem.collected = true;
+            s.hasKey = true;
+            s.exitDoor.locked = false;
+            sounds.playPickup();
           }
-        } else {
-          // Patrol random movement
-          zdx = Math.cos(z.patrolAngle) * (z.speed * 0.3);
-          zdy = Math.sin(z.patrolAngle) * (z.speed * 0.3);
-          if (Math.random() < 0.02) z.patrolAngle = Math.random() * Math.PI * 2;
+
+          // Exit Door Check (Victory)
+          if (!s.isEnded && s.hasKey && Math.hypot(s.player.x - (s.exitDoor.x + 40), s.player.y - s.exitDoor.y) < 45) {
+            s.isEnded = true;
+            onVictory({ kills: s.kills });
+          }
         }
-
-        // Zombie Wall Collisions (Prevents zombies from walking through walls)
-        const nzx = z.x + zdx;
-        const nzy = z.y + zdy;
-        let canZMoveX = true;
-        let canZMoveY = true;
-
-        s.walls.forEach(w => {
-          if (nzx + z.radius > w.x && nzx - z.radius < w.x + w.w &&
-              z.y + z.radius > w.y && z.y - z.radius < w.y + w.h) {
-            canZMoveX = false;
-          }
-          if (z.x + z.radius > w.x && z.x - z.radius < w.x + w.w &&
-              nzy + z.radius > w.y && nzy - z.radius < w.y + w.h) {
-            canZMoveY = false;
-          }
-        });
-
-        if (canZMoveX) z.x = nzx;
-        if (canZMoveY) z.y = nzy;
-
-        // If zombie hits a wall while patrolling, pick a new angle
-        if (!canZMoveX || !canZMoveY) {
-          z.patrolAngle = Math.random() * Math.PI * 2;
-        }
-      });
-
-      // 4. PICKUPS & OBJECTIVES
-      s.pickups.forEach(p => {
-        if (!p.collected && Math.hypot(s.player.x - p.x, s.player.y - p.y) < 30) {
-          p.collected = true;
-          sounds.playPickup();
-          if (p.type === 'ammo_handgun') {
-            s.player.weapons[0].reserveAmmo = Math.min(s.player.weapons[0].maxReserve, s.player.weapons[0].reserveAmmo + p.amount);
-          } else if (p.type === 'medkit') {
-            s.player.hp = Math.min(s.player.maxHp, s.player.hp + p.amount);
-          }
-          onPlayerUpdate({ ...s.player });
-        }
-      });
-
-      // Pit Traps Check (Teleport to start & -10 HP)
-      s.pits.forEach(pit => {
-        const dist = Math.hypot(s.player.x - pit.x, s.player.y - pit.y);
-        if (dist < s.player.radius + pit.radius - 4) {
-          s.player.hp = Math.max(0, s.player.hp - 10);
-          onPlayerUpdate({ ...s.player });
-
-          // Particles
-          createBloodParticles(pit.x, pit.y, 14, '#ef4444');
-          createBloodParticles(150, 850, 10, '#38bdf8');
-
-          // Repop at start
-          s.player.x = 150;
-          s.player.y = 850;
-
-          if (s.player.hp <= 0) {
-            onGameOver({ kills: s.kills });
-          }
-        }
-      });
-
-      // Key Pickup Check
-      if (!s.keyItem.collected && Math.hypot(s.player.x - s.keyItem.x, s.player.y - s.keyItem.y) < 35) {
-        s.keyItem.collected = true;
-        s.hasKey = true;
-        s.exitDoor.locked = false;
-        sounds.playPickup();
-      }
-
-      // Exit Door Check (Victory)
-      if (s.hasKey && Math.hypot(s.player.x - (s.exitDoor.x + 40), s.player.y - s.exitDoor.y) < 40) {
-        onVictory({ kills: s.kills });
-      }
 
       // 5. RENDERING (NO DARKNESS FOG - FULL VISIBILITY)
       ctx.clearRect(0, 0, canvas.width, canvas.height);

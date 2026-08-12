@@ -31,27 +31,30 @@ const HUD = ({ player, onReload, onPause, hasKey, score = 0, kills = 0, multipli
 
   return (
     <div className="absolute inset-0 pointer-events-none z-30 p-4 md:p-6 flex flex-col justify-between select-none">
-      {/* Top Bar: ECG Status & Objective & Live Score & Pause */}
+      {/* Top Bar: ECG Status & Live Score on the Left / Objective & Pause on the Right */}
       <div className="flex flex-wrap justify-between items-start gap-4">
-        {/* ECG Monitor (Resident Evil style) */}
-        <div className={`flex items-center gap-3 px-4 py-2.5 rounded-2xl border backdrop-blur-md ${statusColor} shadow-xl`}>
-          <div className="relative w-8 h-8 flex items-center justify-center">
-            <svg className={`w-full h-full ${pulseSpeed}`} viewBox="0 0 50 30" fill="none" stroke="currentColor" strokeWidth="3">
-              <path d="M0 15 H15 L18 5 L22 25 L25 10 L28 20 L32 15 H50" />
-            </svg>
+        {/* Left Group: Health ECG & Live Score */}
+        <div className="flex items-center gap-3">
+          {/* ECG Monitor (Resident Evil style) */}
+          <div className={`flex items-center gap-3 px-4 py-2.5 rounded-2xl border backdrop-blur-md ${statusColor} shadow-xl`}>
+            <div className="relative w-8 h-8 flex items-center justify-center">
+              <svg className={`w-full h-full ${pulseSpeed}`} viewBox="0 0 50 30" fill="none" stroke="currentColor" strokeWidth="3">
+                <path d="M0 15 H15 L18 5 L22 25 L25 10 L28 20 L32 15 H50" />
+              </svg>
+            </div>
+            <div>
+              <p className="text-[10px] text-gray-400 font-mono tracking-widest uppercase">Équilibre vital</p>
+              <p className="text-base font-black tracking-widest">{statusText} ({Math.max(0, Math.round(player.hp))} HP)</p>
+            </div>
           </div>
-          <div>
-            <p className="text-[10px] text-gray-400 font-mono tracking-widest uppercase">Équilibre vital</p>
-            <p className="text-base font-black tracking-widest">{statusText} ({Math.max(0, Math.round(player.hp))} HP)</p>
-          </div>
-        </div>
 
-        {/* Live Score Pill */}
-        <div className="bg-black/70 border border-yellow-500/30 backdrop-blur-md px-5 py-2.5 rounded-2xl flex items-center gap-3 shadow-xl">
-          <span className="text-xl">⭐</span>
-          <div>
-            <p className="text-[10px] text-yellow-400 font-mono tracking-wider uppercase font-bold">SCORE ({multiplier}x)</p>
-            <p className="text-lg font-black font-mono text-white">{score} <span className="text-xs text-gray-400 font-normal">pts</span></p>
+          {/* Live Score Pill (Right next to health) */}
+          <div className="bg-black/80 border border-yellow-500/40 backdrop-blur-md px-4 py-2.5 rounded-2xl flex items-center gap-2.5 shadow-xl">
+            <span className="text-lg">⭐</span>
+            <div>
+              <p className="text-[10px] text-yellow-400 font-mono tracking-wider uppercase font-bold">SCORE ({multiplier}x)</p>
+              <p className="text-base font-black font-mono text-white">{score} <span className="text-[10px] text-gray-400 font-normal">pts</span></p>
+            </div>
           </div>
         </div>
 

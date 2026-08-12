@@ -27,24 +27,44 @@ const HUD = ({ player, onReload, onPause, hasKey, score = 0, kills = 0, multipli
     statusColor = 'text-yellow-400 border-yellow-500/40 bg-black/80';
   }
 
+  let hpBarColor = 'bg-green-500';
+  let hpGlow = 'shadow-green-500/40';
+  let hpBorder = 'border-green-500/40';
+
+  if (hpPercent <= 30) {
+    hpBarColor = 'bg-red-500';
+    hpGlow = 'shadow-red-500/50';
+    hpBorder = 'border-red-500/50';
+  } else if (hpPercent <= 60) {
+    hpBarColor = 'bg-yellow-500';
+    hpGlow = 'shadow-yellow-500/40';
+    hpBorder = 'border-yellow-500/40';
+  }
+
   const currentWeapon = player.weapons[0] || { name: 'Pistolet 9mm', magAmmo: 12, reserveAmmo: 36 };
 
   return (
     <div className="absolute inset-0 pointer-events-none z-30 p-2 md:p-4 flex flex-col justify-between select-none">
       {/* Top Bar: Ultra Compact Status & Objective */}
       <div className="flex justify-between items-center gap-2">
-        {/* Left Side: Health & Score Pills */}
+        {/* Left Side: Health Bar & Score */}
         <div className="flex items-center gap-2">
-          {/* ECG Health Pill */}
-          <div className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border backdrop-blur-md ${statusColor} shadow-md`}>
-            <div className="w-5 h-5 flex items-center justify-center">
-              <svg className={`w-full h-full ${pulseSpeed}`} viewBox="0 0 50 30" fill="none" stroke="currentColor" strokeWidth="4">
-                <path d="M0 15 H15 L18 5 L22 25 L25 10 L28 20 L32 15 H50" />
-              </svg>
+          {/* Health Bar */}
+          <div className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border backdrop-blur-md bg-black/80 ${hpBorder} shadow-md ${hpPercent <= 30 ? 'animate-pulse' : ''}`}>
+            <div className="flex flex-col gap-0.5 min-w-[80px]">
+              <div className="flex justify-between items-center">
+                <span className="text-[10px] text-gray-400 font-mono uppercase tracking-wider">❤️ Vie</span>
+                <span className={`text-xs font-black font-mono ${hpPercent <= 30 ? 'text-red-400' : hpPercent <= 60 ? 'text-yellow-400' : 'text-green-400'}`}>
+                  {Math.max(0, Math.round(player.hp))} HP
+                </span>
+              </div>
+              <div className="w-full h-2 bg-white/10 rounded-full overflow-hidden">
+                <div
+                  className={`h-full rounded-full transition-all duration-300 ${hpBarColor} shadow-sm`}
+                  style={{ width: `${Math.max(0, hpPercent)}%` }}
+                />
+              </div>
             </div>
-            <span className="text-xs font-mono font-bold tracking-tight">
-              {Math.max(0, Math.round(player.hp))} HP
-            </span>
           </div>
 
           {/* Live Score Pill */}

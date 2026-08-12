@@ -337,6 +337,7 @@ const GameCanvas = ({
 
       // Main Game Engine Loop (60 FPS)
       const render = () => {
+        const now = Date.now();
         if (!s.isEnded) {
           // 1. UPDATE PLAYER
           let dx = 0;
@@ -412,7 +413,6 @@ const GameCanvas = ({
           s.zombies = s.zombies.filter(z => z.hp > 0);
 
           // 3. UPDATE ZOMBIES & AI
-          const now = Date.now();
           s.zombies.forEach(z => {
             const distToPlayer = Math.hypot(s.player.x - z.x, s.player.y - z.y);
 

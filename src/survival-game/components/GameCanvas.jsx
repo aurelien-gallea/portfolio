@@ -13,6 +13,12 @@ const GameCanvas = ({
   mobileKnifeTrigger 
 }) => {
   const canvasRef = useRef(null);
+  const mobileMoveRef = useRef(mobileMove);
+
+  // Always keep mobileMoveRef in sync with the latest mobileMove prop
+  useEffect(() => {
+    mobileMoveRef.current = mobileMove;
+  }, [mobileMove]);
 
   // Map & Game State Ref (to avoid closure stale state in rAF)
   const stateRef = useRef({
@@ -447,9 +453,10 @@ const GameCanvas = ({
           if (s.keys['a'] || s.keys['q'] || s.keys['arrowleft']) dx -= 1;
           if (s.keys['d'] || s.keys['arrowright']) dx += 1;
 
-          if (mobileMove.x !== 0 || mobileMove.y !== 0) {
-            dx = mobileMove.x;
-            dy = mobileMove.y;
+          const mm = mobileMoveRef.current;
+          if (mm.x !== 0 || mm.y !== 0) {
+            dx = mm.x;
+            dy = mm.y;
           }
 
           if (dx !== 0 || dy !== 0) {

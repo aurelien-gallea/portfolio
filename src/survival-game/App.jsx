@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowLeft, Play, RefreshCw, Skull, Trophy, ShieldAlert, Smartphone } from 'lucide-react';
+import { ArrowLeft, Play, Pause, RefreshCw, Skull, Trophy, ShieldAlert, Smartphone } from 'lucide-react';
 import GameCanvas from './components/GameCanvas';
 import HUD from './components/HUD';
 import MobileControls from './components/MobileControls';

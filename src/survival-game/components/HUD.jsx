@@ -15,6 +15,18 @@ const HUD = ({ player, onReload, onPause, hasKey, score = 0, kills = 0, multipli
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [onPause]);
 
+  let statusText = 'FINE';
+  let statusColor = 'text-green-400 border-green-500/30 bg-black/75';
+  let pulseSpeed = 'animate-pulse';
+  
+  if (hpPercent <= 30) {
+    statusText = 'DANGER';
+    statusColor = 'text-red-400 border-red-500/40 bg-black/85';
+  } else if (hpPercent <= 60) {
+    statusText = 'CAUTION';
+    statusColor = 'text-yellow-400 border-yellow-500/40 bg-black/80';
+  }
+
   const currentWeapon = player.weapons[0] || { name: 'Pistolet 9mm', magAmmo: 12, reserveAmmo: 36 };
 
   return (

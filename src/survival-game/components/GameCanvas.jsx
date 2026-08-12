@@ -3,6 +3,7 @@ import { sounds } from '../utils/audio';
 
 const GameCanvas = ({ 
   difficulty = 'normal', 
+  isPaused = false,
   onGameOver, 
   onVictory, 
   onPlayerUpdate, 
@@ -287,7 +288,15 @@ const GameCanvas = ({
 
     s.walls = generateWalls();
 
-    // Spawning Safety Validation helper
+    // Random Exit Door Location (Pick 1 of 5 perimeter positions)
+    const doorCandidates = [
+      { x: 1400, y: 980, width: 80, height: 20, locked: true },
+      { x: 1400, y: 0, width: 80, height: 20, locked: true },
+      { x: 1580, y: 480, width: 20, height: 80, locked: true },
+      { x: 760, y: 0, width: 80, height: 20, locked: true },
+      { x: 200, y: 0, width: 80, height: 20, locked: true }
+    ];
+    s.exitDoor = doorCandidates[Math.floor(Math.random() * doorCandidates.length)];
     const isSafeFromWalls = (x, y, radius = 16, margin = 45) => {
       const safeR = radius + margin;
       return s.walls.every(w => (
@@ -420,7 +429,7 @@ const GameCanvas = ({
         const now = Date.now();
         let dx = 0;
         let dy = 0;
-        if (!s.isEnded) {
+        if (!s.isEnded && !isPaused) {
           // 1. UPDATE PLAYER
           const speed = s.playerSpeed || 3.5;
 
@@ -608,7 +617,9 @@ const GameCanvas = ({
           }
 
           // Exit Door Check (Victory)
-          if (!s.isEnded && s.hasKey && Math.hypot(s.player.x - (s.exitDoor.x + 40), s.player.y - s.exitDoor.y) < 45) {
+          const doorCenterX = s.exitDoor.x + s.exitDoor.width / 2;
+          const doorCenterY = s.exitDoor.y + s.exitDoor.height / 2;
+          if (!s.isEnded && s.hasKey && Math.hypot(s.player.x - doorCenterX, s.player.y - doorCenterY) < 55) {
             triggerEnd('victory');
           }
         }
@@ -796,10 +807,17 @@ const GameCanvas = ({
       ctx.shadowColor = s.exitDoor.locked ? '#dc2626' : '#16a34a';
       ctx.shadowBlur = 15;
       ctx.fillRect(s.exitDoor.x, s.exitDoor.y, s.exitDoor.width, s.exitDoor.height);
+
+      const doorCenterX = s.exitDoor.x + s.exitDoor.width / 2;
+      const doorCenterY = s.exitDoor.y + s.exitDoor.height / 2;
       ctx.fillStyle = '#ffffff';
-      ctx.font = 'bold 12px monospace';
+      ctx.font = 'bold 10px monospace';
       ctx.textAlign = 'center';
-      ctx.fillText(s.exitDoor.locked ? 'PORTE VERROUILLÉE' : 'SORTIE ESPACE !', s.exitDoor.x + 40, s.exitDoor.y - 8);
+      ctx.fillText(
+        s.exitDoor.locked ? '🔒 SORTIE' : '🔓 SORTIE !', 
+        doorCenterX, 
+        s.exitDoor.y < 40 ? doorCenterY + 22 : doorCenterY - 10
+      );
       ctx.restore();
 
       // Draw Walls (Solid Textured Barriers)

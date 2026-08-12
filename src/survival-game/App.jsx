@@ -126,8 +126,8 @@ const SurvivalGameApp = () => {
         </div>
       )}
 
-      {/* PLAYING STATE */}
-      {(gameState === 'playing' || gameState === 'gameover' || gameState === 'victory') && (
+      {/* PLAYING & PAUSED STATE */}
+      {(gameState === 'playing' || gameState === 'paused' || gameState === 'gameover' || gameState === 'victory') && (
         <div className="relative w-full h-full">
           {/* Top Return Link */}
           <Link 
@@ -141,6 +141,7 @@ const SurvivalGameApp = () => {
           <GameCanvas
             key={restartKey}
             difficulty={difficulty}
+            isPaused={gameState === 'paused'}
             onGameOver={handleGameOver}
             onVictory={handleVictory}
             onPlayerUpdate={setPlayerData}
@@ -157,6 +158,7 @@ const SurvivalGameApp = () => {
             kills={playerData.kills || 0}
             multiplier={playerData.multiplier || (difficulty === 'hard' ? 2.5 : difficulty === 'easy' ? 1.0 : 1.5)}
             onReload={() => setMobileReloadTrigger(prev => prev + 1)}
+            onPause={() => setGameState(prev => prev === 'paused' ? 'playing' : 'paused')}
           />
 
           {/* Mobile Touch Overlay */}
@@ -165,6 +167,42 @@ const SurvivalGameApp = () => {
             onFire={() => setMobileFireTrigger(prev => prev + 1)}
             onReload={() => setMobileReloadTrigger(prev => prev + 1)}
           />
+        </div>
+      )}
+
+      {/* PAUSE MODAL */}
+      {gameState === 'paused' && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
+          <div className="max-w-sm w-full bg-zinc-900/90 border border-white/20 rounded-3xl p-8 text-center space-y-6 shadow-2xl">
+            <div className="w-16 h-16 bg-white/10 text-yellow-400 rounded-full flex items-center justify-center mx-auto border border-white/20">
+              <Pause size={36} />
+            </div>
+            <div>
+              <h2 className="text-3xl font-black text-white tracking-wider">PAUSE</h2>
+              <p className="text-gray-400 text-xs mt-1 font-mono">Partie suspendue</p>
+            </div>
+
+            <div className="space-y-3">
+              <button
+                onClick={() => setGameState('playing')}
+                className="w-full bg-gradient-to-r from-red-600 to-orange-600 hover:from-red-500 hover:to-orange-500 text-white font-bold py-3.5 rounded-xl transition-all shadow-lg text-sm cursor-pointer flex items-center justify-center gap-2"
+              >
+                <Play size={18} fill="currentColor" /> Reprendre la partie
+              </button>
+              <button
+                onClick={handleStartGame}
+                className="w-full bg-white/10 hover:bg-white/20 text-gray-200 hover:text-white font-bold py-3 rounded-xl transition-colors border border-white/10 text-sm cursor-pointer flex items-center justify-center gap-2"
+              >
+                <RefreshCw size={16} /> Recommencer
+              </button>
+              <button
+                onClick={() => setGameState('menu')}
+                className="w-full bg-white/5 hover:bg-white/10 text-gray-400 hover:text-white font-bold py-3 rounded-xl transition-colors text-sm cursor-pointer"
+              >
+                Menu Principal
+              </button>
+            </div>
+          </div>
         </div>
       )}
 

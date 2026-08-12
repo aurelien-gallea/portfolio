@@ -603,45 +603,89 @@ const GameCanvas = ({
         ctx.restore();
       });
 
-      // Draw Pickups (Medkit & Ammo Boxes with icons/glowing borders)
+      // Draw Pickups (Medkit with Green Cross & Ammo Boxes)
       s.pickups.filter(p => !p.collected).forEach(p => {
         ctx.save();
         ctx.translate(p.x, p.y);
-        ctx.fillStyle = p.type === 'medkit' ? '#22c55e' : '#eab308';
-        ctx.shadowColor = p.type === 'medkit' ? '#22c55e' : '#eab308';
-        ctx.shadowBlur = 12;
-        ctx.beginPath();
-        ctx.arc(0, 0, 12, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.strokeStyle = '#ffffff';
-        ctx.lineWidth = 2;
-        ctx.stroke();
 
-        // Label
-        ctx.fillStyle = '#ffffff';
-        ctx.font = 'bold 9px monospace';
-        ctx.textAlign = 'center';
-        ctx.fillText(p.type === 'medkit' ? '+SOIN' : '+BALLES', 0, 20);
+        if (p.type === 'medkit') {
+          // Green Medkit Box / Circle
+          ctx.fillStyle = '#15803d';
+          ctx.shadowColor = '#22c55e';
+          ctx.shadowBlur = 15;
+          ctx.beginPath();
+          ctx.arc(0, 0, 14, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.strokeStyle = '#4ade80';
+          ctx.lineWidth = 2;
+          ctx.stroke();
+
+          // Green Cross (Croix Verte Medicale)
+          ctx.fillStyle = '#ffffff';
+          ctx.shadowBlur = 0;
+          ctx.fillRect(-3, -8, 6, 16); // vertical
+          ctx.fillRect(-8, -3, 16, 6); // horizontal
+
+          // Label
+          ctx.fillStyle = '#4ade80';
+          ctx.font = 'bold 9px monospace';
+          ctx.textAlign = 'center';
+          ctx.fillText('+SOIN', 0, 24);
+        } else {
+          // Ammo Box
+          ctx.fillStyle = '#eab308';
+          ctx.shadowColor = '#eab308';
+          ctx.shadowBlur = 12;
+          ctx.beginPath();
+          ctx.arc(0, 0, 12, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.strokeStyle = '#ffffff';
+          ctx.lineWidth = 2;
+          ctx.stroke();
+
+          ctx.fillStyle = '#ffffff';
+          ctx.font = 'bold 9px monospace';
+          ctx.textAlign = 'center';
+          ctx.fillText('+BALLES', 0, 20);
+        }
+
         ctx.restore();
       });
 
-      // Draw Key
+      // Draw Key (Detailed Golden Key Sprite)
       if (!s.keyItem.collected) {
         ctx.save();
         ctx.translate(s.keyItem.x, s.keyItem.y);
-        ctx.fillStyle = '#f59e0b';
-        ctx.shadowColor = '#f59e0b';
-        ctx.shadowBlur = 15;
+
+        // Golden Glow
+        ctx.shadowColor = '#fbbf24';
+        ctx.shadowBlur = 18;
+
+        // Key Ring (Head)
+        ctx.strokeStyle = '#fbbf24';
+        ctx.lineWidth = 3.5;
         ctx.beginPath();
-        ctx.arc(0, 0, 14, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.strokeStyle = '#ffffff';
-        ctx.lineWidth = 2;
+        ctx.arc(-8, 0, 7, 0, Math.PI * 2);
         ctx.stroke();
-        ctx.fillStyle = '#ffffff';
+
+        // Key Shaft
+        ctx.fillStyle = '#fbbf24';
+        ctx.fillRect(-3, -2.5, 18, 5);
+
+        // Key Teeth
+        ctx.fillRect(7, 2.5, 3.5, 6);
+        ctx.fillRect(12, 2.5, 3.5, 5);
+
+        // Shiny inner highlight
+        ctx.fillStyle = '#fef08a';
+        ctx.fillRect(-2, -1, 15, 2);
+
+        // Label
+        ctx.fillStyle = '#fbbf24';
         ctx.font = 'bold 10px monospace';
         ctx.textAlign = 'center';
-        ctx.fillText('CLÉ', 0, 24);
+        ctx.fillText('CLÉ DE SORTIE', 0, 24);
+
         ctx.restore();
       }
 

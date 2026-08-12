@@ -77,13 +77,13 @@ const SurvivalGameApp = () => {
       
       {/* MENU SCREEN */}
       {gameState === 'menu' && (
-        <div className="absolute inset-0 z-50 flex flex-col justify-between p-6 md:p-12 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-red-950/40 via-black to-black border-4 border-red-900/30">
+        <div className="absolute inset-0 z-50 flex flex-col justify-between p-4 md:p-8 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-red-950/40 via-black to-black border-4 border-red-900/30 overflow-y-auto pointer-events-auto">
           
           {/* Header Link */}
-          <div className="flex justify-between items-center">
+          <div className="flex justify-between items-center mb-2">
             <Link 
               to="/" 
-              className="flex items-center gap-2 px-4 py-2 rounded-full bg-white/10 hover:bg-white/20 text-gray-300 hover:text-white border border-white/10 text-xs transition-all backdrop-blur-md"
+              className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/10 hover:bg-white/20 text-gray-300 hover:text-white border border-white/10 text-xs transition-all backdrop-blur-md"
             >
               <ArrowLeft size={16} /> Portfolio
             </Link>
@@ -93,35 +93,36 @@ const SurvivalGameApp = () => {
           </div>
 
           {/* Hero Main Content */}
-          <div className="max-w-3xl mx-auto text-center space-y-6">
-            <h1 className="text-5xl md:text-7xl font-black tracking-tighter text-transparent bg-clip-text bg-gradient-to-r from-red-600 via-orange-500 to-yellow-500 drop-shadow-[0_10px_20px_rgba(220,38,38,0.5)]">
+          <div className="max-w-3xl mx-auto text-center space-y-3 md:space-y-6 my-auto">
+            <h1 className="text-3xl md:text-6xl font-black tracking-tighter text-transparent bg-clip-text bg-gradient-to-r from-red-600 via-orange-500 to-yellow-500 drop-shadow-[0_10px_20px_rgba(220,38,38,0.5)]">
               ZOMBIE RULES
             </h1>
-            <p className="text-gray-400 text-sm md:text-lg max-w-xl mx-auto leading-relaxed">
+            <p className="text-gray-400 text-xs md:text-base max-w-xl mx-auto leading-relaxed">
               Infiltrez le labyrinthe généré aléatoirement. Évitez les pièges, éliminez la horde et trouvez la clé de sortie !
             </p>
 
             {/* High Score Badge */}
             {highScore > 0 && (
-              <div className="inline-flex items-center gap-2 px-5 py-2 rounded-full bg-yellow-500/10 border border-yellow-500/30 text-yellow-400 font-mono text-sm font-bold shadow-lg shadow-yellow-500/10 animate-pulse">
-                <Trophy size={18} /> MEILLEUR SCORE : {highScore} PTS
+              <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-yellow-500/10 border border-yellow-500/30 text-yellow-400 font-mono text-xs font-bold shadow-lg shadow-yellow-500/10">
+                <Trophy size={16} /> MEILLEUR SCORE : {highScore} PTS
               </div>
             )}
 
             {/* Difficulty Selector */}
-            <div className="flex justify-center gap-3 py-2">
+            <div className="flex justify-center gap-2 md:gap-3 py-1 flex-wrap">
               {[
-                { id: 'easy', label: 'Recrue (1.0x)', desc: 'Facile' },
-                { id: 'normal', label: 'Survivant (1.5x)', desc: 'Moyen' },
-                { id: 'hard', label: 'Cauchemar (2.5x)', desc: 'Difficile' }
+                { id: 'easy', label: 'Recrue (1.0x)' },
+                { id: 'normal', label: 'Survivant (1.5x)' },
+                { id: 'hard', label: 'Cauchemar (2.5x)' }
               ].map(d => (
                 <button
                   key={d.id}
+                  onTouchStart={() => setDifficulty(d.id)}
                   onClick={() => setDifficulty(d.id)}
-                  className={`px-5 py-2.5 rounded-xl text-xs font-bold uppercase tracking-wider transition-all border ${
+                  className={`px-4 py-2 rounded-xl text-xs font-bold uppercase tracking-wider transition-all border cursor-pointer pointer-events-auto ${
                     difficulty === d.id 
                       ? 'bg-red-600 text-white border-red-400 shadow-lg shadow-red-600/30 scale-105' 
-                      : 'bg-white/5 text-gray-400 border-white/10 hover:bg-white/10'
+                      : 'bg-white/10 text-gray-300 border-white/10 hover:bg-white/20'
                   }`}
                 >
                   {d.label}
@@ -131,26 +132,21 @@ const SurvivalGameApp = () => {
 
             {/* Start Game Button */}
             <button
+              onTouchStart={handleStartGame}
               onClick={handleStartGame}
-              className="px-10 py-5 rounded-2xl bg-gradient-to-r from-red-600 to-orange-600 hover:from-red-500 hover:to-orange-500 text-white font-black text-xl tracking-wider shadow-2xl shadow-red-600/40 hover:scale-105 transition-all flex items-center gap-3 mx-auto cursor-pointer"
+              className="px-8 py-3.5 md:py-4 rounded-2xl bg-gradient-to-r from-red-600 to-orange-600 hover:from-red-500 hover:to-orange-500 text-white font-black text-lg tracking-wider shadow-2xl shadow-red-600/40 hover:scale-105 transition-all flex items-center gap-3 mx-auto cursor-pointer pointer-events-auto"
             >
-              <Play fill="currentColor" size={24} /> COMMENCER LA MISSION
+              <Play fill="currentColor" size={20} /> COMMENCER LA MISSION
             </button>
           </div>
 
           {/* Controls Quick Guide */}
-          <div className="max-w-2xl mx-auto w-full bg-white/5 border border-white/10 rounded-2xl p-4 text-xs font-mono text-gray-400 grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="max-w-2xl mx-auto w-full bg-white/5 border border-white/10 rounded-xl p-3 text-[11px] font-mono text-gray-400 grid grid-cols-1 md:grid-cols-2 gap-2 mt-2">
             <div>
-              <p className="text-white font-bold mb-1">🎮 Contrôles PC :</p>
-              <p>• ZQSD / Flèches : Déplacement</p>
-              <p>• Souris : Viser & Clic Tirer (Pistolet 9mm)</p>
-              <p>• R : Recharger le chargeur</p>
+              <p className="text-white font-bold mb-0.5">🎮 PC : ZQSD / Souris / R / P (Pause)</p>
             </div>
             <div>
-              <p className="text-white font-bold mb-1">📱 Contrôles Smartphone :</p>
-              <p>• Joystick virtuel gauche : Déplacement 360°</p>
-              <p>• Bouton Rouge : Tirer au Pistolet</p>
-              <p>• Bouton Bleu : Recharger</p>
+              <p className="text-white font-bold mb-0.5">📱 Mobile : Joystick Gauche + Boutons Tirer/Recharger</p>
             </div>
           </div>
         </div>

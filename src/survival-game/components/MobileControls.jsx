@@ -86,25 +86,25 @@ const MobileControls = ({ onMove, onFire, onReload }) => {
       </div>
 
       {/* Right Touch Action Buttons */}
-      <div className="flex flex-col gap-3 items-end pointer-events-auto touch-none">
-        <div className="flex gap-3">
-          {/* Reload */}
-          <button
-            onTouchStart={(e) => { e.preventDefault(); onReload(); }}
-            onClick={onReload}
-            className="w-12 h-12 rounded-full bg-blue-900/80 border border-blue-500 text-blue-200 flex items-center justify-center active:scale-95 shadow-lg cursor-pointer touch-none"
-          >
-            <RefreshCw size={20} />
-          </button>
-        </div>
+      <div className="flex flex-col gap-2 items-end pointer-events-auto touch-none">
 
-        {/* Big Fire / Shoot Button */}
+        {/* Reload Button */}
+        <button
+          onTouchStart={(e) => { e.preventDefault(); onReload(); }}
+          onClick={onReload}
+          className="w-11 h-11 rounded-full bg-blue-900/80 border-2 border-blue-500 text-blue-200 flex items-center justify-center active:scale-90 shadow-lg cursor-pointer touch-none"
+        >
+          <RefreshCw size={18} />
+        </button>
+
+        {/* Big Fire / Shoot Button — shoots in movement direction */}
         <button
           onTouchStart={(e) => { e.preventDefault(); onFire(); }}
           onClick={onFire}
-          className="w-20 h-20 rounded-full bg-gradient-to-br from-red-600 to-red-800 border-2 border-red-400 text-white flex items-center justify-center active:scale-90 shadow-2xl shadow-red-600/40 cursor-pointer touch-none"
+          className="w-20 h-20 rounded-full bg-gradient-to-br from-red-600 to-red-800 border-2 border-red-400 text-white flex flex-col items-center justify-center active:scale-90 shadow-2xl shadow-red-600/40 cursor-pointer touch-none gap-0.5"
         >
-          <Crosshair size={32} />
+          <Crosshair size={26} />
+          <span className="text-[9px] font-bold tracking-tight leading-none opacity-80">TIRER</span>
         </button>
       </div>
     </div>

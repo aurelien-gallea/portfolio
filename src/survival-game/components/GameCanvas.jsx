@@ -483,9 +483,16 @@ const GameCanvas = ({
           }
 
           // Player Aim Angle
-          if (mobileMove.x !== 0 || mobileMove.y !== 0) {
-            s.player.angle = Math.atan2(mobileMove.y, mobileMove.x);
+          // On mobile: always aim in movement direction (fire = shoot where you walk)
+          // On desktop: aim toward mouse cursor
+          if (mm.x !== 0 || mm.y !== 0) {
+            s.player.angle = Math.atan2(mm.y, mm.x);
+            s.player.lastMoveAngle = s.player.angle;
+          } else if (dx !== 0 || dy !== 0) {
+            s.player.angle = Math.atan2(dy, dx);
+            s.player.lastMoveAngle = s.player.angle;
           } else {
+            // Desktop mouse aim
             s.player.angle = Math.atan2(s.mouse.y - s.player.y, s.mouse.x - s.player.x);
           }
 

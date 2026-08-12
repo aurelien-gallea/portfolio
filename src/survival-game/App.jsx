@@ -234,53 +234,55 @@ const SurvivalGameApp = () => {
 
       {/* GAME OVER MODAL */}
       {gameState === 'gameover' && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/90 backdrop-blur-md">
-          <div className="max-w-md w-full bg-red-950/40 border-2 border-red-600 rounded-3xl p-8 text-center space-y-6 shadow-2xl shadow-red-900/50">
-            <div className="w-16 h-16 bg-red-600/20 text-red-500 rounded-full flex items-center justify-center mx-auto border border-red-500/40 animate-pulse">
-              <Skull size={36} />
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 bg-black/90 backdrop-blur-md overflow-y-auto">
+          <div className="max-w-sm w-full bg-red-950/40 border-2 border-red-600 rounded-2xl p-5 text-center space-y-4 shadow-2xl shadow-red-900/50 my-auto">
+            <div className="w-12 h-12 bg-red-600/20 text-red-500 rounded-full flex items-center justify-center mx-auto border border-red-500/40 animate-pulse">
+              <Skull size={28} />
             </div>
             <div>
-              <h2 className="text-4xl font-black text-red-500 tracking-wider">VOUS ÊTES MORT</h2>
-              <p className="text-gray-400 text-sm mt-2">La horde a eu raison de vous dans les ténèbres.</p>
+              <h2 className="text-2xl font-black text-red-500 tracking-wider">VOUS ÊTES MORT</h2>
+              <p className="text-gray-400 text-xs mt-1">La horde a eu raison de vous.</p>
             </div>
 
             {/* Score Breakdown Card */}
-            <div className="bg-black/70 p-5 rounded-2xl border border-white/10 font-mono text-xs space-y-2 text-left">
+            <div className="bg-black/70 p-3 rounded-xl border border-white/10 font-mono text-xs space-y-1.5 text-left">
               <div className="flex justify-between text-gray-400">
-                <span>Zombies éliminés ({stats.kills || 0}) :</span>
+                <span>Zombies ({stats.kills || 0}) :</span>
                 <span className="text-yellow-400 font-bold">+{stats.killScore || 0} pts</span>
               </div>
               <div className="flex justify-between text-gray-400">
                 <span>Bonus Santé :</span>
                 <span className="text-green-400 font-bold">+{stats.hpBonus || 0} pts</span>
               </div>
-              <div className="flex justify-between text-gray-400 border-t border-white/10 pt-2">
-                <span>Multiplicateur Difficulté :</span>
+              <div className="flex justify-between text-gray-400 border-t border-white/10 pt-1.5">
+                <span>Multiplicateur :</span>
                 <span className="text-orange-400 font-bold">{stats.multiplier || 1}x</span>
               </div>
-              <div className="flex justify-between text-white text-base font-black border-t border-white/20 pt-2">
+              <div className="flex justify-between text-white font-black border-t border-white/20 pt-1.5">
                 <span>SCORE FINAL :</span>
                 <span className="text-yellow-400">{stats.score || 0} PTS</span>
               </div>
               {stats.isNewRecord && (
-                <div className="mt-2 text-center text-xs font-bold text-yellow-400 animate-bounce pt-1">
-                  🏆 NOUVEAU RECORD PERSONNEL !
+                <div className="text-center text-xs font-bold text-yellow-400 animate-bounce pt-1">
+                  🏆 NOUVEAU RECORD !
                 </div>
               )}
             </div>
 
-            <div className="flex gap-4">
+            <div className="flex gap-3">
               <button
+                onTouchStart={() => setGameState('menu')}
                 onClick={() => setGameState('menu')}
-                className="flex-1 bg-white/10 hover:bg-white/20 text-white font-bold py-3 rounded-xl transition-colors border border-white/10 text-sm cursor-pointer"
+                className="flex-1 bg-white/10 hover:bg-white/20 text-white font-bold py-2.5 rounded-xl transition-colors border border-white/10 text-sm cursor-pointer"
               >
                 Menu
               </button>
               <button
+                onTouchStart={handleStartGame}
                 onClick={handleStartGame}
-                className="flex-1 bg-red-600 hover:bg-red-700 text-white font-bold py-3 rounded-xl transition-colors text-sm shadow-lg shadow-red-600/30 flex items-center justify-center gap-2 cursor-pointer"
+                className="flex-1 bg-red-600 hover:bg-red-700 text-white font-bold py-2.5 rounded-xl transition-colors text-sm shadow-lg flex items-center justify-center gap-2 cursor-pointer"
               >
-                <RefreshCw size={16} /> Réessayer
+                <RefreshCw size={14} /> Réessayer
               </button>
             </div>
           </div>
@@ -289,63 +291,64 @@ const SurvivalGameApp = () => {
 
       {/* VICTORY MODAL */}
       {gameState === 'victory' && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/90 backdrop-blur-md">
-          <div className="max-w-md w-full bg-green-950/40 border-2 border-green-500 rounded-3xl p-8 text-center space-y-6 shadow-2xl shadow-green-900/50">
-            <div className="w-16 h-16 bg-green-500/20 text-green-400 rounded-full flex items-center justify-center mx-auto border border-green-400/40 animate-bounce">
-              <Trophy size={36} />
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 bg-black/90 backdrop-blur-md overflow-y-auto">
+          <div className="max-w-sm w-full bg-green-950/40 border-2 border-green-500 rounded-2xl p-5 text-center space-y-4 shadow-2xl shadow-green-900/50 my-auto">
+            <div className="w-12 h-12 bg-green-500/20 text-green-400 rounded-full flex items-center justify-center mx-auto border border-green-400/40 animate-bounce">
+              <Trophy size={26} />
             </div>
             <div>
-              <h2 className="text-4xl font-black text-green-400 tracking-wider">ÉVASION RÉUSSIE !</h2>
-              <p className="text-gray-300 text-sm mt-2">Vous avez trouvé la clé et fui le manoir sain et sauf !</p>
+              <h2 className="text-2xl font-black text-green-400 tracking-wider">MISSION ACCOMPLIE !</h2>
+              <p className="text-gray-400 text-xs mt-1">Vous avez survécu et trouvé la sortie !</p>
             </div>
 
             {/* Score Breakdown Card */}
-            <div className="bg-black/70 p-5 rounded-2xl border border-white/10 font-mono text-xs space-y-2 text-left">
+            <div className="bg-black/70 p-3 rounded-xl border border-white/10 font-mono text-xs space-y-1.5 text-left">
               <div className="flex justify-between text-gray-400">
-                <span>Zombies éliminés ({stats.kills || 0}) :</span>
+                <span>Zombies ({stats.kills || 0}) :</span>
                 <span className="text-yellow-400 font-bold">+{stats.killScore || 0} pts</span>
               </div>
               <div className="flex justify-between text-gray-400">
-                <span>Bonus Évasion :</span>
+                <span>Bonus Victoire :</span>
                 <span className="text-green-400 font-bold">+{stats.victoryBonus || 1000} pts</span>
               </div>
               <div className="flex justify-between text-gray-400">
-                <span>Bonus Santé RESTANTE :</span>
+                <span>Bonus Santé :</span>
                 <span className="text-green-400 font-bold">+{stats.hpBonus || 0} pts</span>
               </div>
-              <div className="flex justify-between text-gray-400 border-t border-white/10 pt-2">
-                <span>Multiplicateur Difficulté :</span>
+              <div className="flex justify-between text-gray-400 border-t border-white/10 pt-1.5">
+                <span>Multiplicateur :</span>
                 <span className="text-orange-400 font-bold">{stats.multiplier || 1}x</span>
               </div>
-              <div className="flex justify-between text-white text-base font-black border-t border-white/20 pt-2">
+              <div className="flex justify-between text-white font-black border-t border-white/20 pt-1.5">
                 <span>SCORE FINAL :</span>
                 <span className="text-yellow-400">{stats.score || 0} PTS</span>
               </div>
               {stats.isNewRecord && (
-                <div className="mt-2 text-center text-xs font-bold text-yellow-400 animate-bounce pt-1">
-                  🏆 NOUVEAU RECORD PERSONNEL !
+                <div className="text-center text-xs font-bold text-yellow-400 animate-bounce pt-1">
+                  🏆 NOUVEAU RECORD !
                 </div>
               )}
             </div>
 
-            <div className="flex gap-4">
+            <div className="flex gap-3">
               <button
+                onTouchStart={() => setGameState('menu')}
                 onClick={() => setGameState('menu')}
-                className="flex-1 bg-white/10 hover:bg-white/20 text-white font-bold py-3 rounded-xl transition-colors border border-white/10 text-sm cursor-pointer"
+                className="flex-1 bg-white/10 hover:bg-white/20 text-white font-bold py-2.5 rounded-xl transition-colors border border-white/10 text-sm cursor-pointer"
               >
                 Menu
               </button>
               <button
+                onTouchStart={handleStartGame}
                 onClick={handleStartGame}
-                className="flex-1 bg-green-600 hover:bg-green-700 text-white font-bold py-3 rounded-xl transition-colors text-sm shadow-lg shadow-green-600/30 cursor-pointer"
+                className="flex-1 bg-green-600 hover:bg-green-700 text-white font-bold py-2.5 rounded-xl transition-colors text-sm shadow-lg flex items-center justify-center gap-2 cursor-pointer"
               >
-                Rejouer
+                <RefreshCw size={14} /> Rejouer
               </button>
             </div>
           </div>
         </div>
       )}
-
     </div>
   );
 };

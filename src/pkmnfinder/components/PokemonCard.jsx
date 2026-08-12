@@ -60,7 +60,7 @@ const PokemonCard = ({ pokemon, onClick }) => {
       animate={{ rotateX: rotate.x, rotateY: rotate.y }}
       transition={{ type: 'spring', stiffness: 300, damping: 20 }}
       style={{ transformStyle: 'preserve-3d' }}
-      className="relative w-full max-w-[300px] aspect-[2.5/3.8] rounded-2xl p-3 bg-gradient-to-b from-yellow-300 via-amber-400 to-yellow-500 shadow-2xl border-2 border-yellow-200/60 cursor-pointer group select-none hover:shadow-amber-500/20"
+      className="relative w-full max-w-[300px] aspect-[2.5/3.5] rounded-2xl p-2 sm:p-3 bg-gradient-to-b from-yellow-300 via-amber-400 to-yellow-500 shadow-2xl border-2 border-yellow-200/60 cursor-pointer group select-none hover:shadow-amber-500/20"
     >
       {/* Dynamic Holographic Glare Effect */}
       <div 
@@ -73,22 +73,22 @@ const PokemonCard = ({ pokemon, onClick }) => {
       />
 
       {/* Inner TCG Card Body */}
-      <div className={`w-full h-full rounded-xl p-3 bg-gradient-to-b ${theme.bg} flex flex-col justify-between border-2 ${theme.border} shadow-inner relative overflow-hidden text-white`}>
+      <div className={`w-full h-full rounded-xl p-2 sm:p-3 bg-gradient-to-b ${theme.bg} flex flex-col justify-between border-2 ${theme.border} shadow-inner relative overflow-hidden text-white`}>
         
         {/* Card Header (Name & HP) */}
-        <div className="flex justify-between items-center bg-black/30 backdrop-blur-sm px-3 py-1.5 rounded-lg border border-white/10">
-          <div className="flex items-center gap-1.5">
-            <span className="text-xs font-black text-yellow-300 tracking-wider">N°{pokemon.number.padStart(3, '0')}</span>
-            <h3 className="font-extrabold text-base tracking-wide drop-shadow">{pokemon.name}</h3>
+        <div className="flex justify-between items-center bg-black/30 backdrop-blur-sm px-2 py-1 sm:px-3 sm:py-1.5 rounded-lg border border-white/10">
+          <div className="flex items-center gap-1 sm:gap-1.5 min-w-0">
+            <span className="text-[10px] sm:text-xs font-black text-yellow-300 tracking-wider shrink-0">N°{pokemon.number.padStart(3, '0')}</span>
+            <h3 className="font-extrabold text-xs sm:text-base tracking-wide drop-shadow truncate">{pokemon.name}</h3>
           </div>
-          <div className="flex items-center gap-1 text-red-400 font-extrabold text-sm">
-            <span className="text-[10px] text-gray-300">PV</span>
+          <div className="flex items-center gap-1 text-red-400 font-extrabold text-xs sm:text-sm shrink-0">
+            <span className="text-[9px] sm:text-[10px] text-gray-300">PV</span>
             <span>{pokemon.maxHP}</span>
           </div>
         </div>
 
         {/* Artwork Window */}
-        <div className="relative my-2 w-full h-[180px] rounded-lg bg-gradient-to-b from-black/60 to-black/30 border-2 border-yellow-400/50 overflow-hidden flex items-center justify-center shadow-inner group-hover:border-yellow-300 transition-colors">
+        <div className="relative my-1 sm:my-2 w-full h-[120px] sm:h-[180px] rounded-lg bg-gradient-to-b from-black/60 to-black/30 border-2 border-yellow-400/50 overflow-hidden flex items-center justify-center shadow-inner group-hover:border-yellow-300 transition-colors">
           <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-white/10 via-transparent to-black/40" />
           <img 
             src={pokemon.image} 
@@ -96,47 +96,47 @@ const PokemonCard = ({ pokemon, onClick }) => {
             className="w-[85%] h-[85%] object-contain drop-shadow-[0_10px_15px_rgba(0,0,0,0.8)] group-hover:scale-110 transition-transform duration-300 z-10"
             loading="lazy"
           />
-          <div className="absolute bottom-1 right-2 text-[10px] text-gray-400 font-mono italic">
+          <div className="absolute bottom-1 right-2 text-[8px] sm:text-[10px] text-gray-400 font-mono italic truncate max-w-[80%]">
             {pokemon.classification}
           </div>
         </div>
 
         {/* Types & CP Badges */}
-        <div className="flex justify-between items-center my-1">
-          <div className="flex gap-1.5">
+        <div className="flex justify-between items-center my-0.5 sm:my-1 gap-1">
+          <div className="flex gap-1 flex-wrap">
             {pokemon.types?.map(t => {
               const tStyle = typeColors[t] || typeColors.Normal;
               const Icon = tStyle.icon || Shield;
               return (
-                <span key={t} className={`${tStyle.badge} text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1 border border-white/20 shadow`}>
-                  <Icon size={10} /> {t}
+                <span key={t} className={`${tStyle.badge} text-[9px] sm:text-[10px] font-bold px-1.5 py-0.5 sm:px-2 rounded-full flex items-center gap-0.5 sm:gap-1 border border-white/20 shadow`}>
+                  <Icon size={9} /> {t}
                 </span>
               );
             })}
           </div>
-          <div className="bg-yellow-500/20 text-yellow-300 border border-yellow-500/40 text-[11px] font-bold px-2 py-0.5 rounded-full">
+          <div className="bg-yellow-500/20 text-yellow-300 border border-yellow-500/40 text-[9px] sm:text-[11px] font-bold px-1.5 sm:px-2 py-0.5 rounded-full shrink-0">
             CP {pokemon.maxCP}
           </div>
         </div>
 
         {/* Weakness / Resistance Section */}
-        <div className="bg-black/40 rounded-lg p-2 text-[10px] border border-white/10 space-y-1">
-          <div className="flex justify-between items-center">
-            <span className="text-gray-400 font-semibold">Faiblesses:</span>
-            <span className="text-red-300 font-bold truncate max-w-[150px]">
+        <div className="bg-black/40 rounded-lg p-1.5 sm:p-2 text-[9px] sm:text-[10px] border border-white/10 space-y-0.5 sm:space-y-1">
+          <div className="flex justify-between items-center gap-1">
+            <span className="text-gray-400 font-semibold shrink-0">Faiblesses:</span>
+            <span className="text-red-300 font-bold truncate max-w-[120px] sm:max-w-[150px]">
               {Array.isArray(pokemon.Faiblesses) ? pokemon.Faiblesses.join(', ') : pokemon.Faiblesses || 'Aucune'}
             </span>
           </div>
-          <div className="flex justify-between items-center border-t border-white/5 pt-1">
-            <span className="text-gray-400 font-semibold">Résistances:</span>
-            <span className="text-green-300 font-bold truncate max-w-[150px]">
+          <div className="flex justify-between items-center border-t border-white/5 pt-0.5 sm:pt-1 gap-1">
+            <span className="text-gray-400 font-semibold shrink-0">Résistances:</span>
+            <span className="text-green-300 font-bold truncate max-w-[120px] sm:max-w-[150px]">
               {Array.isArray(pokemon.Résistances) ? pokemon.Résistances.join(', ') : pokemon.Résistances || 'Aucune'}
             </span>
           </div>
         </div>
 
         {/* Card Footer Details */}
-        <div className="flex justify-between text-[9px] text-gray-300 font-mono pt-1">
+        <div className="flex justify-between text-[8px] sm:text-[9px] text-gray-300 font-mono pt-0.5 sm:pt-1">
           <span>Taille: {pokemon.taille?.maximum || '-'}</span>
           <span>Poids: {pokemon.poids?.maximum || '-'}</span>
         </div>

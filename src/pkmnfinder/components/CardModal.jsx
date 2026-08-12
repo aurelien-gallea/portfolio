@@ -13,7 +13,7 @@ const CardModal = ({ pokemon, onClose }) => {
           initial={{ opacity: 0, scale: 0.8, y: 20 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.8, y: 20 }}
-          className="relative max-w-4xl w-full bg-[#121216] border border-white/10 rounded-3xl p-6 md:p-8 shadow-2xl flex flex-col md:flex-row gap-8 overflow-hidden text-white"
+          className="relative max-w-4xl w-full max-h-[90vh] overflow-y-auto bg-[#121216] border border-white/10 rounded-3xl p-4 sm:p-6 md:p-8 shadow-2xl flex flex-col md:flex-row gap-6 md:gap-8 text-white"
         >
           {/* Close Button */}
           <button 

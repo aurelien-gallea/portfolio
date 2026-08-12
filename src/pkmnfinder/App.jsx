@@ -45,15 +45,15 @@ const PkmnApp = () => {
       <div className="max-w-[1500px] mx-auto space-y-8">
         
         {/* Banner Section */}
-        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-yellow-500/20 via-amber-600/10 to-purple-900/30 p-8 border border-yellow-500/20 shadow-2xl flex flex-col md:flex-row justify-between items-center gap-6">
+        <div className="relative overflow-hidden rounded-3xl bg-gradient-to-r from-yellow-500/20 via-amber-600/10 to-purple-900/30 p-5 sm:p-8 border border-yellow-500/20 shadow-2xl flex flex-col md:flex-row justify-between items-center gap-4 sm:gap-6">
           <div className="space-y-2 text-center md:text-left z-10">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-yellow-400/10 border border-yellow-400/30 text-yellow-300 text-xs font-semibold">
               <Sparkles size={14} /> Pokémon TCG Collection Gen 1
             </div>
-            <h2 className="text-3xl md:text-5xl font-extrabold tracking-tight">
+            <h2 className="text-2xl sm:text-3xl md:text-5xl font-extrabold tracking-tight">
               Collectionnez les 151 Pokémon
             </h2>
-            <p className="text-gray-400 max-w-xl text-sm md:text-base">
+            <p className="text-gray-400 max-w-xl text-xs sm:text-sm md:text-base">
               Survolez les cartes pour observer l'effet holographique 3D. Cliquez sur une carte pour inspecter les caractéristiques complètes du Pokémon.
             </p>
           </div>
@@ -115,7 +115,7 @@ const PkmnApp = () => {
             </button>
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8 justify-items-center">
+          <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-6 md:gap-8 justify-items-center">
             {filteredPokemon.map(pokemon => (
               <PokemonCard 
                 key={pokemon.id} 

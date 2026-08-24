@@ -35,7 +35,11 @@ const GameCanvas = ({
       ]
     },
     keys: {},
-    mouse: { x: 0, y: 0 },
+    mouse: { x: 150, y: 850 },
+    hasMouseMoved: false,
+    isMobileControl: false,
+    isFireHeld: false,
+    lastShotTime: 0,
     zombies: [],
     bullets: [],
     particles: [],
@@ -135,6 +139,11 @@ const GameCanvas = ({
   const shootWeapon = () => {
     const s = stateRef.current;
     if (s.isEnded || s.isPaused) return;
+
+    const now = Date.now();
+    // Fire cooldown (semi-auto minimum cooldown: 180ms)
+    if (now - (s.lastShotTime || 0) < 180) return;
+
     const w = s.player.weapons[s.player.activeWeaponIndex];
 
     if (w.id === 'knife') {
@@ -144,9 +153,11 @@ const GameCanvas = ({
 
     if (w.magAmmo <= 0) {
       sounds.playEmptyClick();
+      s.lastShotTime = now;
       return;
     }
 
+    s.lastShotTime = now;
     w.magAmmo--;
     sounds[w.sound]();
     onPlayerUpdate({ ...s.player });
@@ -262,6 +273,9 @@ const GameCanvas = ({
     s.player.hp = 100;
     s.player.x = 150;
     s.player.y = 850;
+    s.player.angle = 0;
+    s.hasMouseMoved = false;
+    s.isMobileControl = false;
     s.player.weapons[0].magAmmo = 12;
     s.player.weapons[0].reserveAmmo = startingReserve;
     s.playerSpeed = playerSpeed;
@@ -414,6 +428,7 @@ const GameCanvas = ({
       if (e.key === '2') { s.player.activeWeaponIndex = 1; onPlayerUpdate({ ...s.player }); }
       if (e.key === '3') { s.player.activeWeaponIndex = 2; onPlayerUpdate({ ...s.player }); }
       if (e.key.toLowerCase() === 'r') reloadWeapon();
+      if ((e.key === ' ' || e.code === 'Space') && !e.repeat) shootWeapon();
     };
 
     const handleKeyUp = (e) => {
@@ -421,6 +436,10 @@ const GameCanvas = ({
     };
 
     const handleMouseMove = (e) => {
+      // Ignore simulated mouse events from touch interfaces
+      if (e.sourceCapabilities && e.sourceCapabilities.firesTouchEvents) return;
+      s.hasMouseMoved = true;
+      s.isMobileControl = false;
       const rect = canvas.getBoundingClientRect();
       const scaleX = canvas.width / rect.width;
       const scaleY = canvas.height / rect.height;
@@ -429,13 +448,24 @@ const GameCanvas = ({
     };
 
     const handleMouseDown = (e) => {
-      if (e.button === 0) shootWeapon();
+      if (e.button === 0) {
+        if (s.isFireHeld) return;
+        s.isFireHeld = true;
+        shootWeapon();
+      }
+    };
+
+    const handleMouseUp = (e) => {
+      if (e.button === 0) {
+        s.isFireHeld = false;
+      }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     window.addEventListener('keyup', handleKeyUp);
     canvas.addEventListener('mousemove', handleMouseMove);
     canvas.addEventListener('mousedown', handleMouseDown);
+    window.addEventListener('mouseup', handleMouseUp);
 
     let animationFrameId;
 
@@ -483,17 +513,17 @@ const GameCanvas = ({
           }
 
           // Player Aim Angle
-          // On mobile: always aim in movement direction (fire = shoot where you walk)
-          // On desktop: aim toward mouse cursor
+          // On mobile: aim in movement direction; keep last orientation when stick is released
+          // On desktop: aim toward mouse cursor if mouse moved, or keep direction when moving via keys
           if (mm.x !== 0 || mm.y !== 0) {
+            s.isMobileControl = true;
             s.player.angle = Math.atan2(mm.y, mm.x);
             s.player.lastMoveAngle = s.player.angle;
+          } else if (s.hasMouseMoved && !s.isMobileControl) {
+            s.player.angle = Math.atan2(s.mouse.y - s.player.y, s.mouse.x - s.player.x);
           } else if (dx !== 0 || dy !== 0) {
             s.player.angle = Math.atan2(dy, dx);
             s.player.lastMoveAngle = s.player.angle;
-          } else {
-            // Desktop mouse aim
-            s.player.angle = Math.atan2(s.mouse.y - s.player.y, s.mouse.x - s.player.x);
           }
 
           // 2. UPDATE BULLETS
@@ -1090,6 +1120,7 @@ const GameCanvas = ({
       window.removeEventListener('keyup', handleKeyUp);
       canvas.removeEventListener('mousemove', handleMouseMove);
       canvas.removeEventListener('mousedown', handleMouseDown);
+      window.removeEventListener('mouseup', handleMouseUp);
     };
   }, [difficulty]);
 

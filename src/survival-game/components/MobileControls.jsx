@@ -1,10 +1,22 @@
 import React, { useState, useRef } from 'react';
 import { Crosshair, RefreshCw } from 'lucide-react';
 
-const MobileControls = ({ onMove, onFire, onReload }) => {
+const MobileControls = ({ player, onMove, onFire, onReload }) => {
   const [joystickPos, setJoystickPos] = useState({ x: 0, y: 0 });
   const touchIdRef = useRef(null);
   const joystickBoundsRef = useRef(null);
+
+  const hpPercent = player ? (player.hp / (player.maxHp || 100)) * 100 : 100;
+  let hpBarColor = 'bg-green-500';
+  let hpBorder = 'border-green-500/50 shadow-green-500/20';
+
+  if (hpPercent <= 30) {
+    hpBarColor = 'bg-red-500';
+    hpBorder = 'border-red-500/60 shadow-red-500/30';
+  } else if (hpPercent <= 60) {
+    hpBarColor = 'bg-yellow-500';
+    hpBorder = 'border-yellow-500/50 shadow-yellow-500/20';
+  }
 
   const updateJoystick = (touch, rect) => {
     const centerX = rect.left + rect.width / 2;
@@ -66,22 +78,46 @@ const MobileControls = ({ onMove, onFire, onReload }) => {
 
   return (
     <div className="absolute inset-0 pointer-events-none z-40 flex justify-between items-end p-4 md:p-6 select-none touch-none overflow-hidden">
-      {/* Left Virtual Joystick - Bottom Left */}
-      <div 
-        onTouchStart={handleTouchStart}
-        onTouchMove={handleTouchMove}
-        onTouchEnd={handleTouchEnd}
-        onTouchCancel={handleTouchEnd}
-        className="w-28 h-28 md:w-32 md:h-32 rounded-full bg-black/60 border-2 border-yellow-500/50 backdrop-blur-md pointer-events-auto relative flex items-center justify-center shadow-[0_0_20px_rgba(234,179,8,0.3)] touch-none"
-      >
-        <div className="absolute inset-2 rounded-full border border-dashed border-yellow-500/30 pointer-events-none" />
+      {/* Left Virtual Joystick & HP Bar - Bottom Left */}
+      <div className="flex flex-col items-center gap-2 pointer-events-none">
+        
+        {/* Health Bar positioned right above the stick */}
+        {player && (
+          <div className={`px-2.5 py-1.5 rounded-xl border backdrop-blur-md bg-black/85 ${hpBorder} shadow-lg flex flex-col gap-1 w-28 md:w-32 pointer-events-auto transition-all duration-300 ${hpPercent <= 30 ? 'animate-pulse' : ''}`}>
+            <div className="flex justify-between items-center">
+              <span className="text-[10px] text-gray-400 font-mono uppercase tracking-wider flex items-center gap-1 font-bold">
+                ❤️ VIE
+              </span>
+              <span className={`text-[11px] font-black font-mono ${hpPercent <= 30 ? 'text-red-400' : hpPercent <= 60 ? 'text-yellow-400' : 'text-green-400'}`}>
+                {Math.max(0, Math.round(player.hp))} HP
+              </span>
+            </div>
+            <div className="w-full h-2 bg-white/15 rounded-full overflow-hidden p-0.5 border border-white/10">
+              <div
+                className={`h-full rounded-full transition-all duration-200 ${hpBarColor} shadow-sm`}
+                style={{ width: `${Math.max(0, hpPercent)}%` }}
+              />
+            </div>
+          </div>
+        )}
+
+        {/* Joystick Base */}
         <div 
-          className="w-12 h-12 md:w-14 md:h-14 rounded-full bg-gradient-to-br from-yellow-400 to-amber-600 shadow-xl border-2 border-white pointer-events-none transition-transform duration-75 flex items-center justify-center text-black font-black text-[10px]"
-          style={{
-            transform: `translate(${joystickPos.x}px, ${joystickPos.y}px)`
-          }}
+          onTouchStart={handleTouchStart}
+          onTouchMove={handleTouchMove}
+          onTouchEnd={handleTouchEnd}
+          onTouchCancel={handleTouchEnd}
+          className="w-28 h-28 md:w-32 md:h-32 rounded-full bg-black/60 border-2 border-yellow-500/50 backdrop-blur-md pointer-events-auto relative flex items-center justify-center shadow-[0_0_20px_rgba(234,179,8,0.3)] touch-none"
         >
-          🕹️
+          <div className="absolute inset-2 rounded-full border border-dashed border-yellow-500/30 pointer-events-none" />
+          <div 
+            className="w-12 h-12 md:w-14 md:h-14 rounded-full bg-gradient-to-br from-yellow-400 to-amber-600 shadow-xl border-2 border-white pointer-events-none transition-transform duration-75 flex items-center justify-center text-black font-black text-[10px]"
+            style={{
+              transform: `translate(${joystickPos.x}px, ${joystickPos.y}px)`
+            }}
+          >
+            🕹️
+          </div>
         </div>
       </div>
 

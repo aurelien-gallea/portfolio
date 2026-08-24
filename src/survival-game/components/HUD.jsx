@@ -47,10 +47,10 @@ const HUD = ({ player, onReload, onPause, hasKey, score = 0, kills = 0, multipli
     <div className="absolute inset-0 pointer-events-none z-30 p-2 md:p-4 flex flex-col justify-between select-none">
       {/* Top Bar: Ultra Compact Status & Objective */}
       <div className="flex justify-between items-center gap-2">
-        {/* Left Side: Health Bar & Score */}
+        {/* Left Side: Health Bar (Desktop only) & Score */}
         <div className="flex items-center gap-2">
-          {/* Health Bar */}
-          <div className={`flex items-center gap-2 px-3 py-1.5 rounded-xl border backdrop-blur-md bg-black/80 ${hpBorder} shadow-md ${hpPercent <= 30 ? 'animate-pulse' : ''}`}>
+          {/* Health Bar (Desktop) */}
+          <div className={`hidden md:flex items-center gap-2 px-3 py-1.5 rounded-xl border backdrop-blur-md bg-black/80 ${hpBorder} shadow-md ${hpPercent <= 30 ? 'animate-pulse' : ''}`}>
             <div className="flex flex-col gap-0.5 min-w-[80px]">
               <div className="flex justify-between items-center">
                 <span className="text-[10px] text-gray-400 font-mono uppercase tracking-wider">❤️ Vie</span>
@@ -68,7 +68,7 @@ const HUD = ({ player, onReload, onPause, hasKey, score = 0, kills = 0, multipli
           </div>
 
           {/* Live Score Pill */}
-          <div className="bg-black/75 border border-yellow-500/30 backdrop-blur-md px-3 py-1.5 rounded-xl flex items-center gap-1.5 shadow-md">
+          <div className="bg-black/75 border border-yellow-500/30 backdrop-blur-md px-3 py-1.5 rounded-xl flex items-center gap-1.5 shadow-md ml-28 md:ml-0">
             <span className="text-xs">⭐</span>
             <span className="text-xs font-black font-mono text-yellow-400">
               {score} <span className="text-[10px] text-gray-400 font-normal">({multiplier}x)</span>

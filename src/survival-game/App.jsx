@@ -189,6 +189,7 @@ const SurvivalGameApp = () => {
 
           {/* Mobile Touch Overlay */}
           <MobileControls
+            player={playerData}
             onMove={setMobileMove}
             onFire={() => setMobileFireTrigger(prev => prev + 1)}
             onReload={() => setMobileReloadTrigger(prev => prev + 1)}

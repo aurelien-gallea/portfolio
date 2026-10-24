@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   ArrowLeft, ChevronLeft, ChevronRight, Plus, Trash2, Pencil, Wallet, TrendingUp,
-  TrendingDown, PiggyBank, Download, Upload, Search, X, Target, RotateCcw,
+  TrendingDown, PiggyBank, Download, Upload, Search, X, Target,
 } from 'lucide-react';
 import { Anneau, Historique } from './Graphiques';
 import {
@@ -353,8 +353,8 @@ export default function BudgetApp() {
             <button type="button" onClick={() => fichier.current?.click()} className={`${bouton} bg-white/5 text-gray-300 hover:bg-white/10`} title="Importer un CSV (relevé bancaire ou export) ou restaurer une sauvegarde JSON">
               <Upload size={16} /> Importer
             </button>
-            <button type="button" onClick={reinitialiser} className={`${bouton} bg-white/5 text-gray-400 hover:bg-red-500/20 hover:text-red-300`} title="Tout effacer">
-              <RotateCcw size={16} />
+            <button type="button" onClick={reinitialiser} className={`${bouton} bg-white/5 text-gray-400 hover:bg-red-500/20 hover:text-red-300`} title="Tout effacer" aria-label="Tout effacer">
+              <Trash2 size={16} />
             </button>
             <input ref={fichier} type="file" accept=".csv,.txt,text/csv,application/json,.json" className="hidden" onChange={importer} />
           </div>

@@ -1,9 +1,10 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
-  ArrowLeft, Fuel, Zap, Gauge, CalendarClock, Leaf, PiggyBank, RotateCcw, Save, X, Info, Landmark,
+  ArrowLeft, Fuel, Zap, Gauge, CalendarClock, Leaf, PiggyBank, RotateCcw, Save, X, Info, Landmark, Search,
 } from 'lucide-react';
 import { Courbes, Repartition, COULEURS } from './Graphiques';
+import { CATALOGUE, rechercher, estimer } from './catalogue';
 import {
   CARBURANTS, THERMIQUES, ELECTRIQUES, CLES_THERMIQUE, CLES_ELECTRIQUE, extraire, identique,
   parDefaut, charger, sauvegarder, simuler, croisement, seuilKm, euros, nombre, dureeTexte,
@@ -64,8 +65,90 @@ function Curseur({ nom, valeur, min, max, pas, format, onChange, couleur = 'acce
   );
 }
 
+const anneeCourante = new Date().getFullYear();
+
+// Recherche dans le catalogue de modèles réels, puis choix de l'année de l'exemplaire
+function CatalogueThermique({ th, onChoisir }) {
+  const [texte, setTexte] = useState('');
+  const [ouvert, setOuvert] = useState(false);
+  const resultats = useMemo(() => rechercher(texte), [texte]);
+  const choisi = CATALOGUE.find((m) => m.id === th.catalogue);
+  const derniere = choisi && Math.min(choisi.a, anneeCourante);
+  const modifie = choisi && !identique(th, estimer(choisi, th.annee), CLES_THERMIQUE);
+
+  return (
+    <div className="space-y-2">
+      <div className="relative">
+        <Search size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
+        <input
+          className={`${champ} pl-9`}
+          placeholder="Chercher votre modèle : Clio, 308 diesel, Yaris…"
+          value={texte}
+          onChange={(e) => { setTexte(e.target.value); setOuvert(true); }}
+          onFocus={() => setOuvert(true)}
+          onBlur={() => setOuvert(false)}
+          onKeyDown={(e) => e.key === 'Escape' && e.currentTarget.blur()}
+        />
+        {ouvert && (
+          <ul
+            className="absolute left-0 right-0 top-full z-30 m-0 mt-1 max-h-80 list-none overflow-y-auto rounded-xl border border-white/10 bg-[#141416] p-1 shadow-2xl"
+            onMouseDown={(e) => e.preventDefault()}
+          >
+            {resultats.length === 0 && <li className="px-3 py-4 text-center text-sm text-gray-500">Aucun modèle trouvé : utilisez un profil type ou saisissez vos valeurs.</li>}
+            {resultats.map((m) => (
+              <li key={m.id}>
+                <button
+                  type="button"
+                  onClick={() => {
+                    onChoisir(m, Math.min(Math.round((m.de + m.a) / 2), anneeCourante));
+                    setTexte('');
+                    setOuvert(false);
+                  }}
+                  className="flex w-full cursor-pointer items-center gap-3 rounded-lg border-0 bg-transparent px-3 py-2 text-left hover:bg-white/5"
+                >
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-sm text-gray-100">{m.marque} {m.modele}</span>
+                    <span className="block truncate text-xs text-gray-500">{m.moteur} · {m.de}–{m.a >= anneeCourante ? 'auj.' : m.a}</span>
+                  </span>
+                  <span className="shrink-0 rounded-md bg-white/5 px-1.5 py-0.5 text-[11px] text-gray-400">
+                    {m.hybride ? 'Hybride' : CARBURANTS[m.carburant].nom}
+                  </span>
+                  <span className="w-20 shrink-0 text-right text-sm font-semibold tabular-nums" style={{ color: COULEURS.thermique }}>
+                    {nombre(m.conso, 1)} L
+                  </span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+
+      {choisi && (
+        <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border px-3 py-2.5" style={{ borderColor: `${COULEURS.thermique}40`, background: `${COULEURS.thermique}0f` }}>
+          <div className="min-w-0">
+            <div className="truncate text-sm font-semibold text-white">{choisi.marque} {choisi.modele} <span className="font-normal text-gray-400">{choisi.moteur}</span></div>
+            <div className="text-xs text-gray-500">
+              {nombre(choisi.conso, 1)} L/100 réels · neuve ≈ {euros(choisi.prixNeuf)}{modifie ? ' · valeurs modifiées' : ' · valeurs estimées'}
+            </div>
+          </div>
+          <label className="flex items-center gap-2 text-xs text-gray-400">
+            Année
+            <select
+              value={th.annee}
+              onChange={(e) => onChoisir(choisi, Number(e.target.value))}
+              className={`${champ} w-auto cursor-pointer py-1 [color-scheme:dark]`}
+            >
+              {Array.from({ length: derniere - choisi.de + 1 }, (_, i) => derniere - i).map((a) => <option key={a} value={a}>{a}</option>)}
+            </select>
+          </label>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // Puces de modèles prédéfinis + modèles enregistrés par l'utilisateur
-function Modeles({ predefinis, perso, actuel, cles, couleur, onChoisir, onEnregistrer, onSupprimer }) {
+function Modeles({ predefinis, perso, actuel, cles, couleur, onChoisir, onEnregistrer, onSupprimer, libre = 'Personnalisé' }) {
   const [nom, setNom] = useState(null);
   const tous = [...predefinis, ...perso];
   const selection = tous.find((m) => identique(m, actuel, cles));
@@ -104,7 +187,7 @@ function Modeles({ predefinis, perso, actuel, cles, couleur, onChoisir, onEnregi
       </div>
       <div className="flex min-h-[2rem] flex-wrap items-center justify-between gap-2 text-xs">
         <span className="text-gray-500">
-          {selection ? (selection.detail ?? 'Modèle personnel') : 'Personnalisé'}
+          {selection ? (selection.detail ?? 'Modèle personnel') : libre}
         </span>
         {nom === null ? (
           !selection && (
@@ -140,11 +223,12 @@ export default function AutoApp() {
   const th = d.thermique;
   const el = d.electrique;
 
-  const choisirThermique = (m) => setD((x) => ({
+  const choisirThermique = (m, reference = {}) => setD((x) => ({
     ...x,
-    thermique: extraire(m, CLES_THERMIQUE),
+    thermique: { ...extraire(m, CLES_THERMIQUE), ...reference },
     usage: m.carburant !== x.thermique.carburant ? { ...x.usage, prixCarburant: CARBURANTS[m.carburant].prix } : x.usage,
   }));
+  const choisirCatalogue = (m, annee) => choisirThermique(estimer(m, annee), { catalogue: m.id, annee });
   const choisirCarburant = (c) => setD((x) => ({
     ...x,
     thermique: { ...x.thermique, carburant: c },
@@ -294,13 +378,16 @@ export default function AutoApp() {
                 <Fuel size={18} style={{ color: COULEURS.thermique }} /> Votre voiture actuelle
               </h2>
               <div className="space-y-4">
+                <CatalogueThermique th={th} onChoisir={choisirCatalogue} />
+                <p className="m-0 text-xs text-gray-500">Ou partez d'un profil type :</p>
                 <Modeles
                   predefinis={THERMIQUES}
                   perso={d.modeles.thermiques}
                   actuel={th}
                   cles={CLES_THERMIQUE}
                   couleur={COULEURS.thermique}
-                  onChoisir={choisirThermique}
+                  libre={th.catalogue ? 'Modèle du catalogue' : 'Personnalisé'}
+                  onChoisir={(m) => choisirThermique(m)}
                   onEnregistrer={enregistrerModele('thermiques', CLES_THERMIQUE, th)}
                   onSupprimer={supprimerModele('thermiques')}
                 />

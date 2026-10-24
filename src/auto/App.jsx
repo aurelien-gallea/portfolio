@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
-  ArrowLeft, Fuel, Zap, Gauge, CalendarClock, Leaf, PiggyBank, RotateCcw, Save, X, Info, Landmark, Search, ChevronDown,
+  ArrowLeft, Fuel, Zap, Gauge, CalendarClock, Leaf, PiggyBank, RotateCcw, Info, Landmark, Search, ChevronDown,
 } from 'lucide-react';
 import { Courbes, Repartition, COULEURS } from './Graphiques';
 import { CATALOGUE, CATALOGUE_ELECTRIQUE, rechercher, estimer, estimerElectrique } from './catalogue';
@@ -192,69 +192,30 @@ function Catalogue({ type, valeurs, couleur, onChoisir }) {
   );
 }
 
-// Puces de modèles prédéfinis + modèles enregistrés par l'utilisateur
-function Modeles({ predefinis, perso, actuel, cles, couleur, onChoisir, onEnregistrer, onSupprimer, libre = 'Personnalisé' }) {
-  const [nom, setNom] = useState(null);
-  const tous = [...predefinis, ...perso];
-  const selection = tous.find((m) => identique(m, actuel, cles));
+// Profils types, pour qui ne trouve pas son modèle dans le catalogue
+function Profils({ actuel, couleur, onChoisir }) {
+  const selection = THERMIQUES.find((m) => identique(m, actuel, CLES_THERMIQUE));
 
   return (
-    <div className="space-y-2">
-      <div className="flex flex-wrap gap-1.5">
-        {tous.map((m) => {
-          const actif = selection?.id === m.id;
-          return (
-            <span key={m.id} className="relative inline-flex">
-              <button
-                type="button"
-                onClick={() => onChoisir(m)}
-                title={m.detail}
-                className={`${bouton} border px-2.5 py-1.5 text-xs ${m.perso ? 'pr-6' : ''} ${
-                  actif ? 'text-white' : 'border-white/10 bg-transparent text-gray-400 hover:text-white'
-                }`}
-                style={actif ? { background: `${couleur}26`, borderColor: couleur } : undefined}
-              >
-                {m.nom}
-              </button>
-              {m.perso && (
-                <button
-                  type="button"
-                  onClick={() => onSupprimer(m.id)}
-                  className="absolute right-1 top-1/2 -translate-y-1/2 cursor-pointer border-0 bg-transparent p-0.5 text-gray-500 hover:text-red-400"
-                  aria-label={`Supprimer le modèle ${m.nom}`}
-                >
-                  <X size={12} />
-                </button>
-              )}
-            </span>
-          );
-        })}
-      </div>
-      <div className="flex min-h-[2rem] flex-wrap items-center justify-between gap-2 text-xs">
-        <span className="text-gray-500">
-          {selection ? (selection.detail ?? 'Modèle personnel') : libre}
-        </span>
-        {nom === null ? (
-          !selection && (
-            <button type="button" onClick={() => setNom('')} className={`${bouton} bg-white/5 px-2.5 py-1 text-xs text-gray-300 hover:bg-white/10`}>
-              <Save size={12} /> Enregistrer ce modèle
-            </button>
-          )
-        ) : (
-          <form
-            className="flex gap-1.5"
-            onSubmit={(e) => {
-              e.preventDefault();
-              if (nom.trim()) onEnregistrer(nom.trim());
-              setNom(null);
-            }}
+    <div className="flex flex-wrap items-center gap-1.5">
+      <span className="mr-1 text-xs text-gray-500">Ou un profil type :</span>
+      {THERMIQUES.map((m) => {
+        const actif = selection?.id === m.id;
+        return (
+          <button
+            key={m.id}
+            type="button"
+            onClick={() => onChoisir(m)}
+            title={m.detail}
+            className={`${bouton} border px-2 py-1 text-xs ${
+              actif ? 'text-white' : 'border-white/10 bg-transparent text-gray-400 hover:text-white'
+            }`}
+            style={actif ? { background: `${couleur}26`, borderColor: couleur } : undefined}
           >
-            <input autoFocus className={`${champ} w-40 py-1 text-xs`} placeholder="Nom du modèle" value={nom} maxLength={30} onChange={(e) => setNom(e.target.value)} />
-            <button type="submit" className={`${bouton} bg-emerald-500 px-2.5 py-1 text-xs text-black hover:bg-emerald-400`}>OK</button>
-            <button type="button" onClick={() => setNom(null)} className={`${bouton} bg-transparent px-1.5 py-1 text-gray-500 hover:text-white`} aria-label="Annuler"><X size={14} /></button>
-          </form>
-        )}
-      </div>
+            {m.nom}
+          </button>
+        );
+      })}
     </div>
   );
 }
@@ -283,18 +244,8 @@ export default function AutoApp() {
     thermique: { ...x.thermique, carburant: c },
     usage: { ...x.usage, prixCarburant: CARBURANTS[c].prix },
   }));
-  const enregistrerModele = (type, cles, valeurs) => (nom) => setD((x) => ({
-    ...x,
-    modeles: { ...x.modeles, [type]: [...x.modeles[type], { id: `perso-${Date.now()}`, nom, perso: true, ...extraire(valeurs, cles) }] },
-  }));
-  const supprimerModele = (type) => (id) => setD((x) => ({
-    ...x,
-    modeles: { ...x.modeles, [type]: x.modeles[type].filter((m) => m.id !== id) },
-  }));
   const reinitialiser = () => {
-    if (window.confirm('Revenir aux valeurs par défaut ? Vos modèles enregistrés sont conservés.')) {
-      setD((x) => ({ ...parDefaut(), modeles: x.modeles }));
-    }
+    if (window.confirm('Revenir aux valeurs par défaut ?')) setD(parDefaut());
   };
 
   const sim = useMemo(() => simuler(d), [d]);
@@ -430,18 +381,7 @@ export default function AutoApp() {
               </h2>
               <div className="space-y-3">
                 <Catalogue type="thermique" valeurs={th} couleur={COULEURS.thermique} onChoisir={choisirCatalogue} />
-                <p className="m-0 text-xs text-gray-500">Ou partez d'un profil type :</p>
-                <Modeles
-                  predefinis={THERMIQUES}
-                  perso={d.modeles.thermiques}
-                  actuel={th}
-                  cles={CLES_THERMIQUE}
-                  couleur={COULEURS.thermique}
-                  libre={th.catalogue ? '' : 'Personnalisé'}
-                  onChoisir={(m) => choisirThermique(m)}
-                  onEnregistrer={enregistrerModele('thermiques', CLES_THERMIQUE, th)}
-                  onSupprimer={supprimerModele('thermiques')}
-                />
+                <Profils actuel={th} couleur={COULEURS.thermique} onChoisir={(m) => choisirThermique(m)} />
                 <div className="flex gap-1 rounded-xl bg-black/40 p-1">
                   {Object.entries(CARBURANTS).map(([id, c]) => (
                     <button
@@ -474,17 +414,6 @@ export default function AutoApp() {
               </h2>
               <div className="space-y-3">
                 <Catalogue type="electrique" valeurs={el} couleur={COULEURS.electrique} onChoisir={choisirElectrique} />
-                <Modeles
-                  predefinis={[]}
-                  perso={d.modeles.electriques}
-                  actuel={el}
-                  cles={CLES_ELECTRIQUE}
-                  couleur={COULEURS.electrique}
-                  libre={el.catalogue ? '' : 'Personnalisé'}
-                  onChoisir={(m) => setD((x) => ({ ...x, electrique: { ...x.electrique, ...extraire(m, CLES_ELECTRIQUE), catalogue: null, annee: 0 } }))}
-                  onEnregistrer={enregistrerModele('electriques', CLES_ELECTRIQUE, el)}
-                  onSupprimer={supprimerModele('electriques')}
-                />
                 <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-2">
                   <Champ nom="Prix d'achat" unite="€" valeur={el.prix} onChange={maj('electrique', 'prix')} />
                   <Champ nom="Aides à l'achat" unite="€" valeur={el.aides} onChange={maj('electrique', 'aides')} aide="Prime CEE « coup de pouce », aides locales… à vérifier selon vos revenus et le modèle" />

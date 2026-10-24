@@ -2,8 +2,8 @@
 import { CATALOGUE_ELECTRIQUE, estimerElectrique } from './catalogue';
 
 export const CARBURANTS = {
-  essence: { nom: 'Essence', prix: 1.75, co2: 2.7 },
-  gazole: { nom: 'Gazole', prix: 1.65, co2: 3.1 },
+  essence: { nom: 'Essence', prix: 1.99, co2: 2.7 },
+  gazole: { nom: 'Gazole', prix: 2.25, co2: 3.1 },
   e85: { nom: 'E85', prix: 0.85, co2: 1.4 },
   gpl: { nom: 'GPL', prix: 1.0, co2: 1.9 },
 };
@@ -40,10 +40,12 @@ export const parDefaut = () => ({
     borne: 1000, autres: 0,
     credit: false, apport: 0, taux: 4.5, dureeCredit: 60,
   },
-  modeles: { thermiques: [], electriques: [] },
 });
 
 const CLE = 'thermique-vs-electrique';
+
+// Anciens prix par défaut : un prix enregistré resté à cette valeur suit les nouveaux
+const ANCIENS_PRIX = { essence: 1.75, gazole: 1.65 };
 
 export function charger() {
   const base = parDefaut();
@@ -51,11 +53,13 @@ export function charger() {
     const brut = localStorage.getItem(CLE);
     if (brut) {
       const d = JSON.parse(brut);
+      const thermique = { ...base.thermique, ...d.thermique };
+      const usage = { ...base.usage, ...d.usage };
+      if (usage.prixCarburant === ANCIENS_PRIX[thermique.carburant]) usage.prixCarburant = CARBURANTS[thermique.carburant].prix;
       return {
-        usage: { ...base.usage, ...d.usage },
-        thermique: { ...base.thermique, ...d.thermique },
+        usage,
+        thermique,
         electrique: { ...base.electrique, ...d.electrique },
-        modeles: { ...base.modeles, ...d.modeles },
       };
     }
   } catch { /* données illisibles : on repart des valeurs par défaut */ }

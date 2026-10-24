@@ -396,6 +396,9 @@ function Piste({ piste, ouverte, onBasculer }) {
   );
 }
 
+// Préférence d'affichage du bloc (ouvert / replié), propre à ce navigateur
+const CLE_DEPLIE = 'budget-pistes-deplie';
+
 export default function Pistes({ donnees, mois, onModifier }) {
   const { pistes, mois: fenetre } = useMemo(() => calculerPistes(donnees, mois), [donnees, mois]);
   const frais = useMemo(() => fraisBancaires(donnees.transactions, mois), [donnees.transactions, mois]);
@@ -406,6 +409,13 @@ export default function Pistes({ donnees, mois, onModifier }) {
     onModifier({ aResilier: aResilier.includes(cle) ? aResilier.filter((c) => c !== cle) : [...aResilier, cle] });
   const [ouverte, setOuverte] = useState(null);
   const [toutes, setToutes] = useState(false);
+  const [deplie, setDeplie] = useState(() => {
+    try { return localStorage.getItem(CLE_DEPLIE) !== 'non'; } catch { return true; }
+  });
+  const basculerBloc = () => {
+    setDeplie(!deplie);
+    try { localStorage.setItem(CLE_DEPLIE, deplie ? 'non' : 'oui'); } catch { /* préférence non mémorisée */ }
+  };
   const profil = donnees.profil ?? {};
   const visibles = toutes ? pistes : pistes.slice(0, 4);
   const premiere = ouverte ?? pistes[0]?.id;
@@ -416,58 +426,81 @@ export default function Pistes({ donnees, mois, onModifier }) {
     frais +
     abonnements.filter((a) => aResilier.includes(a.cle) && !a.contrat && !retires.includes(a.cle)).reduce((s, a) => s + a.mensuel, 0);
 
+  const nbAbonnements = abonnements.filter((a) => !retires.includes(a.cle)).length;
+  const resume = [
+    pistes.length && `${pistes.length} piste${pistes.length > 1 ? 's' : ''}`,
+    nbAbonnements && `${nbAbonnements} abonnement${nbAbonnements > 1 ? 's' : ''} et contrat${nbAbonnements > 1 ? 's' : ''}`,
+    'frais bancaires',
+  ].filter(Boolean).join(' · ');
+
   return (
-    <div className="rounded-2xl border border-white/[0.06] bg-white/[0.03] p-5">
-      <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h3 className="m-0 flex items-center gap-2 text-lg font-semibold"><Lightbulb size={20} className="text-amber-400" /> Pistes pour alléger votre budget</h3>
-          <p className="m-0 mt-1 text-xs text-gray-500">
-            {fenetre.length
-              ? `Moyenne de ${fenetre.map((m) => nomMois(m, 'short').replace('.', '')).join(', ')}, comparée aux repères français. Ordres de grandeur indicatifs.`
-              : 'Ajoutez quelques opérations pour obtenir des pistes.'}
-          </p>
-        </div>
+    <div className="rounded-2xl border border-white/[0.06] bg-white/[0.03]">
+      <button
+        type="button"
+        onClick={basculerBloc}
+        aria-expanded={deplie}
+        aria-controls="pistes-contenu"
+        className="flex w-full cursor-pointer flex-wrap items-center justify-between gap-3 rounded-2xl border-0 bg-transparent p-5 text-left text-white transition-colors hover:bg-white/[0.02]"
+      >
+        <span className="flex min-w-0 items-start gap-3">
+          <ChevronDown size={20} className={`mt-1 shrink-0 text-gray-500 transition-transform duration-300 ${deplie ? 'rotate-180' : ''}`} />
+          <span className="min-w-0">
+            <span className="flex items-center gap-2 text-lg font-semibold"><Lightbulb size={20} className="text-amber-400" /> Pistes pour alléger votre budget</span>
+            <span className="mt-1 block text-xs text-gray-500">
+              {!deplie
+                ? `${resume}. Cliquez pour afficher.`
+                : fenetre.length
+                  ? `Moyenne de ${fenetre.map((m) => nomMois(m, 'short').replace('.', '')).join(', ')}, comparée aux repères français. Ordres de grandeur indicatifs.`
+                  : 'Ajoutez quelques opérations pour obtenir des pistes.'}
+            </span>
+          </span>
+        </span>
         {gainMensuel >= 1 && (
-          <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-2 text-right">
-            <div className="text-lg font-bold tabular-nums text-emerald-400">≈ {euros(Math.round(gainMensuel))} <span className="text-xs font-normal text-emerald-300/80">/ mois</span></div>
-            <div className="text-[11px] text-gray-400">d'économies repérées, soit {euros(Math.round(gainMensuel * 12))} / an</div>
-          </div>
+          <span className="rounded-xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-2 text-right">
+            <span className="block whitespace-nowrap text-lg font-bold tabular-nums text-emerald-400">≈ {euros(Math.round(gainMensuel))} <span className="text-xs font-normal text-emerald-300/80">/ mois</span></span>
+            <span className="block text-[11px] text-gray-400">d'économies repérées, soit {euros(Math.round(gainMensuel * 12))} / an</span>
+          </span>
         )}
-      </div>
+      </button>
 
-      <div className="grid gap-4 lg:grid-cols-5">
-        <div className="min-w-0 space-y-4 lg:col-span-2">
-          <Profil profil={profil} onModifier={(p) => onModifier({ profil: p })} />
-          <FraisBancaires parMois={frais} />
-        </div>
+      {/* Hauteur animée via grid-rows ; overflow masqué seulement replié, pour ne pas couper la liste des villes */}
+      <div id="pistes-contenu" className={`grid transition-[grid-template-rows] duration-300 ${deplie ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'}`}>
+        <div className={`min-h-0 ${deplie ? '' : 'invisible overflow-hidden'}`}>
+          <div className="grid gap-4 px-5 pb-5 lg:grid-cols-5">
+            <div className="min-w-0 space-y-4 lg:col-span-2">
+              <Profil profil={profil} onModifier={(p) => onModifier({ profil: p })} />
+              <FraisBancaires parMois={frais} />
+            </div>
 
-        <div className="min-w-0 space-y-4 lg:col-span-3">
-          <div className="space-y-2">
-            {fenetre.length > 0 && pistes.length === 0 && (
-              <p className="m-0 rounded-xl bg-emerald-500/10 py-4 text-center text-sm text-emerald-400">Tous vos postes sont dans les repères français. Bravo !</p>
-            )}
-            {visibles.map((p) => (
-              <Piste
-                key={p.id}
-                piste={p}
-                ouverte={premiere === p.id}
-                onBasculer={() => setOuverte(premiere === p.id ? '' : p.id)}
+            <div className="min-w-0 space-y-4 lg:col-span-3">
+              <div className="space-y-2">
+                {fenetre.length > 0 && pistes.length === 0 && (
+                  <p className="m-0 rounded-xl bg-emerald-500/10 py-4 text-center text-sm text-emerald-400">Tous vos postes sont dans les repères français. Bravo !</p>
+                )}
+                {visibles.map((p) => (
+                  <Piste
+                    key={p.id}
+                    piste={p}
+                    ouverte={premiere === p.id}
+                    onBasculer={() => setOuverte(premiere === p.id ? '' : p.id)}
+                  />
+                ))}
+                {pistes.length > 4 && (
+                  <button type="button" onClick={() => setToutes(!toutes)} className={`${bouton} w-full justify-center bg-transparent text-xs text-gray-400 hover:text-white`}>
+                    {toutes ? 'Afficher moins' : `Voir les ${pistes.length - 4} autres pistes`}
+                  </button>
+                )}
+              </div>
+              <ScannerAbonnements
+                abonnements={abonnements}
+                aResilier={aResilier}
+                retires={retires}
+                onBasculer={basculerResiliation}
+                onRetirer={(cle) => onModifier({ abonnementsRetires: [...retires, cle], aResilier: aResilier.filter((c) => c !== cle) })}
+                onRestaurer={() => onModifier({ abonnementsRetires: [] })}
               />
-            ))}
-            {pistes.length > 4 && (
-              <button type="button" onClick={() => setToutes(!toutes)} className={`${bouton} w-full justify-center bg-transparent text-xs text-gray-400 hover:text-white`}>
-                {toutes ? 'Afficher moins' : `Voir les ${pistes.length - 4} autres pistes`}
-              </button>
-            )}
+            </div>
           </div>
-          <ScannerAbonnements
-            abonnements={abonnements}
-            aResilier={aResilier}
-            retires={retires}
-            onBasculer={basculerResiliation}
-            onRetirer={(cle) => onModifier({ abonnementsRetires: [...retires, cle], aResilier: aResilier.filter((c) => c !== cle) })}
-            onRestaurer={() => onModifier({ abonnementsRetires: [] })}
-          />
         </div>
       </div>
     </div>

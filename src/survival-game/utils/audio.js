@@ -176,6 +176,12 @@ class SoundManager {
     this.noise(0.5, 0.45, 300, 1800, 'bandpass');
   }
 
+  playSpitCharge() {
+    // Wet gurgle while the throat sac fills up
+    for (let i = 0; i < 4; i++) this.tone('sine', 140 + Math.random() * 80, 90, 0.12, 0.18, i * 0.13);
+    this.noise(0.55, 0.12, 900, 300, 'bandpass');
+  }
+
   playSpit() {
     this.noise(0.18, 0.35, 2500, 500, 'bandpass');
     this.tone('sine', 300, 120, 0.15, 0.15);

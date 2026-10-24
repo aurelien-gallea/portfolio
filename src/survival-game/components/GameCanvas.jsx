@@ -423,14 +423,15 @@ const GameCanvas = ({
     actionsRef.current = { fire, reload: startReload, knife: knifeSlash, cycle: cycleWeapon };
 
     // Spitter: keeps its distance, strafes, then lobs a web that glues the player in place
-    const fireWeb = (z) => {
+    // Aims where the player is heading, with a partial lead on their current movement
+    const webAim = (z) => {
       const p = s.player;
-      const dist = Math.hypot(p.x - z.x, p.y - z.y);
-      const flight = dist / SPIT.speed;
-      // Partial lead on the player's current movement
-      const tx = p.x + p.vx * flight * 0.7;
-      const ty = p.y + p.vy * flight * 0.7;
-      const a = Math.atan2(ty - z.y, tx - z.x);
+      const flight = Math.hypot(p.x - z.x, p.y - z.y) / SPIT.speed;
+      return Math.atan2(p.y + p.vy * flight * 0.7 - z.y, p.x + p.vx * flight * 0.7 - z.x);
+    };
+
+    const fireWeb = (z) => {
+      const a = webAim(z);
       s.webs.push({ x: z.x + Math.cos(a) * 18, y: z.y + Math.sin(a) * 18, vx: Math.cos(a) * SPIT.speed, vy: Math.sin(a) * SPIT.speed, range: 560, angle: a });
       sounds.playSpit();
     };
@@ -439,6 +440,7 @@ const GameCanvas = ({
       const p = s.player;
       if (z.spit !== undefined && z.spit !== null) {
         z.spit -= dtSec;
+        z.spitAngle = webAim(z);
         if (z.spit <= 0) {
           z.spit = null;
           fireWeb(z);
@@ -447,8 +449,14 @@ const GameCanvas = ({
         return { x: 0, y: 0 };
       }
       if (!z.sees) return null;
+      if (!s.spitterSeen) {
+        s.spitterSeen = true;
+        showBanner('CRACHEUR DE TOILE', 'Sa toile vous colle au sol 2 s — abattez-le en priorité !', '#facc15', 2.8);
+      }
       if (toPlayer <= SPIT.maxRange && toPlayer > 60 && s.clock >= (z.nextSpit || 0)) {
         z.spit = SPIT.windup;
+        z.spitAngle = webAim(z);
+        sounds.playSpitCharge();
         return { x: 0, y: 0 };
       }
       const ax = (p.x - z.x) / (toPlayer || 1);
@@ -584,7 +592,9 @@ const GameCanvas = ({
         const y = p.y + Math.sin(angle) * dist;
         if (!isFreeSpot(x, y, 26) || !hasLineOfSight(p.x, p.y, x, y, s.level.solids)) continue;
         const duration = 1.15;
-        s.drops.push({ x, y, type: pickZombieType(diff), timer: duration, duration, dust: 0 });
+        const spitters = s.zombies.filter(z => z.type === 'spitter' && !z.dead).length;
+        const type = spitters < 2 && Math.random() < 0.4 ? 'spitter' : pickZombieType(diff);
+        s.drops.push({ x, y, type, timer: duration, duration, dust: 0 });
         sounds.playCeilingCrack();
         return;
       }
@@ -820,7 +830,7 @@ const GameCanvas = ({
         // Vision, refreshed a few times per second
         if (s.clock >= z.nextSight) {
           z.nextSight = s.clock + 150 + Math.random() * 100;
-          z.sees = toPlayer < 420 && hasLineOfSight(z.x, z.y, p.x, p.y, solids);
+          z.sees = toPlayer < (z.type === 'spitter' ? SPIT.sight : 420) && hasLineOfSight(z.x, z.y, p.x, p.y, solids);
           if (z.state !== 'chase' && (z.sees || toPlayer < 90)) alertZombie(z);
         }
 

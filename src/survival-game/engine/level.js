@@ -318,5 +318,16 @@ export const generateLevel = (diff) => {
     level.zombies.push(makeZombie(pickZombieType(diff), spot.x, spot.y, diff.zombieSpeed));
   }
 
+  // Every mansion gets its share of spitters, swapped in for walkers first, then runners
+  const walkers = [
+    ...shuffle(level.zombies.filter(z => z.type === 'runner')),
+    ...shuffle(level.zombies.filter(z => z.type === 'walker')),
+  ];
+  let missing = diff.minSpitters - level.zombies.filter(z => z.type === 'spitter').length;
+  while (missing-- > 0 && walkers.length) {
+    const w = walkers.pop();
+    level.zombies[level.zombies.indexOf(w)] = makeZombie('spitter', w.x, w.y, diff.zombieSpeed);
+  }
+
   return level;
 };

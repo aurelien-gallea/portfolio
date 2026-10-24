@@ -509,6 +509,7 @@ export const drawZombie = (ctx, z, t) => {
   const flash = z.hitFlash > 0;
 
   if (z.type === 'brute' && z.falling === undefined) drawBruteAura(ctx, z, t);
+  if (z.type === 'spitter' && z.falling === undefined) drawSpitterAura(ctx, z, t);
 
   ctx.save();
   ctx.translate(z.x, z.y);
@@ -595,7 +596,13 @@ export const drawZombie = (ctx, z, t) => {
     ctx.textAlign = 'center';
     ctx.fillStyle = z.enraged ? '#fca5a5' : '#c4b5fd';
     ctx.fillText(z.enraged ? 'COLOSSE ENRAGÉ' : 'COLOSSE', z.x, z.y - z.radius - 19);
-  } else if (z.hp < z.maxHp) {
+  } else if (z.type === 'spitter' && z.state === 'chase') {
+    ctx.font = 'bold 9px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#fde047';
+    ctx.fillText('CRACHEUR', z.x, z.y - z.radius - (z.hp < z.maxHp ? 15 : 8));
+  }
+  if (z.type !== 'brute' && z.hp < z.maxHp) {
     const w = z.radius * 2;
     ctx.fillStyle = 'rgba(0,0,0,0.7)';
     ctx.fillRect(z.x - w / 2, z.y - z.radius - 11, w, 4);
@@ -613,6 +620,32 @@ export const drawZombie = (ctx, z, t) => {
     ctx.fillText('!', z.x, z.y - z.radius - 16 - (0.6 - z.alertTimer) * 10);
     ctx.restore();
   }
+};
+
+// Toxic glow, plus a dashed aim line while the spitter prepares its web
+const drawSpitterAura = (ctx, z, t) => {
+  ctx.save();
+  const pulse = 0.5 + Math.sin(t * 0.008 + z.phase) * 0.5;
+  const g = ctx.createRadialGradient(z.x, z.y, z.radius * 0.5, z.x, z.y, z.radius * 2.4);
+  g.addColorStop(0, `rgba(190, 242, 100, ${0.2 + pulse * 0.15})`);
+  g.addColorStop(1, 'rgba(190, 242, 100, 0)');
+  ctx.fillStyle = g;
+  ctx.beginPath();
+  ctx.arc(z.x, z.y, z.radius * 2.4, 0, Math.PI * 2);
+  ctx.fill();
+  if (z.spit && z.spitAngle !== undefined) {
+    const k = 1 - z.spit / SPIT.windup;
+    ctx.strokeStyle = `rgba(217, 249, 157, ${0.35 + k * 0.6})`;
+    ctx.lineWidth = 2 + k * 2;
+    ctx.setLineDash([6, 8]);
+    ctx.lineDashOffset = -t * 0.06;
+    ctx.beginPath();
+    ctx.moveTo(z.x + Math.cos(z.spitAngle) * z.radius, z.y + Math.sin(z.spitAngle) * z.radius);
+    ctx.lineTo(z.x + Math.cos(z.spitAngle) * SPIT.maxRange, z.y + Math.sin(z.spitAngle) * SPIT.maxRange);
+    ctx.stroke();
+    ctx.setLineDash([]);
+  }
+  ctx.restore();
 };
 
 // Charge telegraph (aim line + pulsing ring), dash trail glow and rage aura for the colossus

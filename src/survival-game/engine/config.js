@@ -12,6 +12,7 @@ export const DIFFICULTIES = {
     runnerRate: 0.25,
     bruteRate: 0.05,
     spitterRate: 0.1,
+    minSpitters: 1,
     horde: 4,
     pits: 3,
     ammoPickups: 5,
@@ -33,6 +34,7 @@ export const DIFFICULTIES = {
     runnerRate: 0.4,
     bruteRate: 0.12,
     spitterRate: 0.18,
+    minSpitters: 2,
     horde: 8,
     pits: 5,
     ammoPickups: 4,
@@ -53,6 +55,7 @@ export const DIFFICULTIES = {
     runnerRate: 0.5,
     bruteRate: 0.18,
     spitterRate: 0.24,
+    minSpitters: 3,
     horde: 14,
     pits: 8,
     ammoPickups: 3,
@@ -70,8 +73,8 @@ export const DIFFICULTIES = {
 
 export const ZOMBIE_TYPES = {
   walker: { hp: 60, radius: 16, speed: 1.25, damage: 1, score: 100, knockback: 1, skin: '#4ade80', body: '#166534', arm: '#15803d' },
-  runner: { hp: 35, radius: 14, speed: 2.6, damage: 0.7, score: 150, knockback: 1.3, skin: '#d9f99d', body: '#57534e', arm: '#78716c' },
-  spitter: { hp: 45, radius: 15, speed: 1.15, damage: 0.6, score: 200, knockback: 1.1, skin: '#fef08a', body: '#713f12', arm: '#a16207' },
+  runner: { hp: 35, radius: 14, speed: 2.6, damage: 0.7, score: 150, knockback: 1.3, skin: '#e7e5e4', body: '#57534e', arm: '#78716c' },
+  spitter: { hp: 45, radius: 15, speed: 1.15, damage: 0.6, score: 200, knockback: 1.1, skin: '#facc15', body: '#854d0e', arm: '#a16207' },
   brute: { hp: 480, radius: 26, speed: 1.0, damage: 3, score: 500, knockback: 0.08, skin: '#a78bfa', body: '#4c1d95', arm: '#5b21b6' },
 };
 
@@ -95,8 +98,9 @@ export const WEAPONS = {
 // Web spitter: keeps its distance and glues the player to the floor
 export const SPIT = {
   minRange: 190,
-  maxRange: 430,
-  windup: 0.55,
+  maxRange: 470,
+  sight: 540,
+  windup: 0.65,
   cooldown: 3.2,
   speed: 7.5,
   rootTime: 2,

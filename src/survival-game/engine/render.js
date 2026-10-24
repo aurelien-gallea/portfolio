@@ -839,3 +839,62 @@ const drawMuzzleFlash = (ctx, x, y, size, alpha) => {
   ctx.fill();
   ctx.restore();
 };
+
+// Warning on the floor while a zombie crashes through the ceiling, then the zombie itself falling in
+export const drawCeilingDrop = (ctx, d, t) => {
+  const k = 1 - d.timer / d.duration;
+  if (!d.cracks) {
+    d.cracks = Array.from({ length: 7 }, () => ({ a: Math.random() * Math.PI * 2, len: 18 + Math.random() * 22, bend: (Math.random() - 0.5) * 0.6 }));
+  }
+  ctx.save();
+  ctx.translate(d.x, d.y);
+
+  // Growing shadow
+  ctx.fillStyle = `rgba(0, 0, 0, ${0.2 + k * 0.5})`;
+  ctx.beginPath();
+  ctx.ellipse(0, 0, 8 + k * 22, 6 + k * 16, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Plaster cracks spreading outwards
+  ctx.strokeStyle = `rgba(214, 211, 209, ${0.25 + k * 0.4})`;
+  ctx.lineWidth = 1.5;
+  d.cracks.forEach(c => {
+    const len = c.len * Math.min(1, k * 1.4);
+    ctx.beginPath();
+    ctx.moveTo(Math.cos(c.a) * 10, Math.sin(c.a) * 10);
+    ctx.lineTo(Math.cos(c.a + c.bend) * (10 + len * 0.6), Math.sin(c.a + c.bend) * (10 + len * 0.6));
+    ctx.lineTo(Math.cos(c.a) * (10 + len), Math.sin(c.a) * (10 + len));
+    ctx.stroke();
+  });
+
+  // Target ring closing in, blinking faster as impact nears
+  const blink = Math.sin(t * (0.015 + k * 0.03)) > -0.3;
+  if (blink) {
+    ctx.strokeStyle = `rgba(239, 68, 68, ${0.5 + k * 0.5})`;
+    ctx.lineWidth = 3;
+    ctx.setLineDash([8, 6]);
+    ctx.lineDashOffset = t * 0.05;
+    ctx.beginPath();
+    ctx.arc(0, 0, 54 - k * 26, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle = '#fca5a5';
+    ctx.font = 'bold 16px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText('!', 0, -60 + k * 26);
+  }
+
+  // The zombie falls in during the last part of the warning
+  if (k > 0.65) {
+    const kk = (k - 0.65) / 0.35;
+    const scale = 1 + (1 - kk) * 1.3;
+    ctx.globalAlpha = kk;
+    ctx.scale(scale, scale);
+    const type = ZOMBIE_TYPES[d.type];
+    drawZombie(ctx, {
+      type: d.type, x: 0, y: 0, radius: type.radius, hp: type.hp, maxHp: type.hp,
+      angle: t * 0.004, phase: 0, hitFlash: 0, state: 'chase', alertTimer: 0,
+    }, t);
+  }
+  ctx.restore();
+};

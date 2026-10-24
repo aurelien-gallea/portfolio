@@ -28,7 +28,7 @@ const INITIAL_HUD = {
 };
 
 const LEGEND = [
-  { icon: '🔑', title: 'Clé', text: 'Cachée dans la pièce la plus lointaine. La ramasser réveille la horde.' },
+  { icon: '🔑', title: 'Clé', text: 'Au fond du manoir. La prendre réveille la horde et fait tomber des zombies du plafond.' },
   { icon: '🚪', title: 'Sortie', text: 'Verrouillée jusqu\'à ce que vous ayez la clé.' },
   { icon: '🕳️', title: 'Trous', text: '-15 PV si vous tombez. Attirez-y les zombies !' },
   { icon: '🧟', title: 'Infectés', text: 'Vert : lent · Pâle : rapide · Violet : colosse.' },

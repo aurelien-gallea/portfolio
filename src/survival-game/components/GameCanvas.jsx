@@ -5,7 +5,7 @@ import { generateLevel, makeZombie, pickZombieType, randomFreePoint } from '../e
 import { moveCircle, pointInRect, hasLineOfSight, rayLength, buildNavGrid, updateFlowField, flowDirection, pathDistance } from '../engine/physics';
 import {
   buildStaticLayer, createDecalLayer, stampBlood,
-  drawPit, drawPickup, drawKey, drawExitDoor, drawZombie, drawPlayer,
+  drawPit, drawPickup, drawKey, drawExitDoor, drawZombie, drawPlayer, drawCeilingDrop,
 } from '../engine/render';
 
 const WEAPON_ORDER = ['handgun', 'shotgun', 'knife'];
@@ -108,7 +108,10 @@ const GameCanvas = ({
       shake: 0,
       damageFlash: 0,
       banner: null,
-      horde: { active: false, remaining: 0, nextSpawn: 0 },
+      horde: { active: false, remaining: 0, nextSpawn: 0, startedAt: 0 },
+      drops: [],
+      nextDrop: 0,
+      flicker: 0,
       navTimer: 0,
       safeTimer: 0,
       hudTimer: 0,
@@ -407,11 +410,61 @@ const GameCanvas = ({
     actionsRef.current = { fire, reload: startReload, knife: knifeSlash, cycle: cycleWeapon };
 
     const startHorde = () => {
-      s.horde = { active: true, remaining: diff.horde, nextSpawn: s.clock + 2500 };
+      s.horde = { active: true, remaining: diff.horde, nextSpawn: s.clock + 2500, startedAt: s.clock };
+      s.nextDrop = s.clock + 1600;
       s.zombies.forEach(alertZombie);
       sounds.playAlarm();
       s.shake = 12;
-      showBanner('LA HORDE SE RÉVEILLE', 'Clé récupérée — foncez vers la sortie !', '#ef4444', 3.2);
+      showBanner('LA HORDE SE RÉVEILLE', 'Le plafond cède — foncez vers la sortie !', '#ef4444', 3.2);
+    };
+
+    // ---------- Ceiling drops: zombies crash through the ceiling around the fleeing player ----------
+
+    const isFreeSpot = (x, y, clearance) => {
+      if (x < 40 || y < 40 || x > MAP_W - 40 || y > MAP_H - 40) return false;
+      const blocked = s.level.solids.some(r => {
+        const cx = Math.max(r.x, Math.min(x, r.x + r.w));
+        const cy = Math.max(r.y, Math.min(y, r.y + r.h));
+        return Math.hypot(x - cx, y - cy) < clearance;
+      });
+      if (blocked) return false;
+      if (s.pits.some(pit => Math.hypot(x - pit.x, y - pit.y) < pit.radius + clearance)) return false;
+      return !s.drops.some(d => Math.hypot(x - d.x, y - d.y) < 50);
+    };
+
+    const scheduleDrop = () => {
+      const p = s.player;
+      const door = s.level.exitDoor;
+      const toExit = Math.atan2(door.y + door.h / 2 - p.y, door.x + door.w / 2 - p.x);
+      // Most drops land on the escape route to cut the player off, the rest right beside them
+      const ahead = Math.random() < 0.65;
+      for (let attempt = 0; attempt < 25; attempt++) {
+        const angle = ahead ? toExit + (Math.random() - 0.5) * 1.3 : Math.random() * Math.PI * 2;
+        const dist = ahead ? 130 + Math.random() * 170 : 90 + Math.random() * 110;
+        const x = p.x + Math.cos(angle) * dist;
+        const y = p.y + Math.sin(angle) * dist;
+        if (!isFreeSpot(x, y, 26) || !hasLineOfSight(p.x, p.y, x, y, s.level.solids)) continue;
+        const duration = 1.15;
+        s.drops.push({ x, y, type: pickZombieType(diff), timer: duration, duration, dust: 0 });
+        sounds.playCeilingCrack();
+        return;
+      }
+    };
+
+    const landDrop = (d) => {
+      const p = s.player;
+      const z = makeZombie(d.type, d.x, d.y, diff.zombieSpeed, 'chase');
+      z.alertTimer = 0.6;
+      z.angle = Math.atan2(p.y - d.y, p.x - d.x);
+      z.stun = 0.35;
+      s.zombies.push(z);
+      burst(d.x, d.y, 22, '#a8a29e', 5, 4, 0.025);
+      burst(d.x, d.y, 8, '#57534e', 3, 6, 0.015);
+      stampBlood(s.decalCtx, d.x, d.y, 1.1, '28, 25, 23');
+      sounds.playDropLand();
+      const dist = Math.hypot(p.x - d.x, p.y - d.y);
+      s.shake = Math.max(s.shake, dist < 250 ? 10 : 5);
+      if (dist < z.radius + p.radius + 8) hurtPlayer(diff.zombieDamage, d.x, d.y);
     };
 
     const spawnHordeZombie = () => {
@@ -599,6 +652,10 @@ const GameCanvas = ({
         }
         const type = ZOMBIE_TYPES[z.type];
         const toPlayer = Math.hypot(p.x - z.x, p.y - z.y);
+        if (z.stun > 0) {
+          z.stun -= dtSec;
+          return;
+        }
 
         // Vision, refreshed a few times per second
         if (s.clock >= z.nextSight) {
@@ -745,6 +802,35 @@ const GameCanvas = ({
         s.horde.nextSpawn = s.clock + (difficulty === 'hard' ? 1800 : 2600);
       }
 
+      // Ceiling drops get more frequent the longer the escape lasts
+      if (s.horde.active) {
+        const escapeSec = (s.clock - s.horde.startedAt) / 1000;
+        const live = s.zombies.filter(z => !z.dead && z.falling === undefined).length;
+        if (s.clock >= s.nextDrop) {
+          if (live + s.drops.length < diff.maxZombies) {
+            scheduleDrop();
+            // After a while they start coming through in pairs
+            if (escapeSec > 20 && Math.random() < 0.35) scheduleDrop();
+          }
+          const interval = Math.max(diff.dropMin, diff.dropStart - escapeSec * diff.dropRamp);
+          s.nextDrop = s.clock + interval * 1000 * (0.75 + Math.random() * 0.5);
+        }
+        s.drops.forEach(d => {
+          d.timer -= dtSec;
+          d.dust -= dtSec;
+          if (d.dust <= 0) {
+            d.dust = 0.07;
+            s.particles.push({ x: d.x + (Math.random() - 0.5) * 40, y: d.y + (Math.random() - 0.5) * 40, vx: 0, vy: 0.6, life: 1, decay: 0.04, size: 2 + Math.random() * 2, color: '#a8a29e', friction: 0.98 });
+          }
+          if (d.timer <= 0) landDrop(d);
+        });
+        s.drops = s.drops.filter(d => d.timer > 0);
+
+        // Failing emergency lights
+        if (s.flicker <= 0 && Math.random() < dtSec * (0.25 + Math.min(0.5, escapeSec * 0.01))) s.flicker = 0.12 + Math.random() * 0.25;
+        s.flicker = Math.max(0, s.flicker - dtSec);
+      }
+
       // 7. EXIT
       const door = s.level.exitDoor;
       if (s.hasKey && Math.hypot(p.x - (door.x + door.w / 2), p.y - (door.y + door.h / 2)) < 50) {
@@ -810,6 +896,7 @@ const GameCanvas = ({
       });
 
       drawPlayer(ctx, p, p.active, s.moving, t);
+      s.drops.forEach(d => drawCeilingDrop(ctx, d, t));
 
       // Reload ring around the player
       if (p.reload) {
@@ -875,6 +962,16 @@ const GameCanvas = ({
       ctx.setTransform(1, 0, 0, 1, 0, 0);
       ctx.fillStyle = vignette;
       ctx.fillRect(0, 0, MAP_W, MAP_H);
+
+      // Escape phase: red emergency lighting and flickering power
+      if (s.horde.active && !s.isEnded) {
+        ctx.fillStyle = `rgba(127, 29, 29, ${0.1 + Math.sin(t * 0.004) * 0.06})`;
+        ctx.fillRect(0, 0, MAP_W, MAP_H);
+        if (s.flicker > 0 && Math.floor(t / 45) % 2 === 0) {
+          ctx.fillStyle = 'rgba(0, 0, 0, 0.45)';
+          ctx.fillRect(0, 0, MAP_W, MAP_H);
+        }
+      }
 
       const lowHp = p.hp / p.maxHp < 0.3 && !s.isEnded;
       const redness = Math.max(s.damageFlash * 0.5, lowHp ? 0.18 + Math.sin(t * 0.006) * 0.1 : 0);

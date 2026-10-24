@@ -81,7 +81,7 @@ const RESOURCES = [
   { type: 'ammo', label: 'Balles 9mm', detail: '+12 pour le pistolet', color: 'text-yellow-400' },
   { type: 'shells', label: 'Cartouches', detail: '+6 pour le pompe', color: 'text-orange-400' },
   { type: 'shotgun', label: 'Fusil à pompe', detail: 'Caché dans un cul-de-sac', color: 'text-orange-500' },
-  { type: 'key', label: 'Clé de sortie', detail: 'Réveille la horde', color: 'text-amber-400' },
+  { type: 'key', label: 'Clé de sortie', detail: 'Horde + chutes du plafond', color: 'text-amber-400' },
   { type: 'pit', label: 'Trou', detail: '-15 PV · piège à zombies', color: 'text-red-400' },
 ];
 

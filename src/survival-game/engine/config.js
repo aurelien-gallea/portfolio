@@ -19,6 +19,11 @@ export const DIFFICULTIES = {
     zombieSpeed: 0.8,
     zombieDamage: 8,
     playerSpeed: 3.3,
+    // Ceiling drops during the escape: first interval, fastest interval, seconds shaved off per second
+    dropStart: 5.5,
+    dropMin: 2.8,
+    dropRamp: 0.05,
+    maxZombies: 22,
   },
   normal: {
     label: 'Survivant',
@@ -34,6 +39,10 @@ export const DIFFICULTIES = {
     zombieSpeed: 1.0,
     zombieDamage: 12,
     playerSpeed: 3.4,
+    dropStart: 4,
+    dropMin: 1.6,
+    dropRamp: 0.07,
+    maxZombies: 32,
   },
   hard: {
     label: 'Cauchemar',
@@ -49,6 +58,10 @@ export const DIFFICULTIES = {
     zombieSpeed: 1.2,
     zombieDamage: 16,
     playerSpeed: 3.5,
+    dropStart: 2.8,
+    dropMin: 0.9,
+    dropRamp: 0.08,
+    maxZombies: 45,
   },
 };
 

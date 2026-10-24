@@ -155,6 +155,17 @@ class SoundManager {
     [523.25, 659.25, 783.99, 1046.5].forEach((f, i) => this.tone('triangle', f, f, 0.3, 0.3, i * 0.12));
   }
 
+  playCeilingCrack() {
+    this.noise(0.5, 0.25, 4000, 900, 'bandpass');
+    this.tone('sawtooth', 60, 40, 0.6, 0.12);
+  }
+
+  playDropLand() {
+    this.noise(0.35, 0.8, 600, 40);
+    this.tone('sine', 90, 30, 0.3, 0.5);
+    this.playZombieGrowl();
+  }
+
   playEmptyClick() {
     this.tone('square', 800, 800, 0.03, 0.15);
   }

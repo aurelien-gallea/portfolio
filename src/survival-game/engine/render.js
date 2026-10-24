@@ -508,6 +508,8 @@ export const drawZombie = (ctx, z, t) => {
   const wobble = Math.sin(t * 0.01 * (z.type === 'runner' ? 1.8 : 1) + z.phase) * 4;
   const flash = z.hitFlash > 0;
 
+  if (z.type === 'brute' && z.falling === undefined) drawBruteAura(ctx, z, t);
+
   ctx.save();
   ctx.translate(z.x, z.y);
   if (z.falling !== undefined) {
@@ -564,8 +566,18 @@ export const drawZombie = (ctx, z, t) => {
 
   if (z.falling !== undefined) return;
 
-  // Health bar only once damaged
-  if (z.hp < z.maxHp) {
+  // Colossi always show their (big) health bar; others only once damaged
+  if (z.type === 'brute') {
+    const w = 64;
+    ctx.fillStyle = 'rgba(0,0,0,0.8)';
+    ctx.fillRect(z.x - w / 2 - 1, z.y - z.radius - 15, w + 2, 7);
+    ctx.fillStyle = z.enraged ? '#ef4444' : '#a78bfa';
+    ctx.fillRect(z.x - w / 2, z.y - z.radius - 14, (Math.max(0, z.hp) / z.maxHp) * w, 5);
+    ctx.font = 'bold 9px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillStyle = z.enraged ? '#fca5a5' : '#c4b5fd';
+    ctx.fillText(z.enraged ? 'COLOSSE ENRAGÉ' : 'COLOSSE', z.x, z.y - z.radius - 19);
+  } else if (z.hp < z.maxHp) {
     const w = z.radius * 2;
     ctx.fillStyle = 'rgba(0,0,0,0.7)';
     ctx.fillRect(z.x - w / 2, z.y - z.radius - 11, w, 4);
@@ -583,6 +595,47 @@ export const drawZombie = (ctx, z, t) => {
     ctx.fillText('!', z.x, z.y - z.radius - 16 - (0.6 - z.alertTimer) * 10);
     ctx.restore();
   }
+};
+
+// Charge telegraph (aim line + pulsing ring), dash trail glow and rage aura for the colossus
+const drawBruteAura = (ctx, z, t) => {
+  const c = z.charge;
+  ctx.save();
+  if (z.enraged) {
+    const pulse = 0.5 + Math.sin(t * 0.012) * 0.5;
+    const g = ctx.createRadialGradient(z.x, z.y, z.radius * 0.6, z.x, z.y, z.radius * 2.2);
+    g.addColorStop(0, `rgba(239, 68, 68, ${0.25 + pulse * 0.2})`);
+    g.addColorStop(1, 'rgba(239, 68, 68, 0)');
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.arc(z.x, z.y, z.radius * 2.2, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  if (c && c.phase === 'windup') {
+    const locked = c.timer <= 0.15;
+    ctx.strokeStyle = locked ? 'rgba(254, 202, 202, 0.95)' : 'rgba(239, 68, 68, 0.75)';
+    ctx.lineWidth = locked ? 5 : 3;
+    ctx.setLineDash([14, 10]);
+    ctx.lineDashOffset = -t * 0.08;
+    ctx.beginPath();
+    ctx.moveTo(z.x + Math.cos(c.angle) * z.radius, z.y + Math.sin(c.angle) * z.radius);
+    ctx.lineTo(z.x + Math.cos(c.angle) * 340, z.y + Math.sin(c.angle) * 340);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.strokeStyle = `rgba(239, 68, 68, ${0.5 + Math.sin(t * 0.04) * 0.4})`;
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.arc(z.x, z.y, z.radius + 8 + Math.sin(t * 0.04) * 4, 0, Math.PI * 2);
+    ctx.stroke();
+  } else if (c && c.phase === 'dash') {
+    ctx.fillStyle = 'rgba(167, 139, 250, 0.35)';
+    for (let i = 1; i <= 3; i++) {
+      ctx.beginPath();
+      ctx.arc(z.x - Math.cos(c.angle) * i * 14, z.y - Math.sin(c.angle) * i * 14, z.radius * (1 - i * 0.15), 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+  ctx.restore();
 };
 
 export const drawPlayer = (ctx, player, weaponId, moving, t) => {

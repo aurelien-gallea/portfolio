@@ -166,6 +166,16 @@ class SoundManager {
     this.playZombieGrowl();
   }
 
+  playBruteRoar() {
+    this.tone('sawtooth', 55, 95, 0.35, 0.35);
+    this.tone('sawtooth', 95, 40, 0.5, 0.3, 0.3);
+    this.noise(0.6, 0.2, 400, 80);
+  }
+
+  playBruteCharge() {
+    this.noise(0.5, 0.45, 300, 1800, 'bandpass');
+  }
+
   playEmptyClick() {
     this.tone('square', 800, 800, 0.03, 0.15);
   }

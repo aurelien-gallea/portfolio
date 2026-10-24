@@ -9,8 +9,8 @@ export const DIFFICULTIES = {
     label: 'Recrue',
     multiplier: 1.0,
     zombies: 8,
-    runnerRate: 0.1,
-    bruteRate: 0,
+    runnerRate: 0.25,
+    bruteRate: 0.05,
     horde: 4,
     pits: 3,
     ammoPickups: 5,
@@ -29,8 +29,8 @@ export const DIFFICULTIES = {
     label: 'Survivant',
     multiplier: 1.5,
     zombies: 14,
-    runnerRate: 0.2,
-    bruteRate: 0.1,
+    runnerRate: 0.4,
+    bruteRate: 0.12,
     horde: 8,
     pits: 5,
     ammoPickups: 4,
@@ -48,8 +48,8 @@ export const DIFFICULTIES = {
     label: 'Cauchemar',
     multiplier: 2.5,
     zombies: 22,
-    runnerRate: 0.3,
-    bruteRate: 0.15,
+    runnerRate: 0.5,
+    bruteRate: 0.18,
     horde: 14,
     pits: 8,
     ammoPickups: 3,
@@ -67,8 +67,8 @@ export const DIFFICULTIES = {
 
 export const ZOMBIE_TYPES = {
   walker: { hp: 60, radius: 16, speed: 1.25, damage: 1, score: 100, knockback: 1, skin: '#4ade80', body: '#166534', arm: '#15803d' },
-  runner: { hp: 35, radius: 14, speed: 2.25, damage: 0.7, score: 150, knockback: 1.3, skin: '#d9f99d', body: '#57534e', arm: '#78716c' },
-  brute: { hp: 240, radius: 23, speed: 0.85, damage: 2, score: 300, knockback: 0.25, skin: '#a78bfa', body: '#4c1d95', arm: '#5b21b6' },
+  runner: { hp: 35, radius: 14, speed: 2.6, damage: 0.7, score: 150, knockback: 1.3, skin: '#d9f99d', body: '#57534e', arm: '#78716c' },
+  brute: { hp: 480, radius: 26, speed: 1.0, damage: 3, score: 500, knockback: 0.08, skin: '#a78bfa', body: '#4c1d95', arm: '#5b21b6' },
 };
 
 export const WEAPONS = {

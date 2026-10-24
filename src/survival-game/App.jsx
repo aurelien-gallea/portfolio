@@ -31,7 +31,7 @@ const LEGEND = [
   { icon: '🔑', title: 'Clé', text: 'Au fond du manoir. La prendre réveille la horde et fait tomber des zombies du plafond.' },
   { icon: '🚪', title: 'Sortie', text: 'Verrouillée jusqu\'à ce que vous ayez la clé.' },
   { icon: '🕳️', title: 'Trous', text: '-15 PV si vous tombez. Attirez-y les zombies !' },
-  { icon: '🧟', title: 'Infectés', text: 'Vert : lent · Pâle : rapide · Violet : colosse.' },
+  { icon: '🧟', title: 'Infectés', text: 'Vert : lent · Pâle : rapide · Violet : colosse qui charge. Esquivez-le contre un mur !' },
   { icon: '💥', title: 'Bruit', text: 'Chaque tir alerte les zombies proches, même derrière les portes.' },
   { icon: '🔫', title: 'Fusil à pompe', text: 'Caché dans un cul-de-sac. Explorez !' },
 ];

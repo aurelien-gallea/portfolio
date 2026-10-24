@@ -409,6 +409,55 @@ const GameCanvas = ({
 
     actionsRef.current = { fire, reload: startReload, knife: knifeSlash, cycle: cycleWeapon };
 
+    // Colossus: telegraphed charge when it sees the player, faster and angrier below half health
+    const bruteBehaviour = (z, toPlayer, dtSec) => {
+      const p = s.player;
+      const enraged = z.hp < z.maxHp * 0.5;
+      if (enraged && !z.enraged) {
+        z.enraged = true;
+        z.speed *= 1.4;
+        sounds.playBruteRoar();
+        floatText(z.x, z.y - 44, 'ENRAGÉ !', '#ef4444', 16);
+      }
+      const c = z.charge;
+      if (c) {
+        c.timer -= dtSec;
+        if (c.phase === 'windup') {
+          // Keeps tracking the player until the very last instant
+          if (c.timer > 0.15) c.angle = Math.atan2(p.y - z.y, p.x - z.x);
+          z.angle = c.angle;
+          if (c.timer <= 0) {
+            c.phase = 'dash';
+            c.duration = enraged ? 0.95 : 0.8;
+            c.timer = c.duration;
+            sounds.playBruteCharge();
+          }
+          return { x: 0, y: 0 };
+        }
+        if (!c.hit && toPlayer < p.radius + z.radius + 8) {
+          c.hit = true;
+          hurtPlayer(diff.zombieDamage * ZOMBIE_TYPES.brute.damage * 1.25, z.x, z.y);
+          p.kx += Math.cos(c.angle) * 10;
+          p.ky += Math.sin(c.angle) * 10;
+          s.shake = Math.max(s.shake, 14);
+        }
+        if (c.timer <= 0) {
+          z.charge = null;
+          z.nextCharge = s.clock + (enraged ? 2000 : 3800);
+          return null;
+        }
+        if (Math.random() < 0.6) s.particles.push({ x: z.x, y: z.y, vx: 0, vy: 0, life: 0.7, decay: 0.05, size: 5, color: '#7c3aed', friction: 1 });
+        const speed = enraged ? 9 : 8;
+        return { x: Math.cos(c.angle) * speed, y: Math.sin(c.angle) * speed };
+      }
+      if (z.sees && toPlayer < 380 && toPlayer > 90 && s.clock >= (z.nextCharge || 0)) {
+        z.charge = { phase: 'windup', timer: enraged ? 0.5 : 0.8, angle: Math.atan2(p.y - z.y, p.x - z.x) };
+        sounds.playBruteRoar();
+        return { x: 0, y: 0 };
+      }
+      return null;
+    };
+
     const startHorde = () => {
       s.horde = { active: true, remaining: diff.horde, nextSpawn: s.clock + 2500, startedAt: s.clock };
       s.nextDrop = s.clock + 1600;
@@ -682,6 +731,11 @@ const GameCanvas = ({
             z.lastAttack = s.clock;
             hurtPlayer(diff.zombieDamage * type.damage, z.x, z.y);
           }
+
+          if (z.type === 'brute') {
+            const move = bruteBehaviour(z, toPlayer, dtSec);
+            if (move) { mx = move.x; my = move.y; }
+          }
         } else {
           if (Math.random() < 0.01 * f) z.wanderAngle += (Math.random() - 0.5) * 2.5;
           mx = Math.cos(z.wanderAngle) * z.speed * 0.3;
@@ -689,6 +743,16 @@ const GameCanvas = ({
         }
 
         const hit = moveCircle(z, (mx + z.vx) * f, (my + z.vy) * f, z.radius, solids);
+        // A charging colossus that slams into a wall is left dazed: the window to unload on it
+        if (hit && z.charge && z.charge.phase === 'dash' && z.charge.timer < z.charge.duration - 0.08) {
+          z.charge = null;
+          z.stun = 1.1;
+          z.nextCharge = s.clock + 2500;
+          s.shake = Math.max(s.shake, 9);
+          burst(z.x, z.y, 16, '#a8a29e', 4, 4, 0.03);
+          sounds.playDropLand();
+          floatText(z.x, z.y - 40, 'SONNÉ !', '#c4b5fd', 14);
+        }
         if (hit && z.state !== 'chase') z.wanderAngle = Math.random() * Math.PI * 2;
         z.vx *= Math.pow(0.82, f);
         z.vy *= Math.pow(0.82, f);

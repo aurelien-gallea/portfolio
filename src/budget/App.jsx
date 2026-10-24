@@ -144,7 +144,7 @@ function Fenetre({ titre, onFermer, children }) {
   );
 }
 
-function Budgets({ budgets, depenses, onModifier }) {
+function Budgets({ budgets, depenses, onModifier, selection, onChoisir }) {
   const [edition, setEdition] = useState(false);
   const [brouillon, setBrouillon] = useState({});
 
@@ -193,24 +193,32 @@ function Budgets({ budgets, depenses, onModifier }) {
       ) : suivis.length === 0 ? (
         <p className="text-sm text-gray-500">Définissez des plafonds pour suivre vos catégories de dépenses.</p>
       ) : (
-        <div className="space-y-4">
+        <div className="-mx-2 space-y-1">
           {suivis.map((c) => {
             const depense = depenses[c.id] ?? 0;
             const ratio = depense / budgets[c.id];
             const couleur = ratio > 1 ? 'bg-red-500' : ratio > 0.8 ? 'bg-amber-400' : 'bg-emerald-500';
             return (
-              <div key={c.id}>
-                <div className="mb-1.5 flex justify-between text-sm">
-                  <span className="text-gray-300">{c.nom}</span>
+              <button
+                key={c.id}
+                type="button"
+                onClick={() => onChoisir(c.id)}
+                aria-pressed={selection === c.id}
+                className={`block w-full cursor-pointer rounded-xl border-0 px-2 py-2 text-left transition-colors ${
+                  selection === c.id ? 'bg-white/10' : 'bg-transparent hover:bg-white/5'
+                }`}
+              >
+                <span className="mb-1.5 flex justify-between text-sm">
+                  <span className={selection === c.id ? 'text-white' : 'text-gray-300'}>{c.nom}</span>
                   <span className={`tabular-nums ${ratio > 1 ? 'text-red-400' : 'text-gray-400'}`}>
                     {euros(depense)} / {euros(budgets[c.id])}
                   </span>
-                </div>
-                <div className="h-2 overflow-hidden rounded-full bg-white/5">
-                  <div className={`h-full rounded-full ${couleur} transition-all duration-500`} style={{ width: `${Math.min(ratio, 1) * 100}%` }} />
-                </div>
-                {ratio > 1 && <p className="mt-1 text-xs text-red-400">Dépassement de {euros(depense - budgets[c.id])}</p>}
-              </div>
+                </span>
+                <span className="block h-2 overflow-hidden rounded-full bg-white/5">
+                  <span className={`block h-full rounded-full ${couleur} transition-all duration-500`} style={{ width: `${Math.min(ratio, 1) * 100}%` }} />
+                </span>
+                {ratio > 1 && <span className="mt-1 block text-xs text-red-400">Dépassement de {euros(depense - budgets[c.id])}</span>}
+              </button>
             );
           })}
         </div>
@@ -227,7 +235,19 @@ export default function BudgetApp() {
   const [filtre, setFiltre] = useState('tout');
   const [assistant, setAssistant] = useState(false);
   const [categorisation, setCategorisation] = useState(false);
+  const [categorieFiltre, setCategorieFiltre] = useState(null);
   const fichier = useRef(null);
+  const listeOperations = useRef(null);
+
+  // Clic sur une catégorie (graphique ou plafond) : filtre la liste, un second clic retire le filtre
+  const choisirCategorie = (id) => {
+    const nouvelle = categorieFiltre === id ? null : id;
+    setCategorieFiltre(nouvelle);
+    if (nouvelle) setFiltre('tout');
+    if (nouvelle &&window.matchMedia('(max-width: 1023px)').matches) {
+      listeOperations.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  };
 
   useEffect(() => { sauvegarder(donnees); }, [donnees]);
   useEffect(() => {
@@ -256,6 +276,7 @@ export default function BudgetApp() {
 
   const visibles = duMois.filter((t) =>
     (filtre === 'tout' || t.type === filtre) &&
+    (!categorieFiltre || t.categorie === categorieFiltre) &&
     (!recherche || `${t.libelle} ${categorie(t.categorie).nom}`.toLowerCase().includes(recherche.toLowerCase()))
   );
 
@@ -412,17 +433,17 @@ export default function BudgetApp() {
           <div className="space-y-6 lg:col-span-2">
             <div className={carte}>
               <h3 className="mb-4 mt-0 font-semibold">Répartition des dépenses</h3>
-              <Anneau parts={repartition} total={resume.depenses} />
+              <Anneau parts={repartition} total={resume.depenses} selection={categorieFiltre} onChoisir={choisirCategorie} />
             </div>
             <div className={carte}>
               <h3 className="mb-4 mt-0 font-semibold">6 derniers mois</h3>
               <Historique mois={historique} moisActif={mois} onChoisir={setMois} />
             </div>
-            <Budgets budgets={budgets} depenses={depensesParCat} onModifier={(b) => setDonnees((d) => ({ ...d, budgets: b }))} />
+            <Budgets budgets={budgets} depenses={depensesParCat} onModifier={(b) => setDonnees((d) => ({ ...d, budgets: b }))} selection={categorieFiltre} onChoisir={choisirCategorie} />
           </div>
 
           {/* Colonne opérations */}
-          <div className={`${carte} lg:col-span-3`}>
+          <div ref={listeOperations} className={`${carte} scroll-mt-4 lg:col-span-3`}>
             <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
               <h3 className="m-0 font-semibold">Opérations <span className="text-sm font-normal text-gray-500">({duMois.length})</span></h3>
               <button type="button" onClick={() => setFormulaire({ ...formulaireVide(), date: mois === cleMois(aujourdhui()) ? aujourdhui() : `${mois}-01` })} className={`${bouton} bg-orange-500 text-black hover:bg-orange-400`}>
@@ -438,6 +459,34 @@ export default function BudgetApp() {
                 </button>
               </div>
             )}
+
+            {categorieFiltre && (() => {
+              const c = categorie(categorieFiltre);
+              const depense = depensesParCat[c.id] ?? 0;
+              const plafond = budgets[c.id];
+              return (
+                <div
+                  className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-xl border px-3 py-2.5 text-sm"
+                  style={{ borderColor: `${c.couleur}55`, background: `${c.couleur}14` }}
+                >
+                  <span className="flex items-center gap-2 text-gray-200">
+                    <span className="h-2.5 w-2.5 rounded-full" style={{ background: c.couleur }} />
+                    <strong className="font-semibold">{c.nom}</strong>
+                    <span className="tabular-nums text-gray-400">
+                      {euros(depense)}{plafond ? ` / ${euros(plafond)}` : ''}
+                    </span>
+                    {plafond && depense > plafond && (
+                      <span className="rounded-md bg-red-500/20 px-1.5 py-0.5 text-xs text-red-300">
+                        +{euros(depense - plafond)}
+                      </span>
+                    )}
+                  </span>
+                  <button type="button" onClick={() => setCategorieFiltre(null)} className={`${bouton} bg-white/5 py-1 text-xs text-gray-300 hover:bg-white/10`}>
+                    <X size={14} /> Toutes les catégories
+                  </button>
+                </div>
+              );
+            })()}
 
             <div className="mb-4 flex flex-col gap-2 sm:flex-row">
               <div className="relative flex-1">

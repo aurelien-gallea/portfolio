@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { euros, nomMois } from './donnees';
 
 // Anneau de répartition des dépenses par catégorie
-export function Anneau({ parts, total }) {
+export function Anneau({ parts, total, selection, onChoisir }) {
   const [survol, setSurvol] = useState(null);
   const rayon = 70;
   const circonference = 2 * Math.PI * rayon;
@@ -16,7 +16,9 @@ export function Anneau({ parts, total }) {
     );
   }
 
-  const actif = survol ? parts.find((p) => p.id === survol) : null;
+  // Le survol prime, sinon on garde en évidence la catégorie sélectionnée
+  const enAvant = survol ?? selection;
+  const actif = enAvant ? parts.find((p) => p.id === enAvant) : null;
 
   return (
     <div className="flex flex-col items-center gap-5 sm:flex-row sm:items-center">
@@ -32,13 +34,14 @@ export function Anneau({ parts, total }) {
               r={rayon}
               fill="none"
               stroke={p.couleur}
-              strokeWidth={survol === p.id ? 28 : 22}
+              strokeWidth={enAvant === p.id ? 28 : 22}
               strokeDasharray={`${Math.max(longueur - 2, 0.5)} ${circonference}`}
               strokeDashoffset={-cumul}
               className="cursor-pointer transition-all duration-200"
-              style={{ opacity: survol && survol !== p.id ? 0.35 : 1 }}
+              style={{ opacity: enAvant && enAvant !== p.id ? 0.35 : 1 }}
               onMouseEnter={() => setSurvol(p.id)}
               onMouseLeave={() => setSurvol(null)}
+              onClick={() => onChoisir(p.id)}
             />
           );
           cumul += longueur;
@@ -54,21 +57,27 @@ export function Anneau({ parts, total }) {
         </g>
       </svg>
 
-      <ul className="w-full space-y-1.5 text-sm">
+      <ul className="m-0 w-full list-none space-y-1 p-0 text-sm">
         {parts.map((p) => (
-          <li
-            key={p.id}
-            className="flex items-center justify-between gap-3 rounded-lg px-2 py-1 transition-colors hover:bg-white/5"
-            onMouseEnter={() => setSurvol(p.id)}
-            onMouseLeave={() => setSurvol(null)}
-          >
-            <span className="flex items-center gap-2 text-gray-300">
-              <span className="h-2.5 w-2.5 rounded-full" style={{ background: p.couleur }} />
-              {p.nom}
-            </span>
-            <span className="tabular-nums text-gray-400">
-              {Math.round((p.montant / total) * 100)}&nbsp;%
-            </span>
+          <li key={p.id}>
+            <button
+              type="button"
+              onClick={() => onChoisir(p.id)}
+              onMouseEnter={() => setSurvol(p.id)}
+              onMouseLeave={() => setSurvol(null)}
+              aria-pressed={selection === p.id}
+              className={`flex w-full cursor-pointer items-center justify-between gap-3 rounded-lg border-0 px-2 py-1.5 text-left text-sm transition-colors ${
+                selection === p.id ? 'bg-white/10' : 'bg-transparent hover:bg-white/5'
+              }`}
+            >
+              <span className={`flex items-center gap-2 ${selection === p.id ? 'text-white' : 'text-gray-300'}`}>
+                <span className="h-2.5 w-2.5 rounded-full" style={{ background: p.couleur }} />
+                {p.nom}
+              </span>
+              <span className="tabular-nums text-gray-400">
+                {euros(p.montant)} · {Math.round((p.montant / total) * 100)}&nbsp;%
+              </span>
+            </button>
           </li>
         ))}
       </ul>

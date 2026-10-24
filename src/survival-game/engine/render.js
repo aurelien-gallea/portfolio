@@ -1,0 +1,626 @@
+// Canvas drawing for Zombie Rules: a pre-rendered mansion layer plus animated sprites.
+
+import { MAP_W, MAP_H, ZOMBIE_TYPES } from './config';
+
+const shade = (hex, amount) => {
+  const n = parseInt(hex.slice(1), 16);
+  const f = (v) => Math.max(0, Math.min(255, Math.round(v + 255 * amount)));
+  return `rgb(${f(n >> 16)}, ${f((n >> 8) & 255)}, ${f(n & 255)})`;
+};
+
+const seeded = (seed) => {
+  let s = seed;
+  return () => {
+    s = (s * 9301 + 49297) % 233280;
+    return s / 233280;
+  };
+};
+
+const makeCanvas = () => {
+  const c = document.createElement('canvas');
+  c.width = MAP_W;
+  c.height = MAP_H;
+  return c;
+};
+
+// ---------- Static layer: floors, lights, props and walls ----------
+
+const drawFloor = (ctx, room) => {
+  const { x, y, w, h, tint } = room;
+  const rnd = seeded(room.id * 97 + 13);
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(x, y, w, h);
+  ctx.clip();
+
+  if (room.style === 'wood') {
+    const plank = 22;
+    for (let py = y, row = 0; py < y + h; py += plank, row++) {
+      const offset = (row % 3) * 60;
+      for (let px = x - offset; px < x + w; px += 140) {
+        ctx.fillStyle = shade('#3a2a1d', tint + (rnd() - 0.5) * 0.04);
+        ctx.fillRect(px, py, 140, plank);
+        ctx.strokeStyle = 'rgba(0,0,0,0.35)';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(px + 0.5, py + 0.5, 140, plank);
+      }
+    }
+  } else if (room.style === 'tiles') {
+    const tile = 40;
+    for (let ty = y, i = 0; ty < y + h; ty += tile, i++) {
+      for (let tx = x, j = 0; tx < x + w; tx += tile, j++) {
+        ctx.fillStyle = shade((i + j) % 2 ? '#2b3236' : '#22282b', tint + (rnd() - 0.5) * 0.02);
+        ctx.fillRect(tx, ty, tile, tile);
+      }
+    }
+    ctx.strokeStyle = 'rgba(0,0,0,0.4)';
+    ctx.lineWidth = 2;
+    for (let tx = x; tx < x + w; tx += 40) { ctx.beginPath(); ctx.moveTo(tx, y); ctx.lineTo(tx, y + h); ctx.stroke(); }
+    for (let ty = y; ty < y + h; ty += 40) { ctx.beginPath(); ctx.moveTo(x, ty); ctx.lineTo(x + w, ty); ctx.stroke(); }
+  } else if (room.style === 'carpet') {
+    ctx.fillStyle = shade('#2b2320', tint);
+    ctx.fillRect(x, y, w, h);
+    ctx.fillStyle = shade('#4a1d26', tint);
+    ctx.fillRect(x + 40, y + 40, w - 80, h - 80);
+    ctx.strokeStyle = shade('#a16207', tint - 0.15);
+    ctx.lineWidth = 3;
+    ctx.strokeRect(x + 52, y + 52, w - 104, h - 104);
+    ctx.setLineDash([6, 8]);
+    ctx.lineWidth = 1.5;
+    ctx.strokeRect(x + 62, y + 62, w - 124, h - 124);
+    ctx.setLineDash([]);
+  } else {
+    ctx.fillStyle = shade('#292624', tint);
+    ctx.fillRect(x, y, w, h);
+    for (let i = 0; i < 260; i++) {
+      ctx.fillStyle = rnd() > 0.5 ? 'rgba(255,255,255,0.025)' : 'rgba(0,0,0,0.12)';
+      ctx.fillRect(x + rnd() * w, y + rnd() * h, 2 + rnd() * 3, 2 + rnd() * 3);
+    }
+    ctx.strokeStyle = 'rgba(0,0,0,0.35)';
+    ctx.lineWidth = 1.5;
+    for (let i = 0; i < 3; i++) {
+      let cx = x + rnd() * w;
+      let cy = y + rnd() * h;
+      ctx.beginPath();
+      ctx.moveTo(cx, cy);
+      for (let k = 0; k < 5; k++) {
+        cx += (rnd() - 0.5) * 50;
+        cy += (rnd() - 0.5) * 50;
+        ctx.lineTo(cx, cy);
+      }
+      ctx.stroke();
+    }
+  }
+
+  // Ceiling lamp light pool
+  const light = ctx.createRadialGradient(room.light.x, room.light.y, 0, room.light.x, room.light.y, 190);
+  light.addColorStop(0, 'rgba(255, 214, 150, 0.13)');
+  light.addColorStop(1, 'rgba(255, 214, 150, 0)');
+  ctx.fillStyle = light;
+  ctx.fillRect(x, y, w, h);
+
+  // Soft darkening towards the walls
+  const edge = ctx.createRadialGradient(room.cx, room.cy, Math.min(w, h) * 0.3, room.cx, room.cy, Math.max(w, h) * 0.7);
+  edge.addColorStop(0, 'rgba(0,0,0,0)');
+  edge.addColorStop(1, 'rgba(0,0,0,0.35)');
+  ctx.fillStyle = edge;
+  ctx.fillRect(x, y, w, h);
+
+  // Room name painted on the floor
+  ctx.fillStyle = 'rgba(255,255,255,0.07)';
+  ctx.font = 'bold 13px monospace';
+  ctx.textAlign = 'left';
+  ctx.fillText(room.name.toUpperCase(), x + 22, y + 34);
+  ctx.restore();
+};
+
+const drawStartZone = (ctx, room) => {
+  ctx.save();
+  ctx.translate(room.cx, room.cy);
+  ctx.strokeStyle = 'rgba(56, 189, 248, 0.35)';
+  ctx.lineWidth = 3;
+  ctx.setLineDash([14, 10]);
+  ctx.beginPath();
+  ctx.arc(0, 0, 70, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.fillStyle = 'rgba(56, 189, 248, 0.25)';
+  ctx.font = 'bold 12px monospace';
+  ctx.textAlign = 'center';
+  ctx.fillText('ZONE SÛRE', 0, 95);
+  ctx.restore();
+};
+
+const drawProp = (ctx, p) => {
+  ctx.save();
+  ctx.fillStyle = 'rgba(0,0,0,0.45)';
+  ctx.fillRect(p.x + 6, p.y + 7, p.w, p.h);
+
+  if (p.kind === 'crate') {
+    ctx.fillStyle = '#7c5a2e';
+    ctx.fillRect(p.x, p.y, p.w, p.h);
+    ctx.strokeStyle = '#3f2a12';
+    ctx.lineWidth = 3;
+    for (let cx = p.x; cx < p.x + p.w - 1; cx += 36) {
+      ctx.strokeRect(cx + 1.5, p.y + 1.5, 33, p.h - 3);
+      ctx.beginPath();
+      ctx.moveTo(cx + 4, p.y + 4); ctx.lineTo(cx + 32, p.y + p.h - 4);
+      ctx.moveTo(cx + 32, p.y + 4); ctx.lineTo(cx + 4, p.y + p.h - 4);
+      ctx.stroke();
+    }
+    ctx.fillStyle = 'rgba(255,255,255,0.08)';
+    ctx.fillRect(p.x, p.y, p.w, 4);
+  } else if (p.kind === 'table') {
+    ctx.fillStyle = '#4a2f1b';
+    ctx.fillRect(p.x, p.y, p.w, p.h);
+    ctx.fillStyle = '#6b4426';
+    ctx.fillRect(p.x + 4, p.y + 4, p.w - 8, p.h - 8);
+    ctx.fillStyle = '#e7e5e4';
+    ctx.save();
+    ctx.translate(p.x + p.w * 0.35, p.y + p.h * 0.45);
+    ctx.rotate(0.3);
+    ctx.fillRect(-9, -6, 18, 12);
+    ctx.restore();
+    ctx.fillStyle = '#a8a29e';
+    ctx.beginPath();
+    ctx.arc(p.x + p.w * 0.7, p.y + p.h * 0.5, 6, 0, Math.PI * 2);
+    ctx.fill();
+  } else if (p.kind === 'shelf') {
+    ctx.fillStyle = '#27272a';
+    ctx.fillRect(p.x, p.y, p.w, p.h);
+    const horizontal = p.w > p.h;
+    const colors = ['#b91c1c', '#1d4ed8', '#a16207', '#15803d', '#7e22ce', '#57534e'];
+    for (let i = 0, pos = 3; pos < (horizontal ? p.w : p.h) - 6; i++) {
+      const size = 5 + ((i * 7) % 5);
+      ctx.fillStyle = colors[i % colors.length];
+      if (horizontal) ctx.fillRect(p.x + pos, p.y + 4, size, p.h - 8);
+      else ctx.fillRect(p.x + 4, p.y + pos, p.w - 8, size);
+      pos += size + 1;
+    }
+    ctx.strokeStyle = '#52525b';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(p.x + 1, p.y + 1, p.w - 2, p.h - 2);
+  } else if (p.kind === 'sofa') {
+    ctx.fillStyle = '#5f1d1d';
+    ctx.fillRect(p.x, p.y, p.w, p.h);
+    ctx.fillStyle = '#7f2a2a';
+    const cushion = (p.w - 16) / 3;
+    for (let i = 0; i < 3; i++) ctx.fillRect(p.x + 8 + i * cushion + 1, p.y + 10, cushion - 2, p.h - 14);
+    ctx.fillStyle = '#4c1414';
+    ctx.fillRect(p.x, p.y, p.w, 8);
+  }
+  ctx.restore();
+};
+
+const drawWall = (ctx, w) => {
+  ctx.fillStyle = '#44403c';
+  ctx.fillRect(w.x, w.y, w.w, w.h);
+  ctx.fillStyle = '#57534e';
+  ctx.fillRect(w.x + 3, w.y + 3, Math.max(0, w.w - 6), Math.max(0, w.h - 6));
+  ctx.strokeStyle = '#1c1917';
+  ctx.lineWidth = 2;
+  ctx.strokeRect(w.x + 1, w.y + 1, w.w - 2, w.h - 2);
+};
+
+export const buildStaticLayer = (level) => {
+  const canvas = makeCanvas();
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = '#0c0a09';
+  ctx.fillRect(0, 0, MAP_W, MAP_H);
+
+  level.rooms.forEach(room => drawFloor(ctx, room));
+  drawStartZone(ctx, level.startRoom);
+
+  // Thresholds under the door openings
+  level.doorways.forEach(d => {
+    ctx.fillStyle = '#3f2d1f';
+    ctx.fillRect(d.x, d.y, d.w, d.h);
+    ctx.strokeStyle = 'rgba(0,0,0,0.5)';
+    ctx.strokeRect(d.x + 0.5, d.y + 0.5, d.w - 1, d.h - 1);
+  });
+
+  // Wall shadows first so they fall onto the floor only
+  ctx.fillStyle = 'rgba(0,0,0,0.5)';
+  level.walls.forEach(w => ctx.fillRect(w.x + 5, w.y + 6, w.w, w.h));
+  level.props.forEach(p => drawProp(ctx, p));
+  level.walls.forEach(w => drawWall(ctx, w));
+  return canvas;
+};
+
+// ---------- Persistent decals (blood, scorch marks) ----------
+
+export const createDecalLayer = () => makeCanvas();
+
+export const stampBlood = (decalCtx, x, y, size = 1, color = '120, 20, 20') => {
+  decalCtx.save();
+  for (let i = 0; i < 7; i++) {
+    const r = (3 + Math.random() * 9) * size;
+    const ox = (Math.random() - 0.5) * 26 * size;
+    const oy = (Math.random() - 0.5) * 26 * size;
+    decalCtx.fillStyle = `rgba(${color}, ${0.25 + Math.random() * 0.3})`;
+    decalCtx.beginPath();
+    decalCtx.arc(x + ox, y + oy, r, 0, Math.PI * 2);
+    decalCtx.fill();
+  }
+  decalCtx.restore();
+};
+
+// ---------- Dynamic sprites ----------
+
+export const drawPit = (ctx, pit, t) => {
+  if (!pit.shape) {
+    pit.shape = Array.from({ length: 14 }, () => 0.82 + Math.random() * 0.3);
+  }
+  ctx.save();
+  ctx.translate(pit.x, pit.y);
+  const pulse = 0.5 + Math.sin(t * 0.004 + pit.x) * 0.5;
+
+  // Broken floor edge
+  ctx.fillStyle = '#1c1410';
+  ctx.beginPath();
+  pit.shape.forEach((k, i) => {
+    const a = (i / pit.shape.length) * Math.PI * 2;
+    const r = pit.radius * (k + 0.22);
+    if (i === 0) ctx.moveTo(Math.cos(a) * r, Math.sin(a) * r);
+    else ctx.lineTo(Math.cos(a) * r, Math.sin(a) * r);
+  });
+  ctx.closePath();
+  ctx.fill();
+
+  // Abyss
+  const hole = ctx.createRadialGradient(0, 0, 2, 0, 0, pit.radius);
+  hole.addColorStop(0, '#000000');
+  hole.addColorStop(0.75, '#050505');
+  hole.addColorStop(1, '#2a1a12');
+  ctx.fillStyle = hole;
+  ctx.beginPath();
+  pit.shape.forEach((k, i) => {
+    const a = (i / pit.shape.length) * Math.PI * 2;
+    const r = pit.radius * k;
+    if (i === 0) ctx.moveTo(Math.cos(a) * r, Math.sin(a) * r);
+    else ctx.lineTo(Math.cos(a) * r, Math.sin(a) * r);
+  });
+  ctx.closePath();
+  ctx.fill();
+
+  // Danger ring
+  ctx.strokeStyle = `rgba(239, 68, 68, ${0.25 + pulse * 0.35})`;
+  ctx.lineWidth = 2;
+  ctx.setLineDash([5, 6]);
+  ctx.lineDashOffset = -t * 0.01;
+  ctx.beginPath();
+  ctx.arc(0, 0, pit.radius + 9, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.restore();
+};
+
+const label = (ctx, text, y, color) => {
+  ctx.font = 'bold 9px monospace';
+  ctx.textAlign = 'center';
+  ctx.fillStyle = 'rgba(0,0,0,0.7)';
+  const w = ctx.measureText(text).width + 8;
+  ctx.fillRect(-w / 2, y - 8, w, 12);
+  ctx.fillStyle = color;
+  ctx.fillText(text, 0, y + 1);
+};
+
+export const drawPickup = (ctx, p, t) => {
+  const bob = Math.sin(t * 0.005 + p.bob) * 2.5;
+  ctx.save();
+  ctx.translate(p.x, p.y + bob);
+
+  ctx.fillStyle = 'rgba(0,0,0,0.4)';
+  ctx.beginPath();
+  ctx.ellipse(0, 14 - bob, 12, 4, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  if (p.type === 'medkit') {
+    ctx.shadowColor = '#22c55e';
+    ctx.shadowBlur = 14;
+    ctx.fillStyle = '#f5f5f4';
+    ctx.fillRect(-12, -10, 24, 20);
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = '#16a34a';
+    ctx.fillRect(-3, -7, 6, 14);
+    ctx.fillRect(-7, -3, 14, 6);
+    label(ctx, '+SOIN', 24, '#4ade80');
+  } else if (p.type === 'ammo') {
+    ctx.shadowColor = '#eab308';
+    ctx.shadowBlur = 14;
+    ctx.fillStyle = '#3f6212';
+    ctx.fillRect(-12, -9, 24, 18);
+    ctx.shadowBlur = 0;
+    for (let i = -1; i <= 1; i++) {
+      ctx.fillStyle = '#eab308';
+      ctx.fillRect(i * 6 - 2, -4, 4, 9);
+      ctx.fillStyle = '#f97316';
+      ctx.beginPath();
+      ctx.moveTo(i * 6 - 2, -4); ctx.lineTo(i * 6, -9); ctx.lineTo(i * 6 + 2, -4);
+      ctx.fill();
+    }
+    label(ctx, '+BALLES', 24, '#fde047');
+  } else if (p.type === 'shells') {
+    ctx.shadowColor = '#f97316';
+    ctx.shadowBlur = 14;
+    ctx.fillStyle = '#7c2d12';
+    ctx.fillRect(-12, -9, 24, 18);
+    ctx.shadowBlur = 0;
+    for (let i = -1; i <= 1; i++) {
+      ctx.fillStyle = '#dc2626';
+      ctx.fillRect(i * 7 - 3, -6, 6, 9);
+      ctx.fillStyle = '#facc15';
+      ctx.fillRect(i * 7 - 3, 3, 6, 3);
+    }
+    label(ctx, '+CARTOUCHES', 24, '#fb923c');
+  } else if (p.type === 'shotgun') {
+    const glow = 10 + Math.sin(t * 0.006) * 6;
+    ctx.shadowColor = '#f97316';
+    ctx.shadowBlur = glow;
+    ctx.strokeStyle = 'rgba(249, 115, 22, 0.6)';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(0, 0, 22, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.rotate(-0.4);
+    ctx.fillStyle = '#78350f';
+    ctx.fillRect(-20, -3, 12, 8);
+    ctx.fillStyle = '#334155';
+    ctx.fillRect(-9, -3, 30, 5);
+    ctx.fillStyle = '#1e293b';
+    ctx.fillRect(0, 2, 12, 4);
+    ctx.rotate(0.4);
+    ctx.shadowBlur = 0;
+    label(ctx, 'FUSIL À POMPE', 34, '#fb923c');
+  }
+  ctx.restore();
+};
+
+export const drawKey = (ctx, key, t) => {
+  const bob = Math.sin(t * 0.004) * 3;
+  ctx.save();
+  ctx.translate(key.x, key.y + bob);
+
+  ctx.save();
+  ctx.rotate(t * 0.0008);
+  ctx.fillStyle = 'rgba(251, 191, 36, 0.08)';
+  for (let i = 0; i < 6; i++) {
+    ctx.rotate(Math.PI / 3);
+    ctx.beginPath();
+    ctx.moveTo(0, 0); ctx.lineTo(48, -9); ctx.lineTo(48, 9);
+    ctx.fill();
+  }
+  ctx.restore();
+
+  ctx.shadowColor = '#fbbf24';
+  ctx.shadowBlur = 18;
+  ctx.strokeStyle = '#fbbf24';
+  ctx.lineWidth = 3.5;
+  ctx.beginPath();
+  ctx.arc(-8, 0, 7, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.fillStyle = '#fbbf24';
+  ctx.fillRect(-3, -2.5, 18, 5);
+  ctx.fillRect(7, 2.5, 3.5, 6);
+  ctx.fillRect(12, 2.5, 3.5, 5);
+  ctx.fillStyle = '#fef08a';
+  ctx.fillRect(-2, -1, 15, 2);
+  ctx.shadowBlur = 0;
+  label(ctx, 'CLÉ DE SORTIE', 26, '#fbbf24');
+  ctx.restore();
+};
+
+export const drawExitDoor = (ctx, door, t) => {
+  const locked = door.locked;
+  const cx = door.x + door.w / 2;
+  const cy = door.y + door.h / 2;
+  const pulse = 0.6 + Math.sin(t * (locked ? 0.003 : 0.008)) * 0.4;
+  ctx.save();
+
+  const glow = ctx.createRadialGradient(cx, cy, 5, cx, cy, locked ? 110 : 160);
+  glow.addColorStop(0, locked ? `rgba(239, 68, 68, ${0.35 * pulse})` : `rgba(34, 197, 94, ${0.55 * pulse})`);
+  glow.addColorStop(1, 'rgba(0,0,0,0)');
+  ctx.fillStyle = glow;
+  ctx.fillRect(cx - 170, cy - 170, 340, 340);
+
+  ctx.fillStyle = locked ? '#7f1d1d' : '#14532d';
+  ctx.shadowColor = locked ? '#ef4444' : '#22c55e';
+  ctx.shadowBlur = 20;
+  ctx.fillRect(door.x - 3, door.y - 3, door.w + 6, door.h + 6);
+  ctx.fillStyle = '#1c1917';
+  ctx.fillRect(door.x, door.y, door.w, door.h);
+  ctx.strokeStyle = locked ? '#f87171' : '#4ade80';
+  ctx.lineWidth = 2.5;
+  ctx.strokeRect(door.x + 2, door.y + 2, door.w - 4, door.h - 4);
+  ctx.shadowBlur = 0;
+
+  // Hazard stripes when locked, arrows when open
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(door.x + 4, door.y + 4, door.w - 8, door.h - 8);
+  ctx.clip();
+  if (locked) {
+    ctx.fillStyle = 'rgba(239, 68, 68, 0.7)';
+    for (let i = -140; i < 140; i += 16) {
+      ctx.beginPath();
+      ctx.moveTo(cx + i, cy - 70); ctx.lineTo(cx + i + 8, cy - 70); ctx.lineTo(cx + i + 88, cy + 70); ctx.lineTo(cx + i + 80, cy + 70);
+      ctx.fill();
+    }
+  } else {
+    ctx.fillStyle = `rgba(74, 222, 128, ${pulse})`;
+    ctx.fillRect(door.x, door.y, door.w, door.h);
+  }
+  ctx.restore();
+
+  // Sign placed on the inner side of the wall
+  const inward = { top: [0, 1], bottom: [0, -1], left: [1, 0], right: [-1, 0] }[door.side];
+  const sx = cx + inward[0] * 58;
+  const sy = cy + inward[1] * 34;
+  ctx.fillStyle = 'rgba(5, 5, 8, 0.9)';
+  ctx.strokeStyle = locked ? '#ef4444' : '#22c55e';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.roundRect(sx - 46, sy - 11, 92, 22, 10);
+  ctx.fill();
+  ctx.stroke();
+  ctx.fillStyle = locked ? '#f87171' : '#4ade80';
+  ctx.font = 'bold 11px monospace';
+  ctx.textAlign = 'center';
+  ctx.fillText(locked ? 'VERROUILLÉ' : 'SORTIE  ➜', sx, sy + 4);
+  ctx.restore();
+};
+
+export const drawZombie = (ctx, z, t) => {
+  const type = ZOMBIE_TYPES[z.type];
+  const scale = z.radius / 16;
+  const wobble = Math.sin(t * 0.01 * (z.type === 'runner' ? 1.8 : 1) + z.phase) * 4;
+  const flash = z.hitFlash > 0;
+
+  ctx.save();
+  ctx.translate(z.x, z.y);
+  if (z.falling !== undefined) {
+    const k = Math.max(0, 1 - z.falling);
+    ctx.scale(k, k);
+    ctx.rotate(z.falling * 6);
+  }
+  ctx.rotate(z.angle);
+  ctx.scale(scale, scale);
+
+  ctx.fillStyle = 'rgba(0,0,0,0.4)';
+  ctx.beginPath();
+  ctx.ellipse(2, 3, 18, 14, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.fillStyle = flash ? '#ffffff' : type.arm;
+  ctx.fillRect(4 + wobble, -12, 16, 5);
+  ctx.fillRect(4 - wobble, 7, 16, 5);
+  ctx.fillStyle = flash ? '#ffffff' : type.skin;
+  ctx.beginPath();
+  ctx.arc(20 + wobble, -10, 3, 0, Math.PI * 2);
+  ctx.arc(20 - wobble, 9, 3, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.fillStyle = flash ? '#ffffff' : type.body;
+  ctx.beginPath();
+  ctx.arc(0, 0, 15, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(0,0,0,0.6)';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
+  if (z.type === 'brute') {
+    // Armored shoulders
+    ctx.fillStyle = flash ? '#ffffff' : '#312e81';
+    ctx.fillRect(-8, -16, 12, 6);
+    ctx.fillRect(-8, 10, 12, 6);
+  }
+
+  ctx.fillStyle = flash ? '#ffffff' : type.skin;
+  ctx.beginPath();
+  ctx.arc(-2, 0, 10, 0, Math.PI * 2);
+  ctx.fill();
+
+  const chasing = z.state === 'chase';
+  ctx.fillStyle = chasing ? '#ef4444' : '#7f1d1d';
+  ctx.shadowColor = '#ef4444';
+  ctx.shadowBlur = chasing ? 8 : 0;
+  ctx.beginPath();
+  ctx.arc(4, -4, 2.5, 0, Math.PI * 2);
+  ctx.arc(4, 4, 2.5, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+
+  if (z.falling !== undefined) return;
+
+  // Health bar only once damaged
+  if (z.hp < z.maxHp) {
+    const w = z.radius * 2;
+    ctx.fillStyle = 'rgba(0,0,0,0.7)';
+    ctx.fillRect(z.x - w / 2, z.y - z.radius - 11, w, 4);
+    ctx.fillStyle = z.type === 'brute' ? '#a78bfa' : '#ef4444';
+    ctx.fillRect(z.x - w / 2, z.y - z.radius - 11, (z.hp / z.maxHp) * w, 4);
+  }
+
+  // Alert marker when a zombie spots the player
+  if (z.alertTimer > 0) {
+    ctx.save();
+    ctx.globalAlpha = Math.min(1, z.alertTimer * 3);
+    ctx.fillStyle = '#facc15';
+    ctx.font = 'bold 18px monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText('!', z.x, z.y - z.radius - 16 - (0.6 - z.alertTimer) * 10);
+    ctx.restore();
+  }
+};
+
+export const drawPlayer = (ctx, player, weaponId, moving, t) => {
+  const legs = moving ? Math.sin(t * 0.015) * 6 : 0;
+  ctx.save();
+  ctx.translate(player.x, player.y);
+  if (player.invuln > 0 && Math.floor(t / 70) % 2 === 0) ctx.globalAlpha = 0.45;
+  ctx.rotate(player.angle);
+
+  ctx.fillStyle = 'rgba(0,0,0,0.5)';
+  ctx.beginPath();
+  ctx.ellipse(2, 3, 20, 15, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.fillStyle = '#1e293b';
+  ctx.fillRect(-10 + legs, -12, 10, 6);
+  ctx.fillRect(-10 - legs, 6, 10, 6);
+  ctx.fillStyle = '#0f172a';
+  ctx.fillRect(-12 + legs, -13, 5, 8);
+  ctx.fillRect(-12 - legs, 5, 5, 8);
+
+  ctx.fillStyle = '#2563eb';
+  ctx.beginPath();
+  ctx.arc(0, 0, 16, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = '#60a5fa';
+  ctx.lineWidth = 2.5;
+  ctx.stroke();
+  ctx.fillStyle = '#1e3a8a';
+  ctx.fillRect(-16, -9, 8, 18);
+
+  if (weaponId === 'knife') {
+    ctx.fillStyle = '#1e293b';
+    ctx.fillRect(8, 2, 8, 4);
+    ctx.fillStyle = '#e2e8f0';
+    ctx.beginPath();
+    ctx.moveTo(16, 2); ctx.lineTo(30, 4); ctx.lineTo(16, 6);
+    ctx.closePath();
+    ctx.fill();
+  } else if (weaponId === 'shotgun') {
+    ctx.fillStyle = '#78350f';
+    ctx.fillRect(4, 0, 10, 8);
+    ctx.fillStyle = '#334155';
+    ctx.fillRect(12, 1, 22, 6);
+    ctx.fillStyle = '#94a3b8';
+    ctx.fillRect(30, 1, 4, 6);
+  } else {
+    ctx.fillStyle = '#475569';
+    ctx.fillRect(8, 2, 15, 6);
+    ctx.fillStyle = '#94a3b8';
+    ctx.fillRect(22, 1, 4, 8);
+  }
+
+  ctx.fillStyle = '#0f172a';
+  ctx.beginPath();
+  ctx.arc(-2, 0, 10, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = '#334155';
+  ctx.fillRect(2, -3, 5, 6);
+
+  if (player.muzzle > 0) {
+    const len = weaponId === 'shotgun' ? 26 : 18;
+    const tip = weaponId === 'shotgun' ? 34 : 26;
+    ctx.globalAlpha = Math.min(1, player.muzzle * 12);
+    ctx.fillStyle = '#fde68a';
+    ctx.shadowColor = '#f59e0b';
+    ctx.shadowBlur = 20;
+    ctx.beginPath();
+    ctx.moveTo(tip, -6); ctx.lineTo(tip + len, 0); ctx.lineTo(tip, 6);
+    ctx.closePath();
+    ctx.fill();
+  }
+  ctx.restore();
+};

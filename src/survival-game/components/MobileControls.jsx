@@ -1,22 +1,10 @@
 import React, { useState, useRef } from 'react';
-import { Crosshair, RefreshCw } from 'lucide-react';
+import { Crosshair, RefreshCw, Swords, Repeat } from 'lucide-react';
 
-const MobileControls = ({ player, onMove, onFire, onReload }) => {
+const MobileControls = ({ onMove, onFire, onReload, onKnife, onSwitch }) => {
   const [joystickPos, setJoystickPos] = useState({ x: 0, y: 0 });
   const touchIdRef = useRef(null);
   const joystickBoundsRef = useRef(null);
-
-  const hpPercent = player ? (player.hp / (player.maxHp || 100)) * 100 : 100;
-  let hpBarColor = 'bg-green-500';
-  let hpBorder = 'border-green-500/50 shadow-green-500/20';
-
-  if (hpPercent <= 30) {
-    hpBarColor = 'bg-red-500';
-    hpBorder = 'border-red-500/60 shadow-red-500/30';
-  } else if (hpPercent <= 60) {
-    hpBarColor = 'bg-yellow-500';
-    hpBorder = 'border-yellow-500/50 shadow-yellow-500/20';
-  }
 
   const updateJoystick = (touch, rect) => {
     const centerX = rect.left + rect.width / 2;
@@ -78,29 +66,8 @@ const MobileControls = ({ player, onMove, onFire, onReload }) => {
 
   return (
     <div className="absolute inset-0 pointer-events-none z-40 flex justify-between items-end p-4 md:p-6 select-none touch-none overflow-hidden">
-      {/* Left Virtual Joystick & HP Bar - Bottom Left */}
+      {/* Left Virtual Joystick - Bottom Left */}
       <div className="flex flex-col items-center gap-2 pointer-events-none">
-        
-        {/* Health Bar positioned right above the stick */}
-        {player && (
-          <div className={`px-2.5 py-1.5 rounded-xl border backdrop-blur-md bg-black/85 ${hpBorder} shadow-lg flex flex-col gap-1 w-28 md:w-32 pointer-events-auto transition-all duration-300 ${hpPercent <= 30 ? 'animate-pulse' : ''}`}>
-            <div className="flex justify-between items-center">
-              <span className="text-[10px] text-gray-400 font-mono uppercase tracking-wider flex items-center gap-1 font-bold">
-                ❤️ VIE
-              </span>
-              <span className={`text-[11px] font-black font-mono ${hpPercent <= 30 ? 'text-red-400' : hpPercent <= 60 ? 'text-yellow-400' : 'text-green-400'}`}>
-                {Math.max(0, Math.round(player.hp))} HP
-              </span>
-            </div>
-            <div className="w-full h-2 bg-white/15 rounded-full overflow-hidden p-0.5 border border-white/10">
-              <div
-                className={`h-full rounded-full transition-all duration-200 ${hpBarColor} shadow-sm`}
-                style={{ width: `${Math.max(0, hpPercent)}%` }}
-              />
-            </div>
-          </div>
-        )}
-
         {/* Joystick Base */}
         <div 
           onTouchStart={handleTouchStart}
@@ -124,24 +91,47 @@ const MobileControls = ({ player, onMove, onFire, onReload }) => {
       {/* Right Touch Action Buttons */}
       <div className="flex flex-col gap-2 items-end pointer-events-auto touch-none">
 
-        {/* Reload Button */}
-        <button
-          type="button"
-          onPointerDown={(e) => { e.preventDefault(); e.stopPropagation(); onReload(); }}
-          className="w-11 h-11 rounded-full bg-blue-900/80 border-2 border-blue-500 text-blue-200 flex items-center justify-center active:scale-90 shadow-lg cursor-pointer touch-none"
-        >
-          <RefreshCw size={18} />
-        </button>
+        <div className="flex gap-2">
+          {/* Weapon Switch Button */}
+          <button
+            type="button"
+            onPointerDown={(e) => { e.preventDefault(); e.stopPropagation(); onSwitch(); }}
+            className="w-11 h-11 rounded-full bg-zinc-800/80 border-2 border-yellow-500/70 text-yellow-200 flex items-center justify-center active:scale-90 shadow-lg cursor-pointer touch-none"
+          >
+            <Repeat size={18} />
+          </button>
 
-        {/* Big Fire / Shoot Button — shoots in movement direction */}
-        <button
-          type="button"
-          onPointerDown={(e) => { e.preventDefault(); e.stopPropagation(); onFire(); }}
-          className="w-20 h-20 rounded-full bg-gradient-to-br from-red-600 to-red-800 border-2 border-red-400 text-white flex flex-col items-center justify-center active:scale-90 shadow-2xl shadow-red-600/40 cursor-pointer touch-none gap-0.5"
-        >
-          <Crosshair size={26} />
-          <span className="text-[9px] font-bold tracking-tight leading-none opacity-80">TIRER</span>
-        </button>
+          {/* Reload Button */}
+          <button
+            type="button"
+            onPointerDown={(e) => { e.preventDefault(); e.stopPropagation(); onReload(); }}
+            className="w-11 h-11 rounded-full bg-blue-900/80 border-2 border-blue-500 text-blue-200 flex items-center justify-center active:scale-90 shadow-lg cursor-pointer touch-none"
+          >
+            <RefreshCw size={18} />
+          </button>
+        </div>
+
+        <div className="flex gap-2 items-end">
+          {/* Knife Button */}
+          <button
+            type="button"
+            onPointerDown={(e) => { e.preventDefault(); e.stopPropagation(); onKnife(); }}
+            className="w-14 h-14 rounded-full bg-sky-900/80 border-2 border-sky-400 text-sky-100 flex flex-col items-center justify-center active:scale-90 shadow-lg cursor-pointer touch-none"
+          >
+            <Swords size={20} />
+            <span className="text-[8px] font-bold leading-none opacity-80">LAME</span>
+          </button>
+
+          {/* Big Fire / Shoot Button — shoots in movement direction */}
+          <button
+            type="button"
+            onPointerDown={(e) => { e.preventDefault(); e.stopPropagation(); onFire(); }}
+            className="w-20 h-20 rounded-full bg-gradient-to-br from-red-600 to-red-800 border-2 border-red-400 text-white flex flex-col items-center justify-center active:scale-90 shadow-2xl shadow-red-600/40 cursor-pointer touch-none gap-0.5"
+          >
+            <Crosshair size={26} />
+            <span className="text-[9px] font-bold tracking-tight leading-none opacity-80">TIRER</span>
+          </button>
+        </div>
       </div>
     </div>
   );

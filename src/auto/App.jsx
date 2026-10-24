@@ -1,18 +1,18 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
-  ArrowLeft, Fuel, Zap, Gauge, CalendarClock, Leaf, PiggyBank, RotateCcw, Save, X, Info, Landmark, Search,
+  ArrowLeft, Fuel, Zap, Gauge, CalendarClock, Leaf, PiggyBank, RotateCcw, Save, X, Info, Landmark, Search, ChevronDown,
 } from 'lucide-react';
 import { Courbes, Repartition, COULEURS } from './Graphiques';
-import { CATALOGUE, rechercher, estimer } from './catalogue';
+import { CATALOGUE, CATALOGUE_ELECTRIQUE, rechercher, estimer, estimerElectrique } from './catalogue';
 import {
-  CARBURANTS, THERMIQUES, ELECTRIQUES, CLES_THERMIQUE, CLES_ELECTRIQUE, extraire, identique,
+  CARBURANTS, THERMIQUES, CLES_THERMIQUE, CLES_ELECTRIQUE, extraire, identique,
   parDefaut, charger, sauvegarder, simuler, croisement, seuilKm, euros, nombre, dureeTexte,
 } from './donnees';
 
 const champ =
-  'w-full rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-sm text-white outline-none transition-colors placeholder:text-gray-600 focus:border-emerald-500/60';
-const carte = 'rounded-2xl border border-white/[0.06] bg-white/[0.03] p-5';
+  'w-full rounded-xl border border-white/10 bg-black/40 px-2.5 py-1.5 text-sm text-white outline-none transition-colors placeholder:text-gray-600 focus:border-emerald-500/60';
+const carte = 'rounded-2xl border border-white/[0.06] bg-white/[0.03] p-4';
 const bouton = 'inline-flex cursor-pointer items-center gap-2 rounded-xl border-0 px-3 py-2 text-sm font-medium transition-colors';
 
 const lire = (texte) => parseFloat(String(texte).replace(/\s/g, '').replace(',', '.'));
@@ -26,14 +26,14 @@ function Champ({ nom, unite, valeur, onChange, aide }) {
   }, [valeur]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
-    <label className="block space-y-1" title={aide}>
-      <span className="flex items-center gap-1 text-xs text-gray-400">
+    <label className="block min-w-0 space-y-0.5" title={aide}>
+      <span className="flex items-center gap-1 truncate text-[11px] text-gray-400">
         {nom}
         {aide && <Info size={11} className="text-gray-600" />}
       </span>
       <div className="relative">
         <input
-          className={`${champ} pr-16 tabular-nums`}
+          className={`${champ} pr-14 tabular-nums`}
           inputMode="decimal"
           value={texte}
           onChange={(e) => {
@@ -43,18 +43,30 @@ function Champ({ nom, unite, valeur, onChange, aide }) {
           }}
           onBlur={() => setTexte(ecrire(valeur))}
         />
-        <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-500">{unite}</span>
+        <span className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-[11px] text-gray-500">{unite}</span>
       </div>
     </label>
   );
 }
 
+// Réglages secondaires, repliés par défaut
+function Plus({ children }) {
+  return (
+    <details className="group">
+      <summary className="flex w-fit cursor-pointer list-none items-center gap-1 text-xs text-gray-500 hover:text-gray-300 [&::-webkit-details-marker]:hidden">
+        <ChevronDown size={14} className="transition-transform group-open:rotate-180" /> Plus de réglages
+      </summary>
+      <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-2">{children}</div>
+    </details>
+  );
+}
+
 function Curseur({ nom, valeur, min, max, pas, format, onChange, couleur = 'accent-emerald-500' }) {
   return (
-    <label className="block space-y-2">
+    <label className="block space-y-1">
       <span className="flex items-baseline justify-between text-sm">
         <span className="text-gray-400">{nom}</span>
-        <span className="text-lg font-semibold tabular-nums text-white">{format(valeur)}</span>
+        <span className="text-base font-semibold tabular-nums text-white">{format(valeur)}</span>
       </span>
       <input
         type="range" min={min} max={max} step={pas} value={valeur}
@@ -67,14 +79,47 @@ function Curseur({ nom, valeur, min, max, pas, format, onChange, couleur = 'acce
 
 const anneeCourante = new Date().getFullYear();
 
-// Recherche dans le catalogue de modèles réels, puis choix de l'année de l'exemplaire
-function CatalogueThermique({ th, onChoisir }) {
+const annees = (de, a) => Array.from({ length: Math.max(0, a - de + 1) }, (_, i) => a - i);
+
+// Réglages propres à chaque catalogue : année par défaut, années proposées, affichage d'une ligne
+const CATALOGUES = {
+  thermique: {
+    liste: CATALOGUE,
+    estimer,
+    cles: CLES_THERMIQUE,
+    placeholder: 'Chercher votre modèle : Clio, 308 diesel, Yaris…',
+    defaut: (m) => Math.min(Math.round((m.de + m.a) / 2), anneeCourante),
+    options: (m) => annees(m.de, Math.min(m.a, anneeCourante)).map((a) => ({ valeur: a, nom: String(a) })),
+    sousTitre: (m) => `${m.moteur} · ${m.de}–${m.a >= anneeCourante ? 'auj.' : m.a}`,
+    badge: (m) => (m.hybride ? 'Hybride' : CARBURANTS[m.carburant].nom),
+    conso: (m) => `${nombre(m.conso, 1)} L`,
+    resume: (m) => `${nombre(m.conso, 1)} L/100 réels · neuve ≈ ${euros(m.prixNeuf)}`,
+  },
+  electrique: {
+    liste: CATALOGUE_ELECTRIQUE,
+    estimer: estimerElectrique,
+    cles: CLES_ELECTRIQUE,
+    placeholder: 'Chercher un modèle : R5, Tesla, SUV, occasion…',
+    defaut: (m) => (m.neuve ? 0 : Math.max(m.de, Math.min(m.a, anneeCourante - 3))),
+    options: (m) => [
+      ...(m.neuve ? [{ valeur: 0, nom: 'Neuve' }] : []),
+      ...annees(m.de, Math.min(m.a, anneeCourante - 1)).map((a) => ({ valeur: a, nom: `Occasion ${a}` })),
+    ],
+    sousTitre: (m) => [m.moteur, !m.moteur.includes('kWh') && `${nombre(m.batterie, 1)} kWh`, `${nombre(m.autonomie)} km WLTP`].filter(Boolean).join(' · '),
+    badge: (m) => (m.neuve ? euros(m.prixNeuf) : 'Occasion'),
+    conso: (m) => `${nombre(m.conso, 1)} kWh`,
+    resume: (m) => `${nombre(m.conso, 1)} kWh/100 réels · ${nombre(m.autonomie)} km WLTP · neuve ≈ ${euros(m.prixNeuf)}`,
+  },
+};
+
+// Recherche dans un catalogue de modèles réels, puis choix de l'année (ou neuve) de l'exemplaire
+function Catalogue({ type, valeurs, couleur, onChoisir }) {
+  const c = CATALOGUES[type];
   const [texte, setTexte] = useState('');
   const [ouvert, setOuvert] = useState(false);
-  const resultats = useMemo(() => rechercher(texte), [texte]);
-  const choisi = CATALOGUE.find((m) => m.id === th.catalogue);
-  const derniere = choisi && Math.min(choisi.a, anneeCourante);
-  const modifie = choisi && !identique(th, estimer(choisi, th.annee), CLES_THERMIQUE);
+  const resultats = useMemo(() => rechercher(c.liste, texte), [c, texte]);
+  const choisi = c.liste.find((m) => m.id === valeurs.catalogue);
+  const modifie = choisi && !identique(valeurs, c.estimer(choisi, valeurs.annee), c.cles);
 
   return (
     <div className="space-y-2">
@@ -82,7 +127,7 @@ function CatalogueThermique({ th, onChoisir }) {
         <Search size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
         <input
           className={`${champ} pl-9`}
-          placeholder="Chercher votre modèle : Clio, 308 diesel, Yaris…"
+          placeholder={c.placeholder}
           value={texte}
           onChange={(e) => { setTexte(e.target.value); setOuvert(true); }}
           onFocus={() => setOuvert(true)}
@@ -100,7 +145,7 @@ function CatalogueThermique({ th, onChoisir }) {
                 <button
                   type="button"
                   onClick={() => {
-                    onChoisir(m, Math.min(Math.round((m.de + m.a) / 2), anneeCourante));
+                    onChoisir(m, c.defaut(m));
                     setTexte('');
                     setOuvert(false);
                   }}
@@ -108,13 +153,13 @@ function CatalogueThermique({ th, onChoisir }) {
                 >
                   <span className="min-w-0 flex-1">
                     <span className="block truncate text-sm text-gray-100">{m.marque} {m.modele}</span>
-                    <span className="block truncate text-xs text-gray-500">{m.moteur} · {m.de}–{m.a >= anneeCourante ? 'auj.' : m.a}</span>
+                    <span className="block truncate text-xs text-gray-500">{c.sousTitre(m)}</span>
                   </span>
-                  <span className="shrink-0 rounded-md bg-white/5 px-1.5 py-0.5 text-[11px] text-gray-400">
-                    {m.hybride ? 'Hybride' : CARBURANTS[m.carburant].nom}
+                  <span className="hidden shrink-0 rounded-md bg-white/5 px-1.5 py-0.5 text-[11px] tabular-nums text-gray-400 sm:inline">
+                    {c.badge(m)}
                   </span>
-                  <span className="w-20 shrink-0 text-right text-sm font-semibold tabular-nums" style={{ color: COULEURS.thermique }}>
-                    {nombre(m.conso, 1)} L
+                  <span className="w-[4.5rem] shrink-0 text-right text-sm font-semibold tabular-nums" style={{ color: couleur }}>
+                    {c.conso(m)}
                   </span>
                 </button>
               </li>
@@ -124,21 +169,21 @@ function CatalogueThermique({ th, onChoisir }) {
       </div>
 
       {choisi && (
-        <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border px-3 py-2.5" style={{ borderColor: `${COULEURS.thermique}40`, background: `${COULEURS.thermique}0f` }}>
+        <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border px-3 py-2.5" style={{ borderColor: `${couleur}40`, background: `${couleur}0f` }}>
           <div className="min-w-0">
             <div className="truncate text-sm font-semibold text-white">{choisi.marque} {choisi.modele} <span className="font-normal text-gray-400">{choisi.moteur}</span></div>
             <div className="text-xs text-gray-500">
-              {nombre(choisi.conso, 1)} L/100 réels · neuve ≈ {euros(choisi.prixNeuf)}{modifie ? ' · valeurs modifiées' : ' · valeurs estimées'}
+              {c.resume(choisi)}{modifie ? ' · valeurs modifiées' : ' · valeurs estimées'}
             </div>
           </div>
           <label className="flex items-center gap-2 text-xs text-gray-400">
-            Année
+            {type === 'thermique' && 'Année'}
             <select
-              value={th.annee}
+              value={valeurs.annee}
               onChange={(e) => onChoisir(choisi, Number(e.target.value))}
               className={`${champ} w-auto cursor-pointer py-1 [color-scheme:dark]`}
             >
-              {Array.from({ length: derniere - choisi.de + 1 }, (_, i) => derniere - i).map((a) => <option key={a} value={a}>{a}</option>)}
+              {c.options(choisi).map((o) => <option key={o.valeur} value={o.valeur}>{o.nom}</option>)}
             </select>
           </label>
         </div>
@@ -229,6 +274,10 @@ export default function AutoApp() {
     usage: m.carburant !== x.thermique.carburant ? { ...x.usage, prixCarburant: CARBURANTS[m.carburant].prix } : x.usage,
   }));
   const choisirCatalogue = (m, annee) => choisirThermique(estimer(m, annee), { catalogue: m.id, annee });
+  const choisirElectrique = (m, annee) => setD((x) => ({
+    ...x,
+    electrique: { ...x.electrique, ...estimerElectrique(m, annee), catalogue: m.id, annee },
+  }));
   const choisirCarburant = (c) => setD((x) => ({
     ...x,
     thermique: { ...x.thermique, carburant: c },
@@ -293,7 +342,7 @@ export default function AutoApp() {
 
   return (
     <div className="min-h-screen bg-[#0a0a0a] px-4 pb-24 pt-6 text-white sm:px-8">
-      <div className="mx-auto max-w-6xl space-y-6">
+      <div className="mx-auto max-w-6xl space-y-4">
         <header className="flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <Link to="/" className="rounded-xl bg-white/5 p-2 text-gray-400 hover:bg-white/10 hover:text-white" aria-label="Retour au portfolio">
@@ -313,7 +362,7 @@ export default function AutoApp() {
 
         {/* Verdict */}
         <div
-          className="rounded-2xl border p-5 sm:p-6"
+          className="rounded-2xl border p-4"
           style={{
             borderColor: `${gagnant ? COULEURS.electrique : COULEURS.thermique}40`,
             background: `linear-gradient(to right, ${gagnant ? COULEURS.electrique : COULEURS.thermique}1f, transparent)`,
@@ -341,44 +390,46 @@ export default function AutoApp() {
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
           {tuiles.map(({ nom, valeur, note, icone: Icone, couleur, fond }) => (
-            <div key={nom} className={`${carte} p-4`}>
-              <div className="mb-3 flex items-center gap-2 text-xs text-gray-400">
-                <span className={`rounded-lg p-1.5 ${fond} ${couleur}`}><Icone size={14} /></span>
+            <div key={nom} className={`${carte} p-3`}>
+              <div className="mb-1.5 flex items-center gap-2 text-xs text-gray-400">
+                <span className={`rounded-lg p-1 ${fond} ${couleur}`}><Icone size={13} /></span>
                 {nom}
               </div>
-              <div className={`text-lg font-bold tabular-nums sm:text-2xl ${couleur}`}>{valeur}</div>
-              <div className="mt-1 text-xs text-gray-500">{note}</div>
+              <div className={`text-lg font-bold tabular-nums sm:text-xl ${couleur}`}>{valeur}</div>
+              <div className="mt-0.5 text-[11px] leading-tight text-gray-500">{note}</div>
             </div>
           ))}
         </div>
 
-        <div className="grid gap-6 lg:grid-cols-5">
+        <div className="grid gap-4 lg:grid-cols-5">
           {/* Paramètres */}
-          <div className="min-w-0 space-y-6 lg:col-span-2">
+          <div className="min-w-0 space-y-4 lg:col-span-2">
             <section className={carte}>
-              <h2 className="mb-4 mt-0 text-base font-semibold">Votre usage</h2>
-              <div className="space-y-5">
+              <h2 className="mb-3 mt-0 text-base font-semibold">Votre usage</h2>
+              <div className="space-y-3">
                 <Curseur nom="Kilométrage annuel" valeur={u.km} min={2000} max={50000} pas={500} format={(v) => `${nombre(v)} km`} onChange={maj('usage', 'km')} />
                 <Curseur nom="Durée de la comparaison" valeur={u.duree} min={1} max={15} pas={1} format={(v) => `${v} an${v > 1 ? 's' : ''}`} onChange={maj('usage', 'duree')} />
                 <Curseur nom="Recharge à domicile" valeur={u.partDomicile} min={0} max={100} pas={5} format={(v) => `${v} %`} onChange={maj('usage', 'partDomicile')} />
-                <div className="grid grid-cols-2 gap-3">
-                  <Champ nom={`Prix ${CARBURANTS[th.carburant].nom.toLowerCase()}`} unite="€/L" valeur={u.prixCarburant} onChange={maj('usage', 'prixCarburant')} />
-                  <Champ nom="Électricité maison" unite="€/kWh" valeur={u.prixDomicile} onChange={maj('usage', 'prixDomicile')} aide="Tarif de votre abonnement, idéalement en heures creuses" />
-                  <Champ nom="Recharge publique" unite="€/kWh" valeur={u.prixPublic} onChange={maj('usage', 'prixPublic')} aide="Prix moyen des bornes (supermarché, autoroute…)" />
+                <div className="grid grid-cols-3 gap-2">
+                  <Champ nom={CARBURANTS[th.carburant].nom} unite="€/L" valeur={u.prixCarburant} onChange={maj('usage', 'prixCarburant')} />
+                  <Champ nom="Élec. maison" unite="€/kWh" valeur={u.prixDomicile} onChange={maj('usage', 'prixDomicile')} aide="Tarif de votre abonnement, idéalement en heures creuses" />
+                  <Champ nom="Borne publique" unite="€/kWh" valeur={u.prixPublic} onChange={maj('usage', 'prixPublic')} aide="Prix moyen des bornes (supermarché, autoroute…)" />
+                </div>
+                <Plus>
                   <Champ nom="Pertes de recharge" unite="%" valeur={u.pertes} onChange={maj('usage', 'pertes')} aide="Énergie perdue entre la prise et la batterie" />
                   <Champ nom="Hausse des énergies" unite="%/an" valeur={u.inflation} onChange={maj('usage', 'inflation')} aide="Appliquée au carburant comme à l'électricité" />
-                </div>
+                </Plus>
               </div>
             </section>
 
             <section className={carte} style={{ borderColor: `${COULEURS.thermique}30` }}>
-              <h2 className="mb-4 mt-0 flex items-center gap-2 text-base font-semibold">
+              <h2 className="mb-3 mt-0 flex items-center gap-2 text-base font-semibold">
                 <Fuel size={18} style={{ color: COULEURS.thermique }} /> Votre voiture actuelle
               </h2>
-              <div className="space-y-4">
-                <CatalogueThermique th={th} onChoisir={choisirCatalogue} />
+              <div className="space-y-3">
+                <Catalogue type="thermique" valeurs={th} couleur={COULEURS.thermique} onChoisir={choisirCatalogue} />
                 <p className="m-0 text-xs text-gray-500">Ou partez d'un profil type :</p>
                 <Modeles
                   predefinis={THERMIQUES}
@@ -386,7 +437,7 @@ export default function AutoApp() {
                   actuel={th}
                   cles={CLES_THERMIQUE}
                   couleur={COULEURS.thermique}
-                  libre={th.catalogue ? 'Modèle du catalogue' : 'Personnalisé'}
+                  libre={th.catalogue ? '' : 'Personnalisé'}
                   onChoisir={(m) => choisirThermique(m)}
                   onEnregistrer={enregistrerModele('thermiques', CLES_THERMIQUE, th)}
                   onSupprimer={supprimerModele('thermiques')}
@@ -403,46 +454,52 @@ export default function AutoApp() {
                     </button>
                   ))}
                 </div>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-2">
                   <Champ nom="Consommation" unite="L/100" valeur={th.conso} onChange={maj('thermique', 'conso')} />
                   <Champ nom="Valeur de revente" unite="€" valeur={th.valeur} onChange={maj('thermique', 'valeur')} aide="Ce que vous en tireriez aujourd'hui (La Centrale, Argus…)" />
-                  <Champ nom="Décote" unite="%/an" valeur={th.decote} onChange={maj('thermique', 'decote')} />
                   <Champ nom="Entretien & réparations" unite="€/an" valeur={th.entretien} onChange={maj('thermique', 'entretien')} />
-                  <Champ nom="Hausse de l'entretien" unite="%/an" valeur={th.hausseEntretien} onChange={maj('thermique', 'hausseEntretien')} aide="Une voiture qui vieillit coûte de plus en plus cher à entretenir" />
                   <Champ nom="Assurance" unite="€/an" valeur={th.assurance} onChange={maj('thermique', 'assurance')} />
-                  <Champ nom="Autres frais" unite="€/an" valeur={th.autres} onChange={maj('thermique', 'autres')} aide="Stationnement, péages, contrôle technique, restrictions ZFE…" />
                 </div>
+                <Plus>
+                  <Champ nom="Décote" unite="%/an" valeur={th.decote} onChange={maj('thermique', 'decote')} />
+                  <Champ nom="Hausse de l'entretien" unite="%/an" valeur={th.hausseEntretien} onChange={maj('thermique', 'hausseEntretien')} aide="Une voiture qui vieillit coûte de plus en plus cher à entretenir" />
+                  <Champ nom="Autres frais" unite="€/an" valeur={th.autres} onChange={maj('thermique', 'autres')} aide="Stationnement, péages, contrôle technique, restrictions ZFE…" />
+                </Plus>
               </div>
             </section>
 
             <section className={carte} style={{ borderColor: `${COULEURS.electrique}30` }}>
-              <h2 className="mb-4 mt-0 flex items-center gap-2 text-base font-semibold">
+              <h2 className="mb-3 mt-0 flex items-center gap-2 text-base font-semibold">
                 <Zap size={18} style={{ color: COULEURS.electrique }} /> La voiture électrique
               </h2>
-              <div className="space-y-4">
+              <div className="space-y-3">
+                <Catalogue type="electrique" valeurs={el} couleur={COULEURS.electrique} onChoisir={choisirElectrique} />
                 <Modeles
-                  predefinis={ELECTRIQUES}
+                  predefinis={[]}
                   perso={d.modeles.electriques}
                   actuel={el}
                   cles={CLES_ELECTRIQUE}
                   couleur={COULEURS.electrique}
-                  onChoisir={(m) => setD((x) => ({ ...x, electrique: { ...x.electrique, ...extraire(m, CLES_ELECTRIQUE) } }))}
+                  libre={el.catalogue ? '' : 'Personnalisé'}
+                  onChoisir={(m) => setD((x) => ({ ...x, electrique: { ...x.electrique, ...extraire(m, CLES_ELECTRIQUE), catalogue: null, annee: 0 } }))}
                   onEnregistrer={enregistrerModele('electriques', CLES_ELECTRIQUE, el)}
                   onSupprimer={supprimerModele('electriques')}
                 />
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-2">
                   <Champ nom="Prix d'achat" unite="€" valeur={el.prix} onChange={maj('electrique', 'prix')} />
                   <Champ nom="Aides à l'achat" unite="€" valeur={el.aides} onChange={maj('electrique', 'aides')} aide="Prime CEE « coup de pouce », aides locales… à vérifier selon vos revenus et le modèle" />
                   <Champ nom="Consommation" unite="kWh/100" valeur={el.conso} onChange={maj('electrique', 'conso')} />
                   <Champ nom="Borne à domicile" unite="€" valeur={el.borne} onChange={maj('electrique', 'borne')} aide="Wallbox installée, crédit d'impôt déduit. 0 si vous rechargez sur une prise classique" />
-                  <Champ nom="Décote 1re année" unite="%" valeur={el.decote1} onChange={maj('electrique', 'decote1')} />
-                  <Champ nom="Décote ensuite" unite="%/an" valeur={el.decote} onChange={maj('electrique', 'decote')} />
                   <Champ nom="Entretien" unite="€/an" valeur={el.entretien} onChange={maj('electrique', 'entretien')} />
                   <Champ nom="Assurance" unite="€/an" valeur={el.assurance} onChange={maj('electrique', 'assurance')} />
+                </div>
+                <Plus>
+                  <Champ nom="Décote 1re année" unite="%" valeur={el.decote1} onChange={maj('electrique', 'decote1')} />
+                  <Champ nom="Décote ensuite" unite="%/an" valeur={el.decote} onChange={maj('electrique', 'decote')} />
                   <Champ nom="Carte grise" unite="€" valeur={el.carteGrise} onChange={maj('electrique', 'carteGrise')} aide="Gratuite ou réduite selon les régions" />
                   <Champ nom="Autres frais" unite="€/an" valeur={el.autres} onChange={maj('electrique', 'autres')} />
                   <Champ nom="CO₂ de fabrication" unite="t" valeur={el.fabrication} onChange={maj('electrique', 'fabrication')} aide="Émissions liées à la construction du véhicule et de sa batterie. 0 pour une occasion : elle existe déjà" />
-                </div>
+                </Plus>
 
                 <div className="rounded-xl border border-white/[0.06] bg-black/20 p-3">
                   <label className="flex cursor-pointer items-center justify-between gap-3 text-sm">
@@ -468,9 +525,9 @@ export default function AutoApp() {
           </div>
 
           {/* Résultats */}
-          <div className="min-w-0 space-y-6 lg:col-span-3">
+          <div className="min-w-0 space-y-4 lg:col-span-3">
             <section className={carte}>
-              <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+              <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
                 <h2 className="m-0 text-base font-semibold">Coût cumulé</h2>
                 <div className="flex gap-4 text-xs text-gray-400">
                   <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full" style={{ background: COULEURS.thermique }} />Garder la thermique</span>
@@ -485,12 +542,12 @@ export default function AutoApp() {
             </section>
 
             <section className={carte}>
-              <h2 className="mb-4 mt-0 text-base font-semibold">Détail sur {u.duree} an{u.duree > 1 ? 's' : ''}</h2>
+              <h2 className="mb-3 mt-0 text-base font-semibold">Détail sur {u.duree} an{u.duree > 1 ? 's' : ''}</h2>
               <Repartition postes={sim.postes} />
             </section>
 
             <section className={carte}>
-              <h2 className="mb-4 mt-0 text-base font-semibold">Émissions de CO₂ cumulées</h2>
+              <h2 className="mb-3 mt-0 text-base font-semibold">Émissions de CO₂ cumulées</h2>
               <Courbes
                 annees={sim.annees}
                 pointMort={pointMortCO2}

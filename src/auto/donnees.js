@@ -1,4 +1,5 @@
 // Valeurs indicatives (France, fin 2026) : toutes modifiables dans l'interface
+import { CATALOGUE_ELECTRIQUE, estimerElectrique } from './catalogue';
 
 export const CARBURANTS = {
   essence: { nom: 'Essence', prix: 1.75, co2: 2.7 },
@@ -18,23 +19,13 @@ export const THERMIQUES = [
   { id: 'hybride', nom: 'Hybride essence', detail: 'Yaris, Corolla, Clio E-Tech… · 2019', carburant: 'essence', conso: 4.5, valeur: 14000, decote: 9, entretien: 650, hausseEntretien: 4, assurance: 600, autres: 0 },
 ];
 
-export const ELECTRIQUES = [
-  { id: 'spring', nom: 'Dacia Spring', detail: 'Neuve · 27 kWh', prix: 16900, aides: 0, conso: 14.5, decote1: 20, decote: 12, entretien: 250, assurance: 450, carteGrise: 0, fabrication: 7 },
-  { id: 'ec3', nom: 'Citroën ë-C3', detail: 'Neuve · 44 kWh', prix: 23300, aides: 3100, conso: 16.5, decote1: 20, decote: 12, entretien: 300, assurance: 550, carteGrise: 0, fabrication: 9 },
-  { id: 'r5', nom: 'Renault 5 E-Tech', detail: 'Neuve · 52 kWh', prix: 32900, aides: 3100, conso: 15.5, decote1: 18, decote: 11, entretien: 300, assurance: 650, carteGrise: 0, fabrication: 10 },
-  { id: 'e208', nom: 'Peugeot e-208', detail: 'Neuve · 51 kWh', prix: 30500, aides: 3100, conso: 15.5, decote1: 22, decote: 12, entretien: 300, assurance: 650, carteGrise: 0, fabrication: 10 },
-  { id: 'ev3', nom: 'Kia EV3', detail: 'Neuve · 58 kWh', prix: 35990, aides: 0, conso: 16, decote1: 20, decote: 11, entretien: 350, assurance: 750, carteGrise: 0, fabrication: 11 },
-  { id: 'model3', nom: 'Tesla Model 3', detail: 'Neuve · Propulsion', prix: 39990, aides: 0, conso: 14.5, decote1: 20, decote: 11, entretien: 350, assurance: 900, carteGrise: 0, fabrication: 11 },
-  { id: 'modely', nom: 'Tesla Model Y', detail: 'Neuve · Propulsion', prix: 44990, aides: 0, conso: 16.5, decote1: 20, decote: 11, entretien: 400, assurance: 950, carteGrise: 0, fabrication: 12 },
-  { id: 'zoe-occasion', nom: 'Renault Zoé', detail: 'Occasion 2020 · 52 kWh', prix: 13500, aides: 0, conso: 16.5, decote1: 10, decote: 10, entretien: 300, assurance: 500, carteGrise: 250, fabrication: 0 },
-  { id: 'mg4-occasion', nom: 'MG4', detail: 'Occasion 2023 · 64 kWh', prix: 19000, aides: 0, conso: 17, decote1: 12, decote: 11, entretien: 300, assurance: 650, carteGrise: 300, fabrication: 0 },
-];
-
 // Champs qui définissent un modèle (comparés pour savoir si un modèle est sélectionné)
 export const CLES_THERMIQUE = ['carburant', 'conso', 'valeur', 'decote', 'entretien', 'hausseEntretien', 'assurance', 'autres'];
 export const CLES_ELECTRIQUE = ['prix', 'aides', 'conso', 'decote1', 'decote', 'entretien', 'assurance', 'carteGrise', 'fabrication'];
 
-export const extraire = (objet, cles) => Object.fromEntries(cles.map((c) => [c, objet[c]]));
+const ELECTRIQUE_DEFAUT = 'renault-5-e-tech-52-kwh';
+
+export const extraire =(objet, cles) => Object.fromEntries(cles.map((c) => [c, objet[c]]));
 export const identique = (a, b, cles) => cles.every((c) => a[c] === b[c]);
 
 export const parDefaut = () => ({
@@ -44,7 +35,8 @@ export const parDefaut = () => ({
   },
   thermique: { ...extraire(THERMIQUES[0], CLES_THERMIQUE) },
   electrique: {
-    ...extraire(ELECTRIQUES[2], CLES_ELECTRIQUE),
+    ...estimerElectrique(CATALOGUE_ELECTRIQUE.find((m) => m.id === ELECTRIQUE_DEFAUT), 0),
+    catalogue: ELECTRIQUE_DEFAUT, annee: 0,
     borne: 1000, autres: 0,
     credit: false, apport: 0, taux: 4.5, dureeCredit: 60,
   },

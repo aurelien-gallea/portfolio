@@ -215,7 +215,8 @@ export const makeZombie = (type, x, y, speedMul, state = 'idle') => {
 export const pickZombieType = (diff) => {
   const roll = Math.random();
   if (roll < diff.bruteRate) return 'brute';
-  if (roll < diff.bruteRate + diff.runnerRate) return 'runner';
+  if (roll < diff.bruteRate + diff.spitterRate) return 'spitter';
+  if (roll < diff.bruteRate + diff.spitterRate + diff.runnerRate) return 'runner';
   return 'walker';
 };
 

@@ -111,6 +111,14 @@ const HUD = ({ hud, onPause, onToggleMute }) => {
         </div>
       </div>
 
+      {/* Rooted by a spitter's web */}
+      {hud.rooted > 0 && (
+        <div className="absolute left-1/2 top-[62%] -translate-x-1/2 flex flex-col items-center gap-1 px-4 py-2 rounded-xl border border-lime-300/60 bg-black/80 backdrop-blur-md shadow-lg shadow-lime-400/20 animate-pulse">
+          <span className="text-sm font-black tracking-widest text-lime-200">🕸️ ENGLUÉ ! {hud.rooted.toFixed(1)}s</span>
+          <span className="text-[10px] font-mono text-gray-300">Couteau (F / Lame) pour couper la toile</span>
+        </div>
+      )}
+
       {/* Weapons: centered on touch screens (buttons live in the corners), bottom-right on desktop */}
       <div className="flex justify-center lg:justify-end items-end">
         <div className="flex gap-1.5 md:gap-2 backdrop-blur-sm">

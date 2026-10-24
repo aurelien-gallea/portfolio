@@ -67,6 +67,14 @@ const ResourceIcon = ({ type }) => {
           <rect x="18.5" y="13" width="2" height="2.8" fill="#fbbf24" />
         </svg>
       );
+    case 'web':
+      return (
+        <svg viewBox="0 0 24 24" className="w-6 h-6" fill="none" stroke="#f5f5f4" strokeWidth="1">
+          {[0, 45, 90, 135].map(a => <line key={a} x1="12" y1="2" x2="12" y2="22" transform={`rotate(${a} 12 12)`} />)}
+          <circle cx="12" cy="12" r="3.5" />
+          <circle cx="12" cy="12" r="7" />
+        </svg>
+      );
     default:
       return (
         <svg viewBox="0 0 24 24" className="w-6 h-6">
@@ -82,6 +90,7 @@ const RESOURCES = [
   { type: 'shells', label: 'Cartouches', detail: '+6 pour le pompe', color: 'text-orange-400' },
   { type: 'shotgun', label: 'Fusil à pompe', detail: 'Caché dans un cul-de-sac', color: 'text-orange-500' },
   { type: 'key', label: 'Clé de sortie', detail: 'Horde + chutes du plafond', color: 'text-amber-400' },
+  { type: 'web', label: 'Toile de cracheur', detail: 'Englué 2 s · couteau pour couper', color: 'text-lime-300' },
   { type: 'pit', label: 'Trou', detail: '-15 PV · piège à zombies', color: 'text-red-400' },
 ];
 

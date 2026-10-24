@@ -176,6 +176,16 @@ class SoundManager {
     this.noise(0.5, 0.45, 300, 1800, 'bandpass');
   }
 
+  playSpit() {
+    this.noise(0.18, 0.35, 2500, 500, 'bandpass');
+    this.tone('sine', 300, 120, 0.15, 0.15);
+  }
+
+  playWebHit() {
+    this.noise(0.25, 0.4, 1800, 200);
+    this.tone('triangle', 180, 90, 0.4, 0.25);
+  }
+
   playEmptyClick() {
     this.tone('square', 800, 800, 0.03, 0.15);
   }

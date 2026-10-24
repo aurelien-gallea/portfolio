@@ -1,6 +1,6 @@
 // Canvas drawing for Zombie Rules: a pre-rendered mansion layer plus animated sprites.
 
-import { MAP_W, MAP_H, ZOMBIE_TYPES } from './config';
+import { MAP_W, MAP_H, ZOMBIE_TYPES, SPIT } from './config';
 
 const shade = (hex, amount) => {
   const n = parseInt(hex.slice(1), 16);
@@ -554,6 +554,24 @@ export const drawZombie = (ctx, z, t) => {
   ctx.arc(-2, 0, 10, 0, Math.PI * 2);
   ctx.fill();
 
+  if (z.type === 'spitter') {
+    // Throat sac swells while the spitter prepares its web
+    const charge = z.spit ? 1 - z.spit / SPIT.windup : 0;
+    ctx.fillStyle = flash ? '#ffffff' : `rgba(190, 242, 100, ${0.75 + charge * 0.25})`;
+    ctx.shadowColor = '#d9f99d';
+    ctx.shadowBlur = charge * 14;
+    ctx.beginPath();
+    ctx.arc(10, 0, 4 + charge * 6, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.shadowBlur = 0;
+    ctx.strokeStyle = 'rgba(245, 245, 244, 0.7)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(13, -2); ctx.lineTo(19, -4);
+    ctx.moveTo(13, 2); ctx.lineTo(18, 5);
+    ctx.stroke();
+  }
+
   const chasing = z.state === 'chase';
   ctx.fillStyle = chasing ? '#ef4444' : '#7f1d1d';
   ctx.shadowColor = '#ef4444';
@@ -949,5 +967,81 @@ export const drawCeilingDrop = (ctx, d, t) => {
       angle: t * 0.004, phase: 0, hitFlash: 0, state: 'chase', alertTimer: 0,
     }, t);
   }
+  ctx.restore();
+};
+
+// ---------- Spitter webs ----------
+
+const webPattern = (ctx, radius, spokes, rings, angle) => {
+  ctx.beginPath();
+  for (let i = 0; i < spokes; i++) {
+    const a = angle + (i / spokes) * Math.PI * 2;
+    ctx.moveTo(0, 0);
+    ctx.lineTo(Math.cos(a) * radius, Math.sin(a) * radius);
+  }
+  for (let r = 1; r <= rings; r++) {
+    const rr = (radius * r) / (rings + 0.3);
+    for (let i = 0; i <= spokes; i++) {
+      const a = angle + (i / spokes) * Math.PI * 2;
+      const sag = i % 2 ? 0.88 : 1;
+      if (i === 0) ctx.moveTo(Math.cos(a) * rr, Math.sin(a) * rr);
+      else ctx.lineTo(Math.cos(a) * rr * sag, Math.sin(a) * rr * sag);
+    }
+  }
+  ctx.stroke();
+};
+
+// Sticky patch left on the floor: slows the player down
+export const drawWebPatch = (ctx, w, radius, life) => {
+  const alpha = Math.min(1, w.life / 1.5) * 0.75;
+  ctx.save();
+  ctx.translate(w.x, w.y);
+  ctx.fillStyle = `rgba(217, 249, 157, ${alpha * 0.18})`;
+  ctx.beginPath();
+  ctx.arc(0, 0, radius, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = `rgba(245, 245, 244, ${alpha})`;
+  ctx.lineWidth = 1.3;
+  webPattern(ctx, radius, 9, 3, w.angle);
+  ctx.restore();
+};
+
+export const drawWebShot = (ctx, w, t) => {
+  ctx.save();
+  ctx.translate(w.x, w.y);
+  ctx.rotate(w.angle);
+  ctx.strokeStyle = 'rgba(245, 245, 244, 0.6)';
+  ctx.lineWidth = 1.2;
+  ctx.beginPath();
+  for (let i = -1; i <= 1; i++) {
+    ctx.moveTo(0, i * 2);
+    ctx.quadraticCurveTo(-14, i * 6 + Math.sin(t * 0.03 + i) * 3, -26, i * 4);
+  }
+  ctx.stroke();
+  ctx.fillStyle = '#f5f5f4';
+  ctx.shadowColor = '#d9f99d';
+  ctx.shadowBlur = 12;
+  ctx.beginPath();
+  ctx.arc(0, 0, 7, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = '#bef264';
+  ctx.beginPath();
+  ctx.arc(1, 0, 3.5, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+};
+
+// Net wrapped over a rooted player, with a ring showing the time left
+export const drawWebNet = (ctx, p, remaining, t) => {
+  ctx.save();
+  ctx.translate(p.x, p.y);
+  ctx.strokeStyle = 'rgba(250, 250, 249, 0.9)';
+  ctx.lineWidth = 1.6;
+  webPattern(ctx, 27, 10, 3, t * 0.0004);
+  ctx.strokeStyle = 'rgba(217, 249, 157, 0.95)';
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.arc(0, 0, 33, -Math.PI / 2, -Math.PI / 2 + remaining * Math.PI * 2);
+  ctx.stroke();
   ctx.restore();
 };

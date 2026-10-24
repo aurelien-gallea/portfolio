@@ -11,6 +11,7 @@ export const DIFFICULTIES = {
     zombies: 8,
     runnerRate: 0.25,
     bruteRate: 0.05,
+    spitterRate: 0.1,
     horde: 4,
     pits: 3,
     ammoPickups: 5,
@@ -31,6 +32,7 @@ export const DIFFICULTIES = {
     zombies: 14,
     runnerRate: 0.4,
     bruteRate: 0.12,
+    spitterRate: 0.18,
     horde: 8,
     pits: 5,
     ammoPickups: 4,
@@ -50,6 +52,7 @@ export const DIFFICULTIES = {
     zombies: 22,
     runnerRate: 0.5,
     bruteRate: 0.18,
+    spitterRate: 0.24,
     horde: 14,
     pits: 8,
     ammoPickups: 3,
@@ -68,6 +71,7 @@ export const DIFFICULTIES = {
 export const ZOMBIE_TYPES = {
   walker: { hp: 60, radius: 16, speed: 1.25, damage: 1, score: 100, knockback: 1, skin: '#4ade80', body: '#166534', arm: '#15803d' },
   runner: { hp: 35, radius: 14, speed: 2.6, damage: 0.7, score: 150, knockback: 1.3, skin: '#d9f99d', body: '#57534e', arm: '#78716c' },
+  spitter: { hp: 45, radius: 15, speed: 1.15, damage: 0.6, score: 200, knockback: 1.1, skin: '#fef08a', body: '#713f12', arm: '#a16207' },
   brute: { hp: 480, radius: 26, speed: 1.0, damage: 3, score: 500, knockback: 0.08, skin: '#a78bfa', body: '#4c1d95', arm: '#5b21b6' },
 };
 
@@ -86,4 +90,18 @@ export const WEAPONS = {
     id: 'knife', name: 'Couteau', short: 'COUTEAU', slot: 3,
     damage: 60, cooldown: 380, reach: 70, arc: 1.2, knockback: 8, noise: 0, sound: 'playKnife',
   },
+};
+
+// Web spitter: keeps its distance and glues the player to the floor
+export const SPIT = {
+  minRange: 190,
+  maxRange: 430,
+  windup: 0.55,
+  cooldown: 3.2,
+  speed: 7.5,
+  rootTime: 2,
+  rootImmunity: 1,
+  patchLife: 7,
+  patchRadius: 34,
+  patchSlow: 0.45,
 };

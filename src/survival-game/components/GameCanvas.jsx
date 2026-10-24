@@ -1,11 +1,12 @@
 import React, { useEffect, useRef } from 'react';
 import { sounds } from '../utils/audio';
-import { MAP_W, MAP_H, DIFFICULTIES, ZOMBIE_TYPES, WEAPONS } from '../engine/config';
+import { MAP_W, MAP_H, DIFFICULTIES, ZOMBIE_TYPES, WEAPONS, SPIT } from '../engine/config';
 import { generateLevel, makeZombie, pickZombieType, randomFreePoint } from '../engine/level';
 import { moveCircle, pointInRect, hasLineOfSight, rayLength, buildNavGrid, updateFlowField, flowDirection, pathDistance } from '../engine/physics';
 import {
   buildStaticLayer, createDecalLayer, stampBlood,
   drawPit, drawPickup, drawKey, drawExitDoor, drawZombie, drawPlayer, drawCeilingDrop,
+  drawWebPatch, drawWebShot, drawWebNet,
 } from '../engine/render';
 
 const WEAPON_ORDER = ['handgun', 'shotgun', 'knife'];
@@ -84,6 +85,10 @@ const GameCanvas = ({
         },
         reload: null,
         safeSpots: [],
+        rooted: 0,
+        rootImmune: 0,
+        vx: 0,
+        vy: 0,
       },
       zombies: level.zombies,
       pickups: level.pickups,
@@ -110,6 +115,8 @@ const GameCanvas = ({
       banner: null,
       horde: { active: false, remaining: 0, nextSpawn: 0, startedAt: 0 },
       drops: [],
+      webs: [],
+      webPatches: [],
       nextDrop: 0,
       flicker: 0,
       navTimer: 0,
@@ -177,6 +184,7 @@ const GameCanvas = ({
         hordeActive: s.horde.active,
         time: s.clock / 1000,
         muted: sounds.muted,
+        rooted: s.player.rooted,
       });
     };
 
@@ -351,6 +359,11 @@ const GameCanvas = ({
       if (fromTouch || !s.hasMouseMoved) aimAssist();
       sounds.playKnife();
       p.swing = 1;
+      if (p.rooted > 0) {
+        // Slashing at the web frees the player a little sooner
+        p.rooted = Math.max(0, p.rooted - 0.25);
+        burst(p.x, p.y, 6, '#f5f5f4', 2.5, 2);
+      }
       s.slashes.push({ x: p.x, y: p.y, angle: p.angle, life: 1 });
       s.zombies.forEach(z => {
         const d = Math.hypot(z.x - p.x, z.y - p.y);
@@ -408,6 +421,83 @@ const GameCanvas = ({
     };
 
     actionsRef.current = { fire, reload: startReload, knife: knifeSlash, cycle: cycleWeapon };
+
+    // Spitter: keeps its distance, strafes, then lobs a web that glues the player in place
+    const fireWeb = (z) => {
+      const p = s.player;
+      const dist = Math.hypot(p.x - z.x, p.y - z.y);
+      const flight = dist / SPIT.speed;
+      // Partial lead on the player's current movement
+      const tx = p.x + p.vx * flight * 0.7;
+      const ty = p.y + p.vy * flight * 0.7;
+      const a = Math.atan2(ty - z.y, tx - z.x);
+      s.webs.push({ x: z.x + Math.cos(a) * 18, y: z.y + Math.sin(a) * 18, vx: Math.cos(a) * SPIT.speed, vy: Math.sin(a) * SPIT.speed, range: 560, angle: a });
+      sounds.playSpit();
+    };
+
+    const spitterBehaviour = (z, toPlayer, dtSec) => {
+      const p = s.player;
+      if (z.spit !== undefined && z.spit !== null) {
+        z.spit -= dtSec;
+        if (z.spit <= 0) {
+          z.spit = null;
+          fireWeb(z);
+          z.nextSpit = s.clock + SPIT.cooldown * 1000 * (0.8 + Math.random() * 0.4);
+        }
+        return { x: 0, y: 0 };
+      }
+      if (!z.sees) return null;
+      if (toPlayer <= SPIT.maxRange && toPlayer > 60 && s.clock >= (z.nextSpit || 0)) {
+        z.spit = SPIT.windup;
+        return { x: 0, y: 0 };
+      }
+      const ax = (p.x - z.x) / (toPlayer || 1);
+      const ay = (p.y - z.y) / (toPlayer || 1);
+      if (toPlayer < SPIT.minRange) return { x: -ax * z.speed * 1.1, y: -ay * z.speed * 1.1 };
+      if (toPlayer < SPIT.maxRange - 60) {
+        if (!z.strafeDir || Math.random() < 0.01) z.strafeDir = Math.random() < 0.5 ? -1 : 1;
+        return { x: -ay * z.strafeDir * z.speed * 0.7, y: ax * z.strafeDir * z.speed * 0.7 };
+      }
+      return null;
+    };
+
+    const addWebPatch = (x, y) => {
+      s.webPatches.push({ x, y, life: SPIT.patchLife, angle: Math.random() * Math.PI });
+      if (s.webPatches.length > 14) s.webPatches.shift();
+    };
+
+    const updateWebs = (f, dtSec) => {
+      const p = s.player;
+      s.webs.forEach(w => {
+        for (let k = 0; k < 2 && w.range > 0; k++) {
+          w.x += (w.vx * f) / 2;
+          w.y += (w.vy * f) / 2;
+          w.range -= (SPIT.speed * f) / 2;
+          if (s.level.solids.some(r => pointInRect(w.x, w.y, r))) {
+            w.range = 0;
+            addWebPatch(w.x - w.vx, w.y - w.vy);
+            return;
+          }
+          if (Math.hypot(p.x - w.x, p.y - w.y) < p.radius + 7) {
+            w.range = 0;
+            addWebPatch(p.x, p.y);
+            if (p.rooted <= 0 && p.rootImmune <= 0 && !s.isEnded) {
+              p.rooted = SPIT.rootTime;
+              p.kx = 0;
+              p.ky = 0;
+              sounds.playWebHit();
+              floatText(p.x, p.y - 34, 'ENGLUÉ !', '#fef08a', 16);
+              emitHud();
+            }
+            return;
+          }
+        }
+        if (w.range <= 0) addWebPatch(w.x, w.y);
+      });
+      s.webs = s.webs.filter(w => w.range > 0);
+      s.webPatches.forEach(w => { w.life -= dtSec; });
+      s.webPatches = s.webPatches.filter(w => w.life > 0);
+    };
 
     // Colossus: telegraphed charge when it sees the player, faster and angrier below half health
     const bruteBehaviour = (z, toPlayer, dtSec) => {
@@ -626,12 +716,29 @@ const GameCanvas = ({
         dx = mm.x;
         dy = mm.y;
       }
-      s.moving = dx !== 0 || dy !== 0;
+      const ox = p.x;
+      const oy = p.y;
+      if (p.rooted > 0) {
+        p.rooted -= dtSec;
+        if (p.rooted <= 0) {
+          p.rooted = 0;
+          p.rootImmune = SPIT.rootImmunity;
+          emitHud();
+        }
+      } else {
+        p.rootImmune = Math.max(0, p.rootImmune - dtSec);
+      }
+      s.moving = (dx !== 0 || dy !== 0) && p.rooted <= 0;
       if (s.moving) {
         const len = Math.hypot(dx, dy);
         const mag = Math.min(1, len);
-        const speed = diff.playerSpeed * (p.reload ? 0.85 : 1) * mag * f;
+        const inWeb = s.webPatches.some(w => Math.hypot(p.x - w.x, p.y - w.y) < SPIT.patchRadius);
+        const speed = diff.playerSpeed * (p.reload ? 0.85 : 1) * (inWeb ? SPIT.patchSlow : 1) * mag * f;
         moveCircle(p, (dx / len) * speed, (dy / len) * speed, p.radius, solids);
+      }
+      if (p.rooted > 0) {
+        p.kx = 0;
+        p.ky = 0;
       }
       if (p.kx || p.ky) {
         moveCircle(p, p.kx * f, p.ky * f, p.radius, solids);
@@ -639,6 +746,10 @@ const GameCanvas = ({
         p.ky *= Math.pow(0.8, f);
         if (Math.abs(p.kx) + Math.abs(p.ky) < 0.05) { p.kx = 0; p.ky = 0; }
       }
+
+      p.vx = (p.x - ox) / (f || 1);
+      p.vy = (p.y - oy) / (f || 1);
+      updateWebs(f, dtSec);
 
       // Aim: stick direction on touch, cursor on desktop, movement for keyboard-only players
       if (mm.x !== 0 || mm.y !== 0) {
@@ -732,8 +843,8 @@ const GameCanvas = ({
             hurtPlayer(diff.zombieDamage * type.damage, z.x, z.y);
           }
 
-          if (z.type === 'brute') {
-            const move = bruteBehaviour(z, toPlayer, dtSec);
+          if (z.type === 'brute' || z.type === 'spitter') {
+            const move = z.type === 'brute' ? bruteBehaviour(z, toPlayer, dtSec) : spitterBehaviour(z, toPlayer, dtSec);
             if (move) { mx = move.x; my = move.y; }
           }
         } else {
@@ -918,6 +1029,7 @@ const GameCanvas = ({
       ctx.drawImage(s.decal, 0, 0);
 
       s.pits.forEach(pit => drawPit(ctx, pit, t));
+      s.webPatches.forEach(w => drawWebPatch(ctx, w, SPIT.patchRadius, SPIT.patchLife));
       drawExitDoor(ctx, s.level.exitDoor, t);
       s.pickups.forEach(item => { if (!item.collected) drawPickup(ctx, item, t); });
       if (!s.hasKey) drawKey(ctx, s.level.key, t);
@@ -960,6 +1072,8 @@ const GameCanvas = ({
       });
 
       drawPlayer(ctx, p, p.active, s.moving, t);
+      if (p.rooted > 0) drawWebNet(ctx, p, p.rooted / SPIT.rootTime, t);
+      s.webs.forEach(w => drawWebShot(ctx, w, t));
       s.drops.forEach(d => drawCeilingDrop(ctx, d, t));
 
       // Reload ring around the player

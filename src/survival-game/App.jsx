@@ -31,9 +31,10 @@ const LEGEND = [
   { icon: '🔑', title: 'Clé', text: 'Au fond du manoir. La prendre réveille la horde et fait tomber des zombies du plafond.' },
   { icon: '🚪', title: 'Sortie', text: 'Verrouillée jusqu\'à ce que vous ayez la clé.' },
   { icon: '🕳️', title: 'Trous', text: '-15 PV si vous tombez. Attirez-y les zombies !' },
-  { icon: '🧟', title: 'Infectés', text: 'Vert : lent · Pâle : rapide · Violet : colosse qui charge. Esquivez-le contre un mur !' },
+  { icon: '🧟', title: 'Infectés', text: 'Vert : lent · Pâle : rapide · Jaune : cracheur de toile · Violet : colosse qui charge.' },
   { icon: '💥', title: 'Bruit', text: 'Chaque tir alerte les zombies proches, même derrière les portes.' },
   { icon: '🔫', title: 'Fusil à pompe', text: 'Caché dans un cul-de-sac. Explorez !' },
+  { icon: '🕸️', title: 'Toile', text: 'Englué 2 s si elle vous touche. Les flaques ralentissent. Le couteau coupe la toile.' },
 ];
 
 const formatTime = (sec = 0) => `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')}`;
@@ -237,7 +238,7 @@ const SurvivalGameApp = () => {
             </button>
 
             {/* Rules legend */}
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-2 text-left max-w-2xl mx-auto">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-left max-w-3xl mx-auto">
               {LEGEND.map(item => (
                 <div key={item.title} className="flex gap-2 items-start bg-white/5 border border-white/10 rounded-lg px-2.5 py-1.5">
                   <span className="text-base leading-none mt-0.5">{item.icon}</span>

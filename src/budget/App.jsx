@@ -438,7 +438,7 @@ export default function BudgetApp() {
 
         <div className="grid gap-6 lg:grid-cols-5">
           {/* Colonne graphiques */}
-          <div className="space-y-6 lg:col-span-2">
+          <div className="min-w-0 space-y-6 lg:col-span-2">
             <div className={carte}>
               <h3 className="mb-4 mt-0 font-semibold">Répartition des dépenses</h3>
               <Anneau parts={repartition} total={resume.depenses} selection={categorieFiltre} onChoisir={choisirCategorie} />
@@ -451,7 +451,7 @@ export default function BudgetApp() {
           </div>
 
           {/* Colonne opérations */}
-          <div ref={listeOperations} className={`${carte} scroll-mt-4 lg:col-span-3`}>
+          <div ref={listeOperations} className={`${carte} min-w-0 scroll-mt-4 lg:col-span-3`}>
             <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
               <h3 className="m-0 font-semibold">Opérations <span className="text-sm font-normal text-gray-500">({duMois.length})</span></h3>
               <button type="button" onClick={() => setFormulaire({ ...formulaireVide(), date: mois === cleMois(aujourdhui()) ? aujourdhui() : `${mois}-01` })} className={`${bouton} bg-orange-500 text-black hover:bg-orange-400`}>

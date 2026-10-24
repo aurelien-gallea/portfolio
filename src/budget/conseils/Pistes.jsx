@@ -19,7 +19,7 @@ function Bascule({ options, valeur, onChoisir }) {
           type="button"
           onClick={() => onChoisir(val)}
           aria-pressed={valeur === val}
-          className={`${bouton} flex-1 justify-center px-2 py-1.5 text-xs ${valeur === val ? 'bg-white/10 text-white' : 'bg-transparent text-gray-500 hover:text-white'}`}
+          className={`flex-1 cursor-pointer whitespace-nowrap rounded-lg border-0 px-2 py-1.5 text-xs font-medium transition-colors ${valeur === val ? 'bg-white/10 text-white' : 'bg-transparent text-gray-500 hover:text-white'}`}
         >
           {nom}
         </button>
@@ -70,52 +70,48 @@ function ChoixVille({ ville, onChoisir }) {
   return (
     <div className="space-y-1">
       <span className="text-xs text-gray-500">Ville</span>
-      <div className="flex gap-2">
-        <div className="relative flex-1">
-          <input
-            className={champ}
-            placeholder={ville ? libelleVille(ville) : 'Nom ou code postal…'}
-            value={saisie}
-            onFocus={() => { charger(); setOuvert(true); }}
-            onBlur={() => setTimeout(() => setOuvert(false), 150)}
-            onChange={(e) => { setSaisie(e.target.value); setOuvert(true); }}
-            onKeyDown={(e) => { if (e.key === 'Enter' && resultats[0]) { e.preventDefault(); choisir(resultats[0]); } }}
-            aria-label="Rechercher une ville"
-          />
-          {ouvert && saisie.trim().length >= 2 && (
-            <ul className="absolute left-0 right-0 top-full z-20 m-0 mt-1 max-h-64 list-none overflow-y-auto rounded-xl border border-white/10 bg-[#1a1a1d] p-1 shadow-2xl">
-              {!villes && <li className="px-3 py-2 text-xs text-gray-500">Chargement des villes…</li>}
-              {villes && resultats.length === 0 && <li className="px-3 py-2 text-xs text-gray-500">Aucune ville de plus de 5 000 habitants ne correspond.</li>}
-              {resultats.map((v) => (
-                <li key={v.code}>
-                  <button
-                    type="button"
-                    onMouseDown={(e) => e.preventDefault()}
-                    onClick={() => choisir(v)}
-                    className="flex w-full cursor-pointer items-center justify-between gap-2 rounded-lg border-0 bg-transparent px-3 py-2 text-left text-sm text-gray-200 hover:bg-white/10"
-                  >
-                    <span className="truncate">{libelleVille(v)}</span>
-                    <span className="shrink-0 text-xs tabular-nums text-gray-500">{v.loyerAppartementM2.toLocaleString('fr-FR')} €/m²</span>
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
+      <div className="relative">
+        <MapPin size={15} className={`pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 ${ville ? 'text-orange-400' : 'text-gray-600'}`} />
+        <input
+          className={`${champ} pl-9 pr-11 ${ville && !saisie ? 'placeholder:text-white' : ''}`}
+          placeholder={ville ? libelleVille(ville) : 'Nom ou code postal…'}
+          value={saisie}
+          onFocus={() => { charger(); setOuvert(true); }}
+          onBlur={() => setTimeout(() => setOuvert(false), 150)}
+          onChange={(e) => { setSaisie(e.target.value); setOuvert(true); }}
+          onKeyDown={(e) => { if (e.key === 'Enter' && resultats[0]) { e.preventDefault(); choisir(resultats[0]); } }}
+          aria-label="Rechercher une ville"
+        />
+        {ouvert && saisie.trim().length >= 2 && (
+          <ul className="absolute left-0 right-0 top-full z-20 m-0 mt-1 max-h-64 list-none overflow-y-auto rounded-xl border border-white/10 bg-[#1a1a1d] p-1 shadow-2xl">
+            {!villes && <li className="px-3 py-2 text-xs text-gray-500">Chargement des villes…</li>}
+            {villes && resultats.length === 0 && <li className="px-3 py-2 text-xs text-gray-500">Aucune ville de plus de 5 000 habitants ne correspond.</li>}
+            {resultats.map((v) => (
+              <li key={v.code}>
+                <button
+                  type="button"
+                  onMouseDown={(e) => e.preventDefault()}
+                  onClick={() => choisir(v)}
+                  className="flex w-full cursor-pointer items-center justify-between gap-2 rounded-lg border-0 bg-transparent px-3 py-2 text-left text-sm text-gray-200 hover:bg-white/10"
+                >
+                  <span className="truncate">{libelleVille(v)}</span>
+                  <span className="shrink-0 text-xs tabular-nums text-gray-500">{v.loyerAppartementM2.toLocaleString('fr-FR')} €/m²</span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
         <button
           type="button"
           onClick={localiser}
           disabled={localisation.etat === 'recherche'}
-          className={`${bouton} shrink-0 bg-white/5 text-gray-300 hover:bg-white/10 disabled:opacity-50`}
-          title="Utiliser ma position (le calcul est fait dans votre navigateur)"
+          className="absolute right-1.5 top-1/2 flex -translate-y-1/2 cursor-pointer items-center rounded-lg border-0 bg-white/5 p-1.5 text-gray-300 transition-colors hover:bg-orange-500/20 hover:text-orange-300 disabled:opacity-50"
+          title="Me localiser (le calcul est fait dans votre navigateur)"
+          aria-label="Me localiser"
         >
           {localisation.etat === 'recherche' ? <Loader2 size={16} className="animate-spin" /> : <LocateFixed size={16} />}
-          <span className="hidden sm:inline">Me localiser</span>
         </button>
       </div>
-      {ville && !saisie && (
-        <p className="m-0 flex items-center gap-1 text-xs text-gray-400"><MapPin size={12} className="text-orange-400" /> {libelleVille(ville)}</p>
-      )}
       {localisation.message && (
         <p className={`m-0 text-xs ${localisation.etat === 'erreur' ? 'text-red-400' : 'text-gray-500'}`}>{localisation.message}</p>
       )}
@@ -128,15 +124,18 @@ function Profil({ profil, onModifier }) {
   const reference = loyerDeReference(profil);
 
   return (
-    <div className="space-y-3 rounded-xl bg-black/30 p-3">
-      <div className="flex items-center gap-2 text-sm text-gray-300">
+    <div className="space-y-3 rounded-xl border border-white/[0.06] bg-black/30 p-4">
+      <div className="flex items-center gap-2 text-sm font-semibold text-white">
         <Home size={16} className="text-orange-400" /> Mon logement
       </div>
       <div className="grid gap-2 sm:grid-cols-2">
-        <Bascule options={[['locataire', 'Locataire'], ['proprietaire', 'Propriétaire (crédit)']]} valeur={profil.statut ?? 'locataire'} onChoisir={(statut) => maj({ statut })} />
+        <Bascule options={[['locataire', 'Locataire'], ['proprietaire', 'Propriétaire']]} valeur={profil.statut ?? 'locataire'} onChoisir={(statut) => maj({ statut })} />
         <Bascule options={[['appartement', 'Appartement'], ['maison', 'Maison']]} valeur={profil.type ?? 'appartement'} onChoisir={(type) => maj({ type })} />
       </div>
-      <div className="grid gap-2 sm:grid-cols-[1fr_8rem]">
+      {profil.statut === 'proprietaire' && (
+        <p className="m-0 text-[11px] text-gray-500">La mensualité est repérée grâce à « prêt », « crédit » ou « échéance » dans le libellé.</p>
+      )}
+      <div className="grid gap-2 sm:grid-cols-[1fr_6.5rem]">
         <ChoixVille ville={typeof profil.ville === 'object' ? profil.ville : null} onChoisir={(ville) => maj({ ville })} />
         <label className="space-y-1">
           <span className="text-xs text-gray-500">Surface (m²)</span>
@@ -212,7 +211,7 @@ function ScannerAbonnements({ abonnements, aResilier, onBasculer }) {
   const [tous, setTous] = useState(false);
   if (abonnements.length === 0) {
     return (
-      <div className="rounded-xl bg-black/30 p-4 text-sm text-gray-500">
+      <div className="rounded-2xl border border-white/[0.06] bg-black/20 p-4 text-sm text-gray-500">
         <span className="flex items-center gap-2 font-semibold text-white"><Repeat size={16} className="text-violet-400" /> Abonnements</span>
         <p className="m-0 mt-1">Aucun prélèvement récurrent détecté pour l'instant : il faut au moins deux passages du même abonnement.</p>
       </div>
@@ -224,7 +223,7 @@ function ScannerAbonnements({ abonnements, aResilier, onBasculer }) {
   const visibles = tous ? abonnements : abonnements.slice(0, 6);
 
   return (
-    <div className="rounded-xl bg-black/30 p-4">
+    <div className="rounded-2xl border border-white/[0.06] bg-black/20 p-4">
       <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
         <span className="flex items-center gap-2 text-sm font-semibold text-white">
           <Repeat size={16} className="text-violet-400" /> {abonnements.length} abonnement{abonnements.length > 1 ? 's' : ''} détecté{abonnements.length > 1 ? 's' : ''}
@@ -234,13 +233,13 @@ function ScannerAbonnements({ abonnements, aResilier, onBasculer }) {
         </span>
       </div>
 
-      <ul className="m-0 grid list-none gap-1.5 p-0 sm:grid-cols-2">
+      <ul className="m-0 grid list-none gap-1.5 p-0 xl:grid-cols-2">
         {visibles.map((a) => {
           const coche = aResilier.includes(a.cle);
           return (
             <li key={a.cle}>
               <label className={`flex cursor-pointer items-center gap-3 rounded-lg px-2.5 py-2 transition-colors ${coche ? 'bg-violet-500/15' : 'bg-white/[0.03] hover:bg-white/[0.06]'}`}>
-                <input type="checkbox" checked={coche} onChange={() => onBasculer(a.cle)} className="h-4 w-4 shrink-0 accent-violet-500" />
+                <input type="checkbox" checked={coche} onChange={() => onBasculer(a.cle)} className="h-4 w-4 shrink-0 cursor-pointer accent-violet-500 [color-scheme:dark]" />
                 <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: categorie(a.categorie).couleur }} />
                 <span className="min-w-0 flex-1">
                   <span className={`block truncate text-sm ${coche ? 'text-gray-400 line-through' : 'text-gray-100'}`}>{a.nom}</span>
@@ -343,45 +342,58 @@ export default function Pistes({ donnees, mois, onProfil, onAResilier }) {
   const visibles = toutes ? pistes : pistes.slice(0, 4);
   const premiere = ouverte ?? pistes[0]?.id;
 
+  // Économies chiffrables par mois : postes au-dessus des repères (hors écart de loyer), frais bancaires, résiliations
+  const gainMensuel =
+    pistes.filter((p) => !p.urgent && p.id !== 'logement').reduce((s, p) => s + p.economie, 0) +
+    frais +
+    abonnements.filter((a) => aResilier.includes(a.cle)).reduce((s, a) => s + a.mensuel, 0);
+
   return (
     <div className="rounded-2xl border border-white/[0.06] bg-white/[0.03] p-5">
-      <div className="mb-4">
-        <h3 className="m-0 flex items-center gap-2 font-semibold"><Lightbulb size={18} className="text-amber-400" /> Pistes pour alléger votre budget</h3>
-        <p className="m-0 mt-1 text-xs text-gray-500">
-          {fenetre.length
-            ? `Moyenne de ${fenetre.map((m) => nomMois(m, 'short').replace('.', '')).join(', ')}, comparée aux repères français. Ordres de grandeur indicatifs.`
-            : 'Ajoutez quelques opérations pour obtenir des pistes.'}
-        </p>
+      <div className="mb-5 flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h3 className="m-0 flex items-center gap-2 text-lg font-semibold"><Lightbulb size={20} className="text-amber-400" /> Pistes pour alléger votre budget</h3>
+          <p className="m-0 mt-1 text-xs text-gray-500">
+            {fenetre.length
+              ? `Moyenne de ${fenetre.map((m) => nomMois(m, 'short').replace('.', '')).join(', ')}, comparée aux repères français. Ordres de grandeur indicatifs.`
+              : 'Ajoutez quelques opérations pour obtenir des pistes.'}
+          </p>
+        </div>
+        {gainMensuel >= 1 && (
+          <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-2 text-right">
+            <div className="text-lg font-bold tabular-nums text-emerald-400">≈ {euros(Math.round(gainMensuel))} <span className="text-xs font-normal text-emerald-300/80">/ mois</span></div>
+            <div className="text-[11px] text-gray-400">d'économies repérées, soit {euros(Math.round(gainMensuel * 12))} / an</div>
+          </div>
+        )}
       </div>
 
       <div className="grid gap-4 lg:grid-cols-5">
-      <div className="space-y-4 lg:col-span-2">
-        <Profil profil={profil} onModifier={onProfil} />
-        <FraisBancaires parMois={frais} />
-      </div>
+        <div className="min-w-0 space-y-4 lg:col-span-2">
+          <Profil profil={profil} onModifier={onProfil} />
+          <FraisBancaires parMois={frais} />
+        </div>
 
-      <div className="space-y-2 lg:col-span-3">
-        {fenetre.length > 0 && pistes.length === 0 && (
-          <p className="m-0 py-4 text-center text-sm text-emerald-400">Tous vos postes sont dans les repères français. Bravo !</p>
-        )}
-        {visibles.map((p) => (
-          <Piste
-            key={p.id}
-            piste={p}
-            ouverte={premiere === p.id}
-            onBasculer={() => setOuverte(premiere === p.id ? '' : p.id)}
-          />
-        ))}
-        {pistes.length > 4 && (
-          <button type="button" onClick={() => setToutes(!toutes)} className={`${bouton} w-full justify-center bg-transparent text-xs text-gray-400 hover:text-white`}>
-            {toutes ? 'Afficher moins' : `Voir les ${pistes.length - 4} autres pistes`}
-          </button>
-        )}
-      </div>
-      </div>
-
-      <div className="mt-4">
-        <ScannerAbonnements abonnements={abonnements} aResilier={aResilier} onBasculer={basculerResiliation} />
+        <div className="min-w-0 space-y-4 lg:col-span-3">
+          <div className="space-y-2">
+            {fenetre.length > 0 && pistes.length === 0 && (
+              <p className="m-0 rounded-xl bg-emerald-500/10 py-4 text-center text-sm text-emerald-400">Tous vos postes sont dans les repères français. Bravo !</p>
+            )}
+            {visibles.map((p) => (
+              <Piste
+                key={p.id}
+                piste={p}
+                ouverte={premiere === p.id}
+                onBasculer={() => setOuverte(premiere === p.id ? '' : p.id)}
+              />
+            ))}
+            {pistes.length > 4 && (
+              <button type="button" onClick={() => setToutes(!toutes)} className={`${bouton} w-full justify-center bg-transparent text-xs text-gray-400 hover:text-white`}>
+                {toutes ? 'Afficher moins' : `Voir les ${pistes.length - 4} autres pistes`}
+              </button>
+            )}
+          </div>
+          <ScannerAbonnements abonnements={abonnements} aResilier={aResilier} onBasculer={basculerResiliation} />
+        </div>
       </div>
     </div>
   );

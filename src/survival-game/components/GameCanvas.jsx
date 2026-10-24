@@ -347,6 +347,7 @@ const GameCanvas = ({
       s.lastKnife = s.clock;
       if (fromTouch || !s.hasMouseMoved) aimAssist();
       sounds.playKnife();
+      p.swing = 1;
       s.slashes.push({ x: p.x, y: p.y, angle: p.angle, life: 1 });
       s.zombies.forEach(z => {
         const d = Math.hypot(z.x - p.x, z.y - p.y);
@@ -924,6 +925,7 @@ const GameCanvas = ({
     // Visual effects keep animating at the same pace whatever the refresh rate
     const updateEffects = (f, dtSec) => {
       s.shake = Math.max(0, s.shake * Math.pow(0.85, f));
+      s.player.swing = Math.max(0, (s.player.swing || 0) - dtSec * 5);
       s.particles.forEach(pt => {
         pt.x += pt.vx * f;
         pt.y += pt.vy * f;

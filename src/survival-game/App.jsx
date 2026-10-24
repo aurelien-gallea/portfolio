@@ -4,6 +4,7 @@ import { ArrowLeft, Play, Pause, RefreshCw, Skull, Trophy, ShieldAlert, Smartpho
 import GameCanvas from './components/GameCanvas';
 import HUD from './components/HUD';
 import MobileControls from './components/MobileControls';
+import ControlsPanel from './components/ControlsPanel';
 import { DIFFICULTIES } from './engine/config';
 import { sounds } from './utils/audio';
 
@@ -259,35 +260,40 @@ const SurvivalGameApp = () => {
 
       {/* PLAYING & PAUSED STATE */}
       {gameState !== 'menu' && (
-        <div className={`relative w-full h-full ${isTouch ? '' : 'lg:py-14'}`}>
-          {/* Game Canvas Engine */}
-          <GameCanvas
-            key={restartKey}
-            difficulty={difficulty}
-            isPaused={gameState === 'paused'}
-            onGameOver={handleGameOver}
-            onVictory={handleVictory}
-            onHudUpdate={setHud}
-            mobileMove={mobileMove}
-            mobileFireTrigger={mobileFireTrigger}
-            mobileReloadTrigger={mobileReloadTrigger}
-            mobileKnifeTrigger={mobileKnifeTrigger}
-            mobileSwitchTrigger={mobileSwitchTrigger}
-          />
-
-          {/* HUD Overlay */}
-          <HUD hud={hud} onPause={togglePause} onToggleMute={toggleMute} />
-
-          {/* Mobile Touch Overlay */}
-          {isTouch && (
-            <MobileControls
-              onMove={setMobileMove}
-              onFire={() => setMobileFireTrigger(prev => prev + 1)}
-              onReload={() => setMobileReloadTrigger(prev => prev + 1)}
-              onKnife={() => setMobileKnifeTrigger(prev => prev + 1)}
-              onSwitch={() => setMobileSwitchTrigger(prev => prev + 1)}
+        <div className="flex w-full h-full">
+          <div className={`relative flex-1 min-w-0 h-full ${isTouch ? '' : 'lg:py-14'}`}>
+            {/* Game Canvas Engine */}
+            <GameCanvas
+              key={restartKey}
+              difficulty={difficulty}
+              isPaused={gameState === 'paused'}
+              onGameOver={handleGameOver}
+              onVictory={handleVictory}
+              onHudUpdate={setHud}
+              mobileMove={mobileMove}
+              mobileFireTrigger={mobileFireTrigger}
+              mobileReloadTrigger={mobileReloadTrigger}
+              mobileKnifeTrigger={mobileKnifeTrigger}
+              mobileSwitchTrigger={mobileSwitchTrigger}
             />
-          )}
+
+            {/* HUD Overlay */}
+            <HUD hud={hud} onPause={togglePause} onToggleMute={toggleMute} />
+
+            {/* Mobile Touch Overlay */}
+            {isTouch && (
+              <MobileControls
+                onMove={setMobileMove}
+                onFire={() => setMobileFireTrigger(prev => prev + 1)}
+                onReload={() => setMobileReloadTrigger(prev => prev + 1)}
+                onKnife={() => setMobileKnifeTrigger(prev => prev + 1)}
+                onSwitch={() => setMobileSwitchTrigger(prev => prev + 1)}
+              />
+            )}
+          </div>
+
+          {/* Desktop side panel: controls & resource legend */}
+          {!isTouch && <ControlsPanel />}
         </div>
       )}
 

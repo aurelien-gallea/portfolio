@@ -297,17 +297,50 @@ export const drawPit = (ctx, pit, t) => {
 const label = (ctx, text, y, color) => {
   ctx.font = 'bold 9px monospace';
   ctx.textAlign = 'center';
-  ctx.fillStyle = 'rgba(0,0,0,0.7)';
-  const w = ctx.measureText(text).width + 8;
-  ctx.fillRect(-w / 2, y - 8, w, 12);
+  const w = ctx.measureText(text).width + 10;
+  ctx.fillStyle = 'rgba(0,0,0,0.85)';
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.roundRect(-w / 2, y - 8, w, 13, 4);
+  ctx.fill();
+  ctx.stroke();
   ctx.fillStyle = color;
-  ctx.fillText(text, 0, y + 1);
+  ctx.fillText(text, 0, y + 1.5);
+};
+
+const PICKUP_COLORS = {
+  medkit: '74, 222, 128',
+  ammo: '250, 204, 21',
+  shells: '251, 146, 60',
+  shotgun: '249, 115, 22',
+};
+
+// Floor glow plus an expanding ring so supplies stand out on every floor style
+const drawBeacon = (ctx, p, t) => {
+  const rgb = PICKUP_COLORS[p.type];
+  const glow = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, 46);
+  glow.addColorStop(0, `rgba(${rgb}, 0.38)`);
+  glow.addColorStop(1, `rgba(${rgb}, 0)`);
+  ctx.fillStyle = glow;
+  ctx.beginPath();
+  ctx.arc(p.x, p.y, 46, 0, Math.PI * 2);
+  ctx.fill();
+
+  const k = ((t * 0.0007 + p.bob) % 1);
+  ctx.strokeStyle = `rgba(${rgb}, ${0.7 * (1 - k)})`;
+  ctx.lineWidth = 2.5;
+  ctx.beginPath();
+  ctx.arc(p.x, p.y, 16 + k * 34, 0, Math.PI * 2);
+  ctx.stroke();
 };
 
 export const drawPickup = (ctx, p, t) => {
+  drawBeacon(ctx, p, t);
   const bob = Math.sin(t * 0.005 + p.bob) * 2.5;
   ctx.save();
   ctx.translate(p.x, p.y + bob);
+  ctx.scale(1.3, 1.3);
 
   ctx.fillStyle = 'rgba(0,0,0,0.4)';
   ctx.beginPath();
@@ -581,27 +614,37 @@ export const drawPlayer = (ctx, player, weaponId, moving, t) => {
   ctx.fillStyle = '#1e3a8a';
   ctx.fillRect(-16, -9, 8, 18);
 
+  // Recoil pushes the weapon and hands back for a few frames
+  const kick = player.muzzle > 0 ? (weaponId === 'shotgun' ? 5 : 3) * Math.min(1, player.muzzle * 16) : 0;
+  ctx.save();
+  ctx.translate(-kick, 0);
   if (weaponId === 'knife') {
-    ctx.fillStyle = '#1e293b';
-    ctx.fillRect(8, 2, 8, 4);
-    ctx.fillStyle = '#e2e8f0';
-    ctx.beginPath();
-    ctx.moveTo(16, 2); ctx.lineTo(30, 4); ctx.lineTo(16, 6);
-    ctx.closePath();
-    ctx.fill();
+    // The swing rotates the striking arm through the slash arc
+    const swing = player.swing > 0 ? Math.sin((1 - player.swing) * Math.PI) * 1.1 - 0.4 : 0;
+    drawArm(ctx, [[2, -12], [9, -11]]);
+    drawHand(ctx, 9, -11);
+    ctx.save();
+    ctx.translate(2, 11);
+    ctx.rotate(-swing);
+    drawArm(ctx, [[0, 0], [14, -3]]);
+    drawKnife(ctx, 14, -3);
+    drawHand(ctx, 14, -3);
+    ctx.restore();
   } else if (weaponId === 'shotgun') {
-    ctx.fillStyle = '#78350f';
-    ctx.fillRect(4, 0, 10, 8);
-    ctx.fillStyle = '#334155';
-    ctx.fillRect(12, 1, 22, 6);
-    ctx.fillStyle = '#94a3b8';
-    ctx.fillRect(30, 1, 4, 6);
+    // Arms go under the weapon; the left elbow bends out to reach the pump
+    drawArm(ctx, [[2, 12], [10, 11], [17, 6]]);
+    drawArm(ctx, [[2, -12], [20, -9], [34, 1]]);
+    drawShotgun(ctx);
+    drawHand(ctx, 17, 6);
+    drawHand(ctx, 34, 2.5);
   } else {
-    ctx.fillStyle = '#475569';
-    ctx.fillRect(8, 2, 15, 6);
-    ctx.fillStyle = '#94a3b8';
-    ctx.fillRect(22, 1, 4, 8);
+    drawArm(ctx, [[2, 12], [16, 3.5]]);
+    drawArm(ctx, [[2, -12], [16, -2.5]]);
+    drawPistol(ctx);
+    drawHand(ctx, 16, 3);
+    drawHand(ctx, 16.5, -2);
   }
+  ctx.restore();
 
   ctx.fillStyle = '#0f172a';
   ctx.beginPath();
@@ -611,16 +654,188 @@ export const drawPlayer = (ctx, player, weaponId, moving, t) => {
   ctx.fillRect(2, -3, 5, 6);
 
   if (player.muzzle > 0) {
-    const len = weaponId === 'shotgun' ? 26 : 18;
-    const tip = weaponId === 'shotgun' ? 34 : 26;
-    ctx.globalAlpha = Math.min(1, player.muzzle * 12);
-    ctx.fillStyle = '#fde68a';
-    ctx.shadowColor = '#f59e0b';
-    ctx.shadowBlur = 20;
-    ctx.beginPath();
-    ctx.moveTo(tip, -6); ctx.lineTo(tip + len, 0); ctx.lineTo(tip, 6);
-    ctx.closePath();
-    ctx.fill();
+    drawMuzzleFlash(ctx, weaponId === 'shotgun' ? 51 - kick : 36 - kick, weaponId === 'shotgun' ? 2 : 0, weaponId === 'shotgun' ? 1.6 : 1, Math.min(1, player.muzzle * 12));
   }
+  ctx.restore();
+};
+
+// ---------- Held weapons (drawn in the player's local frame, +x = aiming direction) ----------
+
+const metal = (ctx, y0, y1, dark = '#334155', light = '#cbd5e1') => {
+  const g = ctx.createLinearGradient(0, y0, 0, y1);
+  g.addColorStop(0, dark);
+  g.addColorStop(0.35, light);
+  g.addColorStop(1, dark);
+  return g;
+};
+
+const drawArm = (ctx, points) => {
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  ctx.beginPath();
+  points.forEach(([x, y], i) => (i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)));
+  ctx.strokeStyle = '#172554';
+  ctx.lineWidth = 6;
+  ctx.stroke();
+  ctx.strokeStyle = '#2563eb';
+  ctx.lineWidth = 3.5;
+  ctx.stroke();
+  ctx.lineCap = 'butt';
+  ctx.lineJoin = 'miter';
+};
+
+const drawHand = (ctx, x, y) => {
+  ctx.fillStyle = '#292524';
+  ctx.beginPath();
+  ctx.arc(x, y, 3.6, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.strokeStyle = '#57534e';
+  ctx.lineWidth = 1;
+  ctx.stroke();
+};
+
+const drawPistol = (ctx) => {
+  // Frame & grip (mostly hidden by the hands)
+  ctx.fillStyle = '#1f2937';
+  ctx.beginPath();
+  ctx.roundRect(12, -2.5, 9, 6, 1.5);
+  ctx.fill();
+  // Slide
+  ctx.fillStyle = metal(ctx, -3.5, 3.5, '#374151', '#d1d5db');
+  ctx.beginPath();
+  ctx.roundRect(14, -3.5, 21, 7, 1.5);
+  ctx.fill();
+  ctx.strokeStyle = '#111827';
+  ctx.lineWidth = 1;
+  ctx.stroke();
+  // Rear serrations
+  ctx.strokeStyle = 'rgba(17, 24, 39, 0.8)';
+  for (let x = 15.5; x < 20; x += 1.5) {
+    ctx.beginPath();
+    ctx.moveTo(x, -3); ctx.lineTo(x, 3);
+    ctx.stroke();
+  }
+  // Ejection port, sights and muzzle
+  ctx.fillStyle = '#111827';
+  ctx.fillRect(24, -3.5, 4, 2);
+  ctx.fillStyle = '#f8fafc';
+  ctx.fillRect(33, -0.6, 1.5, 1.2);
+  ctx.fillStyle = '#030712';
+  ctx.beginPath();
+  ctx.arc(35, 0, 1.4, 0, Math.PI * 2);
+  ctx.fill();
+};
+
+const drawShotgun = (ctx) => {
+  // Wooden stock against the shoulder
+  const wood = ctx.createLinearGradient(0, -3, 0, 8);
+  wood.addColorStop(0, '#b45309');
+  wood.addColorStop(0.5, '#78350f');
+  wood.addColorStop(1, '#451a03');
+  ctx.fillStyle = wood;
+  ctx.beginPath();
+  ctx.moveTo(1, -2); ctx.lineTo(15, -1); ctx.lineTo(15, 6); ctx.lineTo(1, 8);
+  ctx.closePath();
+  ctx.fill();
+  ctx.strokeStyle = '#1c0a00';
+  ctx.lineWidth = 1;
+  ctx.stroke();
+  // Receiver with side shell carrier
+  ctx.fillStyle = metal(ctx, -1.5, 6.5, '#0f172a', '#475569');
+  ctx.fillRect(14, -1.5, 11, 8);
+  ['#dc2626', '#dc2626', '#dc2626'].forEach((c, i) => {
+    ctx.fillStyle = c;
+    ctx.fillRect(15.5 + i * 3, -3.5, 2.2, 2.5);
+    ctx.fillStyle = '#facc15';
+    ctx.fillRect(15.5 + i * 3, -1.5, 2.2, 0.8);
+  });
+  // Barrel above the magazine tube
+  ctx.fillStyle = '#1e293b';
+  ctx.fillRect(25, 2.5, 19, 3);
+  ctx.fillStyle = metal(ctx, -0.5, 3, '#334155', '#e2e8f0');
+  ctx.fillRect(25, -0.5, 26, 3.5);
+  ctx.strokeStyle = '#0f172a';
+  ctx.strokeRect(25, -0.5, 26, 3.5);
+  // Pump with grip grooves
+  ctx.fillStyle = wood;
+  ctx.beginPath();
+  ctx.roundRect(29, -1.8, 11, 8.6, 2);
+  ctx.fill();
+  ctx.strokeStyle = 'rgba(28, 10, 0, 0.8)';
+  for (let x = 31; x < 39; x += 2) {
+    ctx.beginPath();
+    ctx.moveTo(x, -1.2); ctx.lineTo(x, 6.2);
+    ctx.stroke();
+  }
+  // Front bead
+  ctx.fillStyle = '#fbbf24';
+  ctx.beginPath();
+  ctx.arc(50, 1.2, 1.2, 0, Math.PI * 2);
+  ctx.fill();
+};
+
+const drawKnife = (ctx, x, y) => {
+  ctx.save();
+  ctx.translate(x, y);
+  // Handle wrapped in cord
+  ctx.fillStyle = '#18181b';
+  ctx.beginPath();
+  ctx.roundRect(-4, -2.2, 9, 4.4, 1.5);
+  ctx.fill();
+  ctx.strokeStyle = '#3f3f46';
+  ctx.lineWidth = 1;
+  for (let k = -2; k < 5; k += 2) {
+    ctx.beginPath();
+    ctx.moveTo(k, -2); ctx.lineTo(k + 1, 2);
+    ctx.stroke();
+  }
+  // Cross guard
+  ctx.fillStyle = '#9ca3af';
+  ctx.fillRect(5, -4, 2, 8);
+  // Blade with a bright cutting edge
+  const steel = ctx.createLinearGradient(0, -2.5, 0, 3);
+  steel.addColorStop(0, '#f8fafc');
+  steel.addColorStop(0.5, '#94a3b8');
+  steel.addColorStop(1, '#475569');
+  ctx.fillStyle = steel;
+  ctx.shadowColor = '#7dd3fc';
+  ctx.shadowBlur = 6;
+  ctx.beginPath();
+  ctx.moveTo(7, -2.5);
+  ctx.lineTo(19, -2.5);
+  ctx.quadraticCurveTo(24, -1.5, 25, 0.5);
+  ctx.lineTo(7, 2.8);
+  ctx.closePath();
+  ctx.fill();
+  ctx.shadowBlur = 0;
+  ctx.strokeStyle = '#ffffff';
+  ctx.lineWidth = 0.8;
+  ctx.beginPath();
+  ctx.moveTo(8, 2.4); ctx.lineTo(24.5, 0.6);
+  ctx.stroke();
+  ctx.restore();
+};
+
+const drawMuzzleFlash = (ctx, x, y, size, alpha) => {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.globalAlpha = alpha;
+  ctx.shadowColor = '#f59e0b';
+  ctx.shadowBlur = 24;
+  ctx.fillStyle = '#fbbf24';
+  ctx.beginPath();
+  const spikes = 7;
+  for (let i = 0; i <= spikes * 2; i++) {
+    const a = -0.9 + (i / (spikes * 2)) * 1.8;
+    const r = (i % 2 ? 7 : 18 + Math.random() * 6) * size;
+    if (i === 0) ctx.moveTo(0, 0);
+    ctx.lineTo(Math.cos(a) * r, Math.sin(a) * r);
+  }
+  ctx.closePath();
+  ctx.fill();
+  ctx.fillStyle = '#fffbeb';
+  ctx.beginPath();
+  ctx.ellipse(4 * size, 0, 7 * size, 3.5 * size, 0, 0, Math.PI * 2);
+  ctx.fill();
   ctx.restore();
 };

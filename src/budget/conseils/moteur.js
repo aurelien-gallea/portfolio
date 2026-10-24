@@ -17,6 +17,15 @@ export function fenetreRecente(transactions, fin) {
 const LOYER = /loyer/i;
 const CREDIT = /cr[eé]dit|pr[eê]t|emprunt|[eé]ch[eé]ance|immo/i;
 
+const FRAIS_BANCAIRES = /agios|commission|cotisation (carte|cb|visa|mastercard)|frais (de )?(tenue|gestion|bancaires?|carte|de compte)|tenue de compte|offre group[eé]e/i;
+
+// Frais bancaires repérés dans les libellés, en moyenne par mois sur la fenêtre récente
+export function fraisBancaires(transactions, fin) {
+  const mois = fenetreRecente(transactions, fin);
+  if (!mois.length) return 0;
+  return somme(transactions.filter((t) => t.type === 'depense' && mois.includes(cleMois(t.date)) && FRAIS_BANCAIRES.test(t.libelle))) / mois.length;
+}
+
 // Loyer moyen charges comprises pour la surface et le type de logement du profil
 export function loyerDeReference(profil) {
   const v = typeof profil.ville === 'object' ? profil.ville : null; // ancien format : identifiant texte

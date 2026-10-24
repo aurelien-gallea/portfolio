@@ -429,6 +429,8 @@ export default function BudgetApp() {
           ))}
         </div>
 
+        <Pistes donnees={donnees} mois={mois} onProfil={(profil) => setDonnees((d) => ({ ...d, profil }))} />
+
         <div className="grid gap-6 lg:grid-cols-5">
           {/* Colonne graphiques */}
           <div className="space-y-6 lg:col-span-2">
@@ -552,8 +554,6 @@ export default function BudgetApp() {
             )}
           </div>
         </div>
-
-        <Pistes donnees={donnees} mois={mois} onProfil={(profil) => setDonnees((d) => ({ ...d, profil }))} />
       </div>
 
       {categorisation && (

@@ -5,6 +5,9 @@
 // Part du revenu net au-delà de laquelle un poste mérite d'être regardé.
 // Logement : le tiers des revenus, seuil classique du « taux d'effort ».
 // Autres postes : arrondis au-dessus des parts moyennes de la consommation des ménages (INSEE).
+// Lien de parrainage BoursoBank affiché dans l'encart « Frais bancaires » (vide = encart sans lien)
+export const PARRAINAGE_BOURSOBANK = 'https://bour.so/p/Rm3e8DB2z0Q';
+
 // Taux d'endettement maximal recommandé par le Haut Conseil de stabilité financière (HCSF)
 export const ENDETTEMENT_MAX = 0.35;
 

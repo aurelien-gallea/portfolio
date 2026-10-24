@@ -1,7 +1,8 @@
 import React, { useMemo, useState } from 'react';
-import { ExternalLink, Home, Lightbulb, AlertTriangle, ChevronDown, LocateFixed, Loader2, MapPin } from 'lucide-react';
+import { ExternalLink, Home, Lightbulb, AlertTriangle, ChevronDown, LocateFixed, Loader2, MapPin, Landmark } from 'lucide-react';
 import { categorie, euros, nomMois } from '../donnees';
-import { calculerPistes, loyerDeReference } from './moteur';
+import { calculerPistes, loyerDeReference, fraisBancaires } from './moteur';
+import { PARRAINAGE_BOURSOBANK } from './reperes';
 import { chargerVilles, rechercherVilles, villeLaPlusProche, resumeVille, nomCourt } from './villes';
 
 const champ =
@@ -158,6 +159,47 @@ function Profil({ profil, onModifier }) {
   );
 }
 
+// Encart mis en avant : frais bancaires repérés et banque en ligne (lien de parrainage)
+function FraisBancaires({ parMois }) {
+  return (
+    <div className="rounded-xl border border-sky-500/25 bg-sky-500/[0.07] p-4">
+      <div className="mb-2 flex items-center justify-between gap-2">
+        <span className="flex items-center gap-2 text-sm font-semibold text-white">
+          <Landmark size={16} className="text-sky-400" /> Frais bancaires
+        </span>
+        {parMois > 0 && (
+          <span className="text-right">
+            <span className="block text-sm font-semibold tabular-nums text-sky-300">{euros(parMois * 12)}</span>
+            <span className="block text-[11px] text-gray-500">par an</span>
+          </span>
+        )}
+      </div>
+      <p className="m-0 text-sm text-gray-300">
+        {parMois > 0
+          ? `Vous payez environ ${euros(parMois)} de frais bancaires par mois (cotisation carte, tenue de compte, commissions…).`
+          : 'Cotisation carte, tenue de compte, commissions : dans une banque traditionnelle, ces frais pèsent souvent plusieurs dizaines d\'euros par an.'}
+        {' '}Une banque en ligne permet en général de les supprimer.
+      </p>
+      {PARRAINAGE_BOURSOBANK && (
+        <>
+          <a
+            href={PARRAINAGE_BOURSOBANK}
+            target="_blank"
+            rel="noreferrer sponsored"
+            className={`${bouton} mt-3 w-full justify-center bg-sky-500 text-black hover:bg-sky-400 hover:text-black`}
+          >
+            Ouvrir un compte BoursoBank <ExternalLink size={14} />
+          </a>
+          <p className="m-0 mt-2 text-[11px] leading-snug text-gray-500">
+            BoursoBank propose un compte et une carte sans frais de tenue de compte, sous conditions d'utilisation (voir leur grille tarifaire).
+            Lien de parrainage : il peut vous donner droit à une prime de bienvenue, et m'en rapporte une aussi.
+          </p>
+        </>
+      )}
+    </div>
+  );
+}
+
 function Piste({ piste, ouverte, onBasculer }) {
   const couleur = piste.urgent ? '#ef4444' : categorie(piste.id).couleur;
   return (
@@ -214,6 +256,7 @@ function Piste({ piste, ouverte, onBasculer }) {
 
 export default function Pistes({ donnees, mois, onProfil }) {
   const { pistes, mois: fenetre } = useMemo(() => calculerPistes(donnees, mois), [donnees, mois]);
+  const frais = useMemo(() => fraisBancaires(donnees.transactions, mois), [donnees.transactions, mois]);
   const [ouverte, setOuverte] = useState(null);
   const [toutes, setToutes] = useState(false);
   const profil = donnees.profil ?? {};
@@ -231,9 +274,13 @@ export default function Pistes({ donnees, mois, onProfil }) {
         </p>
       </div>
 
-      <Profil profil={profil} onModifier={onProfil} />
+      <div className="grid gap-4 lg:grid-cols-5">
+      <div className="space-y-4 lg:col-span-2">
+        <Profil profil={profil} onModifier={onProfil} />
+        <FraisBancaires parMois={frais} />
+      </div>
 
-      <div className="mt-4 space-y-2">
+      <div className="space-y-2 lg:col-span-3">
         {fenetre.length > 0 && pistes.length === 0 && (
           <p className="m-0 py-4 text-center text-sm text-emerald-400">Tous vos postes sont dans les repères français. Bravo !</p>
         )}
@@ -250,6 +297,7 @@ export default function Pistes({ donnees, mois, onProfil }) {
             {toutes ? 'Afficher moins' : `Voir les ${pistes.length - 4} autres pistes`}
           </button>
         )}
+      </div>
       </div>
     </div>
   );

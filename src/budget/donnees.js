@@ -117,10 +117,15 @@ export function parCategorie(transactions) {
     .sort((a, b) => b.montant - a.montant);
 }
 
+// Un libellé commençant par = + - @ serait exécuté comme formule par Excel :
+// l'apostrophe le force en texte (retirée à la réimportation)
+const FORMULE = /^[=+\-@\t\r]/;
+const sansFormule = (texte) => (FORMULE.test(texte) ? `'${texte}` : texte);
+
 export function exporterCsv(transactions) {
   const entete = 'date;type;categorie;libelle;montant';
   const lignes = transactions.map((t) =>
-    [t.date, t.type, categorie(t.categorie).nom, `"${t.libelle.replace(/"/g, '""')}"`, t.montant.toFixed(2).replace('.', ',')].join(';')
+    [t.date, t.type, categorie(t.categorie).nom, `"${sansFormule(t.libelle).replace(/"/g, '""')}"`, t.montant.toFixed(2).replace('.', ',')].join(';')
   );
   return '﻿' + [entete, ...lignes].join('\n');
 }
@@ -255,7 +260,7 @@ export function importerCsv(texte) {
     montant = Math.round(Math.abs(montant) * 100) / 100;
     if (!date || !montant) { ignorees++; continue; }
 
-    const libelle = (col.libelle >= 0 ? l[col.libelle] : '')?.replace(/\s+/g, ' ').slice(0, 60) ?? '';
+    const libelle = (col.libelle >= 0 ? l[col.libelle] : '')?.replace(/^'(?=[=+\-@])/, '').replace(/\s+/g, ' ').slice(0, 60) ?? '';
     const indice = col.categorie >= 0 && l[col.categorie] ? l[col.categorie] : libelle;
     const cat = devinerCategorie(indice, type);
     transactions.push({

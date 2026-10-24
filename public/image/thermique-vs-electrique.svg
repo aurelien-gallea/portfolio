@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 240" font-family="Inter, Arial, sans-serif">
+  <rect width="400" height="240" rx="16" fill="#111113"/>
+  <text x="24" y="38" font-size="18" font-weight="700"><tspan fill="#fb923c">Thermique</tspan><tspan fill="#efefef"> ou </tspan><tspan fill="#34d399">électrique</tspan><tspan fill="#efefef"> ?</tspan></text>
+  <text x="24" y="58" fill="#6b7280" font-size="11">Coût cumulé sur 8 ans</text>
+  <g stroke="#ffffff" stroke-opacity="0.06">
+    <line x1="24" y1="110" x2="376" y2="110"/><line x1="24" y1="150" x2="376" y2="150"/><line x1="24" y1="190" x2="376" y2="190"/>
+  </g>
+  <path d="M24 214 L68 196 L112 177 L156 157 L200 136 L244 114 L288 91 L332 67 L376 42" fill="none" stroke="#fb923c" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M24 170 L68 150 L112 138 L156 127 L200 117 L244 108 L288 99 L332 91 L376 83" fill="none" stroke="#34d399" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="218" cy="128" r="8" fill="none" stroke="#ffffff" stroke-width="2.5"/>
+  <line x1="24" y1="214" x2="376" y2="214" stroke="#ffffff" stroke-opacity="0.08"/>
+</svg>

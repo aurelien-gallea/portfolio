@@ -5,6 +5,7 @@ import {
   TrendingDown, PiggyBank, Download, Upload, Search, X, Target, Sparkles, Wand2,
 } from 'lucide-react';
 import { Anneau, Historique } from './Graphiques';
+import Pistes from './conseils/Pistes';
 import {
   CATEGORIES, categorie, charger, sauvegarder, nouvelId, cleMois, aujourdhui, decalerMois,
   nomMois, euros, totaux, parCategorie, exporterCsv, importerCsv, empreinte, telecharger,
@@ -551,6 +552,8 @@ export default function BudgetApp() {
             )}
           </div>
         </div>
+
+        <Pistes donnees={donnees} mois={mois} onProfil={(profil) => setDonnees((d) => ({ ...d, profil }))} />
       </div>
 
       {categorisation && (

@@ -1,6 +1,7 @@
 // Outils de l'assistant : le modèle choisit une requête, ce module calcule les chiffres
 // (le LLM ne fait jamais d'arithmétique lui-même)
 import { CATEGORIES, categorie, cleMois, decalerMois, nomMois, euros, aujourdhui } from '../donnees';
+import { calculerPistes, pistesEnTexte } from '../conseils/moteur';
 
 const ACTIONS = ['total', 'repartition', 'evolution', 'top', 'conseil', 'hors_sujet'];
 const FORMAT_MOIS = /^\d{4}-(0[1-9]|1[0-2])$/;
@@ -58,7 +59,8 @@ ${ex('Quelle est la capitale du Pérou ?', { action: 'hors_sujet', debut: couran
 export const PROMPT_REPONSE = `Tu es l'assistant de l'application « Mon Budget ». Tu vouvoies l'utilisateur (« vous avez dépensé », « vos revenus »).
 Réponds en français, en 2 ou 3 phrases courtes et factuelles, sans titre, sans liste et sans jugement.
 Appuie-toi UNIQUEMENT sur les faits fournis : cite les montants importants tels quels, n'invente aucun chiffre ni aucune information.
-Commence toujours ta réponse par « Vous » ou « Votre ».`;
+Commence toujours ta réponse par « Vous » ou « Votre ».
+Si les faits comparent le budget aux repères français, cite le poste qui dépasse le plus et reprends telle quelle une des pistes concrètes fournies.`;
 
 const somme = (liste) => liste.reduce((s, t) => s + t.montant, 0);
 
@@ -69,7 +71,7 @@ function plageMois(debut, fin) {
 }
 
 // Exécute la requête produite par le modèle ; renvoie { titre, barres, faits }
-export function executer(requete, { transactions, budgets }) {
+export function executer(requete, { transactions, budgets, profil }) {
   const courant = cleMois(aujourdhui());
   let debut = FORMAT_MOIS.test(requete.debut) ? requete.debut : courant;
   let fin = FORMAT_MOIS.test(requete.fin) ? requete.fin : debut;
@@ -165,6 +167,7 @@ export function executer(requete, { transactions, budgets }) {
           compressibles.length
             ? `Dépenses les plus faciles à réduire : ${compressibles.map(({ c, moyenne }) => `${c.nom} (${euros(moyenne)} par mois)`).join(', ')}. Les réduire de 20 % ferait économiser environ ${euros(gain)} par mois, soit ${euros(gain * 12)} par an.`
             : '',
+          pistesEnTexte(calculerPistes({ transactions, profil }, fin)),
         ].filter(Boolean).join('\n'),
       };
     }

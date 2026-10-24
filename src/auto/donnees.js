@@ -1,5 +1,5 @@
 // Valeurs indicatives (France, fin 2026) : toutes modifiables dans l'interface
-import { CATALOGUE_ELECTRIQUE, estimerElectrique } from './catalogue';
+import { CATALOGUE, CATALOGUE_ELECTRIQUE, estimer, estimerElectrique } from './catalogue';
 
 export const CARBURANTS = {
   essence: { nom: 'Essence', prix: 1.99, co2: 2.7 },
@@ -11,18 +11,12 @@ export const CARBURANTS = {
 // kg CO2e par kWh, mix électrique français (cycle de vie)
 export const CO2_KWH = 0.052;
 
-export const THERMIQUES = [
-  { id: 'citadine-essence', nom: 'Citadine essence', detail: 'Clio IV, 208, Polo… · 2015', carburant: 'essence', conso: 6, valeur: 6500, decote: 10, entretien: 700, hausseEntretien: 6, assurance: 550, autres: 0 },
-  { id: 'compacte-diesel', nom: 'Compacte diesel', detail: '308, Mégane, Golf… · 2016', carburant: 'gazole', conso: 5.2, valeur: 8500, decote: 11, entretien: 900, hausseEntretien: 6, assurance: 650, autres: 0 },
-  { id: 'suv-essence', nom: 'SUV essence', detail: '3008, Captur, Tiguan… · 2019', carburant: 'essence', conso: 7, valeur: 16000, decote: 12, entretien: 950, hausseEntretien: 5, assurance: 750, autres: 0 },
-  { id: 'familiale-diesel', nom: 'Monospace diesel', detail: 'Scénic, C4 Picasso, Touran… · 2014', carburant: 'gazole', conso: 6, valeur: 6000, decote: 10, entretien: 1100, hausseEntretien: 7, assurance: 650, autres: 0 },
-  { id: 'hybride', nom: 'Hybride essence', detail: 'Yaris, Corolla, Clio E-Tech… · 2019', carburant: 'essence', conso: 4.5, valeur: 14000, decote: 9, entretien: 650, hausseEntretien: 4, assurance: 600, autres: 0 },
-];
 
 // Champs qui définissent un modèle (comparés pour savoir si un modèle est sélectionné)
 export const CLES_THERMIQUE = ['carburant', 'conso', 'valeur', 'decote', 'entretien', 'hausseEntretien', 'assurance', 'autres'];
 export const CLES_ELECTRIQUE = ['prix', 'aides', 'conso', 'decote1', 'decote', 'entretien', 'assurance', 'carteGrise', 'fabrication'];
 
+const THERMIQUE_DEFAUT = { catalogue: 'renault-clio-iv-0-9-tce-90', annee: 2015 };
 const ELECTRIQUE_DEFAUT = 'renault-5-e-tech-52-kwh';
 
 export const extraire =(objet, cles) => Object.fromEntries(cles.map((c) => [c, objet[c]]));
@@ -33,7 +27,10 @@ export const parDefaut = () => ({
     km: 13000, duree: 8, prixCarburant: CARBURANTS.essence.prix,
     prixDomicile: 0.2, prixPublic: 0.5, partDomicile: 80, pertes: 10, inflation: 2,
   },
-  thermique: { ...extraire(THERMIQUES[0], CLES_THERMIQUE) },
+  thermique: {
+    ...estimer(CATALOGUE.find((m) => m.id === THERMIQUE_DEFAUT.catalogue), THERMIQUE_DEFAUT.annee),
+    ...THERMIQUE_DEFAUT,
+  },
   electrique: {
     ...estimerElectrique(CATALOGUE_ELECTRIQUE.find((m) => m.id === ELECTRIQUE_DEFAUT), 0),
     catalogue: ELECTRIQUE_DEFAUT, annee: 0,

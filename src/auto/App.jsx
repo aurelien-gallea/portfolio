@@ -6,7 +6,7 @@ import {
 import { Courbes, Repartition, COULEURS } from './Graphiques';
 import { CATALOGUE, CATALOGUE_ELECTRIQUE, rechercher, estimer, estimerElectrique } from './catalogue';
 import {
-  CARBURANTS, THERMIQUES, CLES_THERMIQUE, CLES_ELECTRIQUE, extraire, identique,
+  CARBURANTS, CLES_THERMIQUE, CLES_ELECTRIQUE, extraire, identique,
   parDefaut, charger, sauvegarder, simuler, croisement, seuilKm, euros, nombre, dureeTexte,
 } from './donnees';
 
@@ -139,7 +139,7 @@ function Catalogue({ type, valeurs, couleur, onChoisir }) {
             className="absolute left-0 right-0 top-full z-30 m-0 mt-1 max-h-80 list-none overflow-y-auto rounded-xl border border-white/10 bg-[#141416] p-1 shadow-2xl"
             onMouseDown={(e) => e.preventDefault()}
           >
-            {resultats.length === 0 && <li className="px-3 py-4 text-center text-sm text-gray-500">Aucun modèle trouvé : utilisez un profil type ou saisissez vos valeurs.</li>}
+            {resultats.length === 0 && <li className="px-3 py-4 text-center text-sm text-gray-500">Aucun modèle trouvé : choisissez-en un proche et ajustez les valeurs.</li>}
             {resultats.map((m) => (
               <li key={m.id}>
                 <button
@@ -192,33 +192,6 @@ function Catalogue({ type, valeurs, couleur, onChoisir }) {
   );
 }
 
-// Profils types, pour qui ne trouve pas son modèle dans le catalogue
-function Profils({ actuel, couleur, onChoisir }) {
-  const selection = THERMIQUES.find((m) => identique(m, actuel, CLES_THERMIQUE));
-
-  return (
-    <div className="flex flex-wrap items-center gap-1.5">
-      <span className="mr-1 text-xs text-gray-500">Ou un profil type :</span>
-      {THERMIQUES.map((m) => {
-        const actif = selection?.id === m.id;
-        return (
-          <button
-            key={m.id}
-            type="button"
-            onClick={() => onChoisir(m)}
-            title={m.detail}
-            className={`${bouton} border px-2 py-1 text-xs ${
-              actif ? 'text-white' : 'border-white/10 bg-transparent text-gray-400 hover:text-white'
-            }`}
-            style={actif ? { background: `${couleur}26`, borderColor: couleur } : undefined}
-          >
-            {m.nom}
-          </button>
-        );
-      })}
-    </div>
-  );
-}
 
 export default function AutoApp() {
   const [d, setD] = useState(charger);
@@ -381,7 +354,6 @@ export default function AutoApp() {
               </h2>
               <div className="space-y-3">
                 <Catalogue type="thermique" valeurs={th} couleur={COULEURS.thermique} onChoisir={choisirCatalogue} />
-                <Profils actuel={th} couleur={COULEURS.thermique} onChoisir={(m) => choisirThermique(m)} />
                 <div className="flex gap-1 rounded-xl bg-black/40 p-1">
                   {Object.entries(CARBURANTS).map(([id, c]) => (
                     <button

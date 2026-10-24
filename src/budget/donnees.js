@@ -64,8 +64,17 @@ function exemple() {
   ].map(([type, cat, libelle, montant, jour]) => ({
     id: nouvelId(), type, categorie: cat, libelle, montant, date: `${m}-${jour}`,
   }));
+  // Libellés bruts de relevé, laissés en « Autre » pour essayer la catégorisation par IA
+  const aClasser = [
+    ['CB BURGER KING 4974XXXX', 14.5, '03'],
+    ['CB PHARMACIE DU CENTRE', 18.9, '07'],
+    ['CB STATION AVIA', 52, '10'],
+    ['CB ZALANDO', 64.99, '15'],
+  ].map(([libelle, montant, jour]) => ({
+    id: nouvelId(), type: 'depense', categorie: 'autre', libelle, montant, date: `${mois}-${jour}`,
+  }));
   return {
-    transactions: [...lignes(prec), ...lignes(mois)],
+    transactions: [...lignes(prec), ...lignes(mois), ...aClasser],
     budgets: { courses: 350, loisirs: 120, restaurants: 100, transport: 150, shopping: 100 },
   };
 }

@@ -1,14 +1,18 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   ArrowLeft, ChevronLeft, ChevronRight, Plus, Trash2, Pencil, Wallet, TrendingUp,
-  TrendingDown, PiggyBank, Download, Upload, Search, X, Target,
+  TrendingDown, PiggyBank, Download, Upload, Search, X, Target, Sparkles, Wand2,
 } from 'lucide-react';
 import { Anneau, Historique } from './Graphiques';
 import {
   CATEGORIES, categorie, charger, sauvegarder, nouvelId, cleMois, aujourdhui, decalerMois,
   nomMois, euros, totaux, parCategorie, exporterCsv, importerCsv, empreinte, telecharger,
 } from './donnees';
+
+// Fonctions IA chargées à la demande : les modèles ne sont téléchargés qu'à la première utilisation
+const Assistant = lazy(() => import('./ia/Assistant'));
+const Categorisation = lazy(() => import('./ia/Categorisation'));
 
 const champ =
   'w-full rounded-xl border border-white/10 bg-black/40 px-3 py-2.5 text-sm text-white outline-none transition-colors placeholder:text-gray-600 focus:border-orange-500/60';
@@ -221,6 +225,8 @@ export default function BudgetApp() {
   const [formulaire, setFormulaire] = useState(null);
   const [recherche, setRecherche] = useState('');
   const [filtre, setFiltre] = useState('tout');
+  const [assistant, setAssistant] = useState(false);
+  const [categorisation, setCategorisation] = useState(false);
   const fichier = useRef(null);
 
   useEffect(() => { sauvegarder(donnees); }, [donnees]);
@@ -252,6 +258,8 @@ export default function BudgetApp() {
     (filtre === 'tout' || t.type === filtre) &&
     (!recherche || `${t.libelle} ${categorie(t.categorie).nom}`.toLowerCase().includes(recherche.toLowerCase()))
   );
+
+  const nonClassees = transactions.filter((t) => t.categorie === 'autre' || t.categorie === 'autre-revenu').length;
 
   const tauxEpargne = resume.revenus > 0 ? Math.round((resume.solde / resume.revenus) * 100) : null;
 
@@ -306,6 +314,14 @@ export default function BudgetApp() {
     } catch {
       window.alert('Fichier invalide : utilisez une sauvegarde JSON exportée depuis cette page.');
     }
+  };
+
+  const appliquerCategories = (nouvelles) => {
+    setDonnees((d) => ({
+      ...d,
+      transactions: d.transactions.map((t) => (nouvelles[t.id] ? { ...t, categorie: nouvelles[t.id] } : t)),
+    }));
+    setCategorisation(false);
   };
 
   const reinitialiser = () => {
@@ -414,6 +430,15 @@ export default function BudgetApp() {
               </button>
             </div>
 
+            {nonClassees > 0 && (
+              <div className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-orange-500/20 bg-orange-500/[0.06] px-3 py-2.5 text-sm">
+                <span className="text-gray-300">{nonClassees} opération(s) classée(s) dans « Autre »</span>
+                <button type="button" onClick={() => setCategorisation(true)} className={`${bouton} bg-orange-500/15 py-1.5 text-xs text-orange-300 hover:bg-orange-500/25`}>
+                  <Wand2 size={14} /> Catégoriser avec l'IA
+                </button>
+              </div>
+            )}
+
             <div className="mb-4 flex flex-col gap-2 sm:flex-row">
               <div className="relative flex-1">
                 <Search size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
@@ -478,6 +503,24 @@ export default function BudgetApp() {
           </div>
         </div>
       </div>
+
+      {categorisation && (
+        <Fenetre titre="Catégorisation automatique" onFermer={() => setCategorisation(false)}>
+          <Suspense fallback={null}>
+            <Categorisation transactions={transactions} onAppliquer={appliquerCategories} onFermer={() => setCategorisation(false)} />
+          </Suspense>
+        </Fenetre>
+      )}
+
+      {assistant ? (
+        <Suspense fallback={null}>
+          <Assistant donnees={donnees} onFermer={() => setAssistant(false)} />
+        </Suspense>
+      ) : (
+        <button type="button" onClick={() => setAssistant(true)} className={`${bouton} fixed bottom-6 right-6 z-40 rounded-full bg-orange-500 px-5 py-3 text-black shadow-lg shadow-orange-500/20 hover:bg-orange-400`}>
+          <Sparkles size={18} /> Assistant IA
+        </button>
+      )}
 
       {formulaire && (
         <Fenetre titre={formulaire.id ? "Modifier l'opération" : 'Nouvelle opération'} onFermer={() => setFormulaire(null)}>

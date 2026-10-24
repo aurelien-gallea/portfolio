@@ -53,7 +53,7 @@ function exemple() {
   const mois = cleMois(aujourdhui());
   const prec = decalerMois(mois, -1);
   const lignes = (m) => [
-    ['revenu', 'salaire', 'Salaire', 2450, '01'],
+    ['revenu', 'salaire', 'Salaire', 2000, '01'],
     ['depense', 'logement', 'Loyer', 780, '02'],
     ['depense', 'abonnements', 'Internet + mobile', 45, '05'],
     ['depense', 'courses', 'Supermarché', 132.4, '06'],

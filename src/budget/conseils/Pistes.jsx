@@ -1,8 +1,9 @@
 import React, { useMemo, useState } from 'react';
-import { ExternalLink, Home, Lightbulb, AlertTriangle, ChevronDown, LocateFixed, Loader2, MapPin, Landmark } from 'lucide-react';
+import { ExternalLink, Home, Lightbulb, AlertTriangle, ChevronDown, LocateFixed, Loader2, MapPin, Landmark, Repeat, TrendingUp, BadgePercent } from 'lucide-react';
 import { categorie, euros, nomMois } from '../donnees';
 import { calculerPistes, loyerDeReference, fraisBancaires } from './moteur';
 import { PARRAINAGE_BOURSOBANK } from './reperes';
+import { detecterAbonnements } from './abonnements';
 import { chargerVilles, rechercherVilles, villeLaPlusProche, resumeVille, nomCourt } from './villes';
 
 const champ =
@@ -190,12 +191,87 @@ function FraisBancaires({ parMois }) {
           >
             Ouvrir un compte BoursoBank <ExternalLink size={14} />
           </a>
+          <p className="m-0 mt-3 flex gap-2 text-xs text-sky-200">
+            <BadgePercent size={15} className="mt-0.5 shrink-0 text-sky-400" />
+            En prime, du cashback sur certains achats chez des marchands partenaires quand vous payez avec la carte BoursoBank.
+          </p>
           <p className="m-0 mt-2 text-[11px] leading-snug text-gray-500">
             BoursoBank propose un compte et une carte sans frais de tenue de compte, sous conditions d'utilisation (voir leur grille tarifaire).
             Lien de parrainage : il peut vous donner droit à une prime de bienvenue, et m'en rapporte une aussi.
           </p>
         </>
       )}
+    </div>
+  );
+}
+
+const FREQUENCE_COURTE = { mensuel: '/ mois', trimestriel: '/ trim.', annuel: '/ an' };
+
+// Scanner d'abonnements : prélèvements récurrents, hausses de prix, et économie si l'on résilie
+function ScannerAbonnements({ abonnements, aResilier, onBasculer }) {
+  const [tous, setTous] = useState(false);
+  if (abonnements.length === 0) {
+    return (
+      <div className="rounded-xl bg-black/30 p-4 text-sm text-gray-500">
+        <span className="flex items-center gap-2 font-semibold text-white"><Repeat size={16} className="text-violet-400" /> Abonnements</span>
+        <p className="m-0 mt-1">Aucun prélèvement récurrent détecté pour l'instant : il faut au moins deux passages du même abonnement.</p>
+      </div>
+    );
+  }
+
+  const totalAnnuel = abonnements.reduce((s, a) => s + a.annuel, 0);
+  const economie = abonnements.filter((a) => aResilier.includes(a.cle)).reduce((s, a) => s + a.annuel, 0);
+  const visibles = tous ? abonnements : abonnements.slice(0, 6);
+
+  return (
+    <div className="rounded-xl bg-black/30 p-4">
+      <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
+        <span className="flex items-center gap-2 text-sm font-semibold text-white">
+          <Repeat size={16} className="text-violet-400" /> {abonnements.length} abonnement{abonnements.length > 1 ? 's' : ''} détecté{abonnements.length > 1 ? 's' : ''}
+        </span>
+        <span className="text-xs text-gray-400">
+          <strong className="text-sm tabular-nums text-white">{euros(totalAnnuel / 12)}</strong> / mois, soit {euros(totalAnnuel)} / an
+        </span>
+      </div>
+
+      <ul className="m-0 grid list-none gap-1.5 p-0 sm:grid-cols-2">
+        {visibles.map((a) => {
+          const coche = aResilier.includes(a.cle);
+          return (
+            <li key={a.cle}>
+              <label className={`flex cursor-pointer items-center gap-3 rounded-lg px-2.5 py-2 transition-colors ${coche ? 'bg-violet-500/15' : 'bg-white/[0.03] hover:bg-white/[0.06]'}`}>
+                <input type="checkbox" checked={coche} onChange={() => onBasculer(a.cle)} className="h-4 w-4 shrink-0 accent-violet-500" />
+                <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: categorie(a.categorie).couleur }} />
+                <span className="min-w-0 flex-1">
+                  <span className={`block truncate text-sm ${coche ? 'text-gray-400 line-through' : 'text-gray-100'}`}>{a.nom}</span>
+                  {a.hausse > 0 ? (
+                    <span className="flex items-center gap-1 text-[11px] text-amber-400"><TrendingUp size={11} /> +{euros(a.hausse)} de hausse</span>
+                  ) : (
+                    <span className="block text-[11px] text-gray-500">{euros(a.annuel)} / an</span>
+                  )}
+                </span>
+                <span className="shrink-0 text-sm tabular-nums text-gray-300">
+                  {euros(a.montant)} <span className="text-[11px] text-gray-500">{FREQUENCE_COURTE[a.frequence.id]}</span>
+                </span>
+              </label>
+            </li>
+          );
+        })}
+      </ul>
+
+      {abonnements.length > 6 && (
+        <button type="button" onClick={() => setTous(!tous)} className={`${bouton} mt-1 w-full justify-center bg-transparent text-xs text-gray-400 hover:text-white`}>
+          {tous ? 'Afficher moins' : `Voir les ${abonnements.length - 6} autres`}
+        </button>
+      )}
+
+      <p className="m-0 mt-3 text-xs text-gray-400">
+        {economie > 0 ? (
+          <>En résiliant la sélection : <strong className="text-sm tabular-nums text-emerald-400">{euros(economie)} / an</strong> d'économie. La loi impose une résiliation en 3 clics pour les abonnements souscrits en ligne.</>
+        ) : (
+          'Cochez ceux que vous n\'utilisez plus pour voir ce que leur résiliation vous ferait économiser.'
+        )}
+      </p>
     </div>
   );
 }
@@ -254,9 +330,13 @@ function Piste({ piste, ouverte, onBasculer }) {
   );
 }
 
-export default function Pistes({ donnees, mois, onProfil }) {
+export default function Pistes({ donnees, mois, onProfil, onAResilier }) {
   const { pistes, mois: fenetre } = useMemo(() => calculerPistes(donnees, mois), [donnees, mois]);
   const frais = useMemo(() => fraisBancaires(donnees.transactions, mois), [donnees.transactions, mois]);
+  const abonnements = useMemo(() => detecterAbonnements(donnees.transactions), [donnees.transactions]);
+  const aResilier = donnees.aResilier ?? [];
+  const basculerResiliation = (cle) =>
+    onAResilier(aResilier.includes(cle) ? aResilier.filter((c) => c !== cle) : [...aResilier, cle]);
   const [ouverte, setOuverte] = useState(null);
   const [toutes, setToutes] = useState(false);
   const profil = donnees.profil ?? {};
@@ -298,6 +378,10 @@ export default function Pistes({ donnees, mois, onProfil }) {
           </button>
         )}
       </div>
+      </div>
+
+      <div className="mt-4">
+        <ScannerAbonnements abonnements={abonnements} aResilier={aResilier} onBasculer={basculerResiliation} />
       </div>
     </div>
   );

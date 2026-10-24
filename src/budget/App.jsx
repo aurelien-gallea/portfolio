@@ -429,7 +429,12 @@ export default function BudgetApp() {
           ))}
         </div>
 
-        <Pistes donnees={donnees} mois={mois} onProfil={(profil) => setDonnees((d) => ({ ...d, profil }))} />
+        <Pistes
+          donnees={donnees}
+          mois={mois}
+          onProfil={(profil) => setDonnees((d) => ({ ...d, profil }))}
+          onAResilier={(aResilier) => setDonnees((d) => ({ ...d, aResilier }))}
+        />
 
         <div className="grid gap-6 lg:grid-cols-5">
           {/* Colonne graphiques */}

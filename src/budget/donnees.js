@@ -73,8 +73,16 @@ function exemple() {
   ].map(([libelle, montant, jour]) => ({
     id: nouvelId(), type: 'depense', categorie: 'autre', libelle, montant, date: `${mois}-${jour}`,
   }));
+  // Prélèvements récurrents, pour le scanner d'abonnements (dont une hausse de prix)
+  const abonnements = [
+    ['abonnements', 'PRLV NETFLIX.COM', 12.99, 13.49, '08'],
+    ['loisirs', 'PRLV SALLE DE SPORT FITNESS', 29.99, 29.99, '04'],
+    ['abonnements', 'CB SPOTIFY P1A2B3', 11.12, 11.12, '19'],
+  ].flatMap(([cat, libelle, avant, maintenant, jour]) => [[prec, avant], [mois, maintenant]].map(([m, montant]) => ({
+    id: nouvelId(), type: 'depense', categorie: cat, libelle, montant, date: `${m}-${jour}`,
+  })));
   return {
-    transactions: [...lignes(prec), ...lignes(mois), ...aClasser],
+    transactions: [...lignes(prec), ...lignes(mois), ...aClasser, ...abonnements],
     budgets: { courses: 350, loisirs: 120, restaurants: 100, transport: 150, shopping: 100 },
   };
 }

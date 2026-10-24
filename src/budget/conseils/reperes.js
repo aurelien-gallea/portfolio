@@ -2,34 +2,12 @@
 // Ce sont des ordres de grandeur indicatifs, pas des normes : ils servent à repérer
 // un poste qui pèse nettement plus que la moyenne, pas à juger un budget.
 
-// Loyer moyen d'un appartement, charges comprises, en €/m²/mois
-// (ordres de grandeur d'après la Carte des loyers du ministère du Logement et les observatoires locaux).
-// « encadrement » : commune où l'encadrement des loyers s'applique (« partiel » : seulement certaines communes du secteur).
-export const VILLES = [
-  { id: 'paris', nom: 'Paris', loyerM2: 28, encadrement: true },
-  { id: 'petite-couronne', nom: 'Petite couronne (92, 93, 94)', loyerM2: 20, encadrement: 'partiel' },
-  { id: 'grande-couronne', nom: 'Grande couronne (77, 78, 91, 95)', loyerM2: 16 },
-  { id: 'nice', nom: 'Nice', loyerM2: 18 },
-  { id: 'lyon', nom: 'Lyon / Villeurbanne', loyerM2: 15, encadrement: true },
-  { id: 'montpellier', nom: 'Montpellier', loyerM2: 15, encadrement: true },
-  { id: 'bordeaux', nom: 'Bordeaux', loyerM2: 14.5, encadrement: true },
-  { id: 'lille', nom: 'Lille', loyerM2: 14.5, encadrement: true },
-  { id: 'marseille', nom: 'Marseille', loyerM2: 14 },
-  { id: 'strasbourg', nom: 'Strasbourg', loyerM2: 13.5 },
-  { id: 'rennes', nom: 'Rennes', loyerM2: 13.5 },
-  { id: 'nantes', nom: 'Nantes', loyerM2: 13 },
-  { id: 'toulouse', nom: 'Toulouse', loyerM2: 13 },
-  { id: 'grenoble', nom: 'Grenoble', loyerM2: 12.5, encadrement: true },
-  { id: 'dijon', nom: 'Dijon', loyerM2: 12 },
-  { id: 'ville-moyenne', nom: 'Autre grande ou moyenne ville', loyerM2: 11 },
-  { id: 'rural', nom: 'Petite ville ou campagne', loyerM2: 9.5 },
-];
-
-export const ville = (id) => VILLES.find((v) => v.id === id);
-
 // Part du revenu net au-delà de laquelle un poste mérite d'être regardé.
 // Logement : le tiers des revenus, seuil classique du « taux d'effort ».
 // Autres postes : arrondis au-dessus des parts moyennes de la consommation des ménages (INSEE).
+// Taux d'endettement maximal recommandé par le Haut Conseil de stabilité financière (HCSF)
+export const ENDETTEMENT_MAX = 0.35;
+
 export const REPERES = {
   logement: 0.33,
   courses: 0.15,
@@ -52,7 +30,12 @@ export const ASTUCES = {
     { texte: 'Remettez votre assurance habitation en concurrence : elle est résiliable à tout moment après un an (loi Hamon)' },
   ],
   loyerEncadre: lien('Votre ville applique l\'encadrement des loyers : vérifiez que votre loyer respecte le plafond légal', 'https://www.service-public.gouv.fr/particuliers/vosdroits/F1314'),
-  loyerEncadrePartiel: lien('Certaines communes de votre secteur (Est Ensemble, Plaine Commune) encadrent les loyers : vérifiez si c\'est le cas de la vôtre', 'https://www.service-public.gouv.fr/particuliers/vosdroits/F1314'),
+  loyerEncadrePartiel: lien('Une partie de votre commune applique l\'encadrement des loyers : vérifiez si votre adresse est concernée', 'https://www.service-public.gouv.fr/particuliers/vosdroits/F1314'),
+  credit: [
+    { texte: "Changez d'assurance emprunteur : depuis la loi Lemoine, c'est possible à tout moment et sans frais, et l'économie atteint souvent plusieurs milliers d'euros sur la durée du prêt" },
+    { texte: 'Si les taux actuels sont nettement inférieurs au vôtre, demandez une renégociation à votre banque, ou faites jouer la concurrence via un courtier' },
+    { texte: 'Méfiez-vous du rachat de crédit : il baisse la mensualité, mais allonge la durée et augmente souvent le coût total' },
+  ],
   courses: [
     { texte: 'Passez aux marques distributeur sur les produits de base : souvent 20 à 30 % moins chères à qualité proche' },
     { texte: 'Faites une liste avant de partir, ou commandez en drive pour éviter les achats d\'impulsion' },

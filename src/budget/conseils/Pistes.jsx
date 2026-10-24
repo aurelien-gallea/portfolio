@@ -1,36 +1,159 @@
 import React, { useMemo, useState } from 'react';
-import { ExternalLink, Home, Lightbulb, AlertTriangle, ChevronDown } from 'lucide-react';
+import { ExternalLink, Home, Lightbulb, AlertTriangle, ChevronDown, LocateFixed, Loader2, MapPin } from 'lucide-react';
 import { categorie, euros, nomMois } from '../donnees';
-import { VILLES } from './reperes';
-import { calculerPistes } from './moteur';
+import { calculerPistes, loyerDeReference } from './moteur';
+import { chargerVilles, rechercherVilles, villeLaPlusProche, resumeVille, nomCourt } from './villes';
 
 const champ =
   'w-full rounded-xl border border-white/10 bg-black/40 px-3 py-2 text-sm text-white outline-none transition-colors focus:border-orange-500/60';
 const bouton = 'inline-flex cursor-pointer items-center gap-2 rounded-xl border-0 px-3 py-2 text-sm font-medium transition-colors';
 
-function Profil({ profil, onModifier }) {
+function Bascule({ options, valeur, onChoisir }) {
   return (
-    <div className="flex flex-col gap-2 rounded-xl bg-black/30 p-3 sm:flex-row sm:items-end">
-      <div className="flex items-center gap-2 text-sm text-gray-300 sm:mb-2 sm:w-40 sm:shrink-0">
+    <div className="flex gap-1 rounded-xl bg-black/40 p-1">
+      {options.map(([val, nom]) => (
+        <button
+          key={val}
+          type="button"
+          onClick={() => onChoisir(val)}
+          aria-pressed={valeur === val}
+          className={`${bouton} flex-1 justify-center px-2 py-1.5 text-xs ${valeur === val ? 'bg-white/10 text-white' : 'bg-transparent text-gray-500 hover:text-white'}`}
+        >
+          {nom}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+const libelleVille = (v) => `${nomCourt(v.nom)} (${v.codePostal})`;
+
+function ChoixVille({ ville, onChoisir }) {
+  const [saisie, setSaisie] = useState('');
+  const [villes, setVilles] = useState(null);
+  const [ouvert, setOuvert] = useState(false);
+  const [localisation, setLocalisation] = useState({ etat: 'repos', message: '' });
+
+  const charger = () => { if (!villes) chargerVilles().then(setVilles); };
+  const resultats = useMemo(() => (villes ? rechercherVilles(villes, saisie) : []), [villes, saisie]);
+
+  const choisir = (v, message = '') => {
+    onChoisir(resumeVille(v));
+    setSaisie('');
+    setOuvert(false);
+    setLocalisation({ etat: 'repos', message });
+  };
+
+  const localiser = () => {
+    if (!navigator.geolocation) {
+      setLocalisation({ etat: 'erreur', message: "La géolocalisation n'est pas disponible dans ce navigateur." });
+      return;
+    }
+    setLocalisation({ etat: 'recherche', message: '' });
+    navigator.geolocation.getCurrentPosition(
+      async ({ coords }) => {
+        const liste = villes ?? await chargerVilles();
+        setVilles(liste);
+        const { ville: proche, distanceKm } = villeLaPlusProche(liste, coords.latitude, coords.longitude);
+        choisir(proche, distanceKm > 5 ? `Ville de plus de 5 000 habitants la plus proche, à ${Math.round(distanceKm)} km.` : '');
+      },
+      (e) => setLocalisation({
+        etat: 'erreur',
+        message: e.code === 1 ? 'Localisation refusée : cherchez votre ville à la main.' : 'Position introuvable : cherchez votre ville à la main.',
+      }),
+      { enableHighAccuracy: false, timeout: 10000, maximumAge: 600000 },
+    );
+  };
+
+  return (
+    <div className="space-y-1">
+      <span className="text-xs text-gray-500">Ville</span>
+      <div className="flex gap-2">
+        <div className="relative flex-1">
+          <input
+            className={champ}
+            placeholder={ville ? libelleVille(ville) : 'Nom ou code postal…'}
+            value={saisie}
+            onFocus={() => { charger(); setOuvert(true); }}
+            onBlur={() => setTimeout(() => setOuvert(false), 150)}
+            onChange={(e) => { setSaisie(e.target.value); setOuvert(true); }}
+            onKeyDown={(e) => { if (e.key === 'Enter' && resultats[0]) { e.preventDefault(); choisir(resultats[0]); } }}
+            aria-label="Rechercher une ville"
+          />
+          {ouvert && saisie.trim().length >= 2 && (
+            <ul className="absolute left-0 right-0 top-full z-20 m-0 mt-1 max-h-64 list-none overflow-y-auto rounded-xl border border-white/10 bg-[#1a1a1d] p-1 shadow-2xl">
+              {!villes && <li className="px-3 py-2 text-xs text-gray-500">Chargement des villes…</li>}
+              {villes && resultats.length === 0 && <li className="px-3 py-2 text-xs text-gray-500">Aucune ville de plus de 5 000 habitants ne correspond.</li>}
+              {resultats.map((v) => (
+                <li key={v.code}>
+                  <button
+                    type="button"
+                    onMouseDown={(e) => e.preventDefault()}
+                    onClick={() => choisir(v)}
+                    className="flex w-full cursor-pointer items-center justify-between gap-2 rounded-lg border-0 bg-transparent px-3 py-2 text-left text-sm text-gray-200 hover:bg-white/10"
+                  >
+                    <span className="truncate">{libelleVille(v)}</span>
+                    <span className="shrink-0 text-xs tabular-nums text-gray-500">{v.loyerAppartementM2.toLocaleString('fr-FR')} €/m²</span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+        <button
+          type="button"
+          onClick={localiser}
+          disabled={localisation.etat === 'recherche'}
+          className={`${bouton} shrink-0 bg-white/5 text-gray-300 hover:bg-white/10 disabled:opacity-50`}
+          title="Utiliser ma position (le calcul est fait dans votre navigateur)"
+        >
+          {localisation.etat === 'recherche' ? <Loader2 size={16} className="animate-spin" /> : <LocateFixed size={16} />}
+          <span className="hidden sm:inline">Me localiser</span>
+        </button>
+      </div>
+      {ville && !saisie && (
+        <p className="m-0 flex items-center gap-1 text-xs text-gray-400"><MapPin size={12} className="text-orange-400" /> {libelleVille(ville)}</p>
+      )}
+      {localisation.message && (
+        <p className={`m-0 text-xs ${localisation.etat === 'erreur' ? 'text-red-400' : 'text-gray-500'}`}>{localisation.message}</p>
+      )}
+    </div>
+  );
+}
+
+function Profil({ profil, onModifier }) {
+  const maj = (champs) => onModifier({ ...profil, ...champs });
+  const reference = loyerDeReference(profil);
+
+  return (
+    <div className="space-y-3 rounded-xl bg-black/30 p-3">
+      <div className="flex items-center gap-2 text-sm text-gray-300">
         <Home size={16} className="text-orange-400" /> Mon logement
       </div>
-      <label className="flex-1 space-y-1">
-        <span className="text-xs text-gray-500">Ville ou secteur</span>
-        <select className={`${champ} [color-scheme:dark]`} value={profil.ville ?? ''} onChange={(e) => onModifier({ ...profil, ville: e.target.value })}>
-          <option value="">Choisir…</option>
-          {VILLES.map((v) => <option key={v.id} value={v.id}>{v.nom}</option>)}
-        </select>
-      </label>
-      <label className="space-y-1 sm:w-32">
-        <span className="text-xs text-gray-500">Surface (m²)</span>
-        <input
-          className={champ}
-          inputMode="numeric"
-          placeholder="Ex. : 45"
-          value={profil.surface ?? ''}
-          onChange={(e) => onModifier({ ...profil, surface: e.target.value.replace(/\D/g, '').slice(0, 4) })}
-        />
-      </label>
+      <div className="grid gap-2 sm:grid-cols-2">
+        <Bascule options={[['locataire', 'Locataire'], ['proprietaire', 'Propriétaire (crédit)']]} valeur={profil.statut ?? 'locataire'} onChoisir={(statut) => maj({ statut })} />
+        <Bascule options={[['appartement', 'Appartement'], ['maison', 'Maison']]} valeur={profil.type ?? 'appartement'} onChoisir={(type) => maj({ type })} />
+      </div>
+      <div className="grid gap-2 sm:grid-cols-[1fr_8rem]">
+        <ChoixVille ville={typeof profil.ville === 'object' ? profil.ville : null} onChoisir={(ville) => maj({ ville })} />
+        <label className="space-y-1">
+          <span className="text-xs text-gray-500">Surface (m²)</span>
+          <input
+            className={champ}
+            inputMode="numeric"
+            placeholder="Ex. : 45"
+            value={profil.surface ?? ''}
+            onChange={(e) => maj({ surface: e.target.value.replace(/\D/g, '').slice(0, 4) })}
+          />
+        </label>
+      </div>
+      {reference > 0 && (
+        <p className="m-0 rounded-lg bg-white/[0.03] px-3 py-2 text-xs text-gray-400">
+          {profil.statut === 'proprietaire' ? 'Loyer équivalent' : 'Loyer moyen'} pour {profil.type === 'maison' ? 'une maison' : 'un appartement'} de {profil.surface} m² :{' '}
+          <strong className="text-sm text-white">≈ {euros(reference)}</strong> par mois, charges comprises
+          <span className="block text-[11px] text-gray-600">Source : Carte des loyers 2025 (ANIL, ministère du Logement), loyers d'annonce.</span>
+        </p>
+      )}
     </div>
   );
 }

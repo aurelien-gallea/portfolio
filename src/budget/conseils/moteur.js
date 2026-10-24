@@ -1,7 +1,7 @@
 // Compare les dépenses moyennes de l'utilisateur aux repères français
 // et en tire des pistes concrètes, classées par économie possible.
 import { categorie, cleMois, decalerMois, nomMois, euros } from '../donnees';
-import { ASTUCES, REPERES, ville } from './reperes';
+import { ASTUCES, REPERES, ENDETTEMENT_MAX } from './reperes';
 
 const somme = (liste) => liste.reduce((s, t) => s + t.montant, 0);
 
@@ -12,6 +12,76 @@ export function fenetreRecente(transactions, fin) {
     if (transactions.some((t) => cleMois(t.date) === m)) mois.push(m);
   }
   return mois.reverse();
+}
+
+const LOYER = /loyer/i;
+const CREDIT = /cr[eé]dit|pr[eê]t|emprunt|[eé]ch[eé]ance|immo/i;
+
+// Loyer moyen charges comprises pour la surface et le type de logement du profil
+export function loyerDeReference(profil) {
+  const v = typeof profil.ville === 'object' ? profil.ville : null; // ancien format : identifiant texte
+  const surface = Number(profil.surface) || 0;
+  if (!v || !surface) return 0;
+  const m2 = profil.type === 'maison' ? v.loyerMaisonM2 ?? v.loyerAppartementM2 : v.loyerAppartementM2;
+  return Math.round(m2 * surface);
+}
+
+function pisteLogement({ recentes, n, logement, revenus, profil }) {
+  const v = typeof profil.ville === 'object' ? profil.ville : null;
+  const surface = Number(profil.surface) || 0;
+  const reference = loyerDeReference(profil);
+  const lieu = v && `${profil.type === 'maison' ? 'une maison' : 'un appartement'} de ${surface} m² à ${v.nom}`;
+  const effort = revenus > 0 ? logement / revenus : 0;
+  // Le poste peut mélanger loyer, crédit et énergie : on isole le loyer ou la mensualité grâce au libellé
+  const motif = profil.statut === 'proprietaire' ? CREDIT : LOYER;
+  const principal = somme(recentes.filter((t) => t.categorie === 'logement' && motif.test(t.libelle))) / n || logement;
+
+  if (profil.statut === 'proprietaire') {
+    const endettement = revenus > 0 ? principal / revenus : 0;
+    const constats = [`Votre mensualité de crédit (${euros(principal)}) représente ${Math.round(endettement * 100)} % de vos revenus. Les banques plafonnent l'endettement à ${Math.round(ENDETTEMENT_MAX * 100)} %, assurance comprise.`];
+    if (reference) {
+      constats.push(principal <= reference
+        ? `C'est moins que le loyer moyen pour ${lieu} (≈ ${euros(reference)} par mois) : votre crédit vous coûte moins qu'une location équivalente.`
+        : `C'est ${Math.round((principal / reference - 1) * 100)} % de plus que le loyer moyen pour ${lieu} (≈ ${euros(reference)} par mois).`);
+    }
+    const ecart = Math.max(0, principal - ENDETTEMENT_MAX * revenus);
+    if (!ecart && effort <= REPERES.logement) return [];
+    return [{
+      id: 'logement', titre: 'Logement (crédit)', constats, actions: ASTUCES.credit, economie: ecart,
+      part: endettement, repere: ENDETTEMENT_MAX,
+    }];
+  }
+
+  const constats = [];
+  let economie = 0;
+  if (effort > REPERES.logement) {
+    constats.push(`Le logement absorbe ${Math.round(effort * 100)} % de vos revenus, au-delà du tiers généralement recommandé.`);
+    economie = logement - REPERES.logement * revenus;
+  }
+  if (reference && principal > reference * 1.1) {
+    constats.push(`Votre loyer (${euros(principal)}) dépasse d'environ ${Math.round((principal / reference - 1) * 100)} % le loyer moyen pour ${lieu} (≈ ${euros(reference)} charges comprises).`);
+    economie = Math.max(economie, principal - reference);
+  } else if (reference) {
+    constats.push(`Votre loyer (${euros(principal)}) est dans la moyenne pour ${lieu} (≈ ${euros(reference)} charges comprises).`);
+  }
+
+  if (!reference) {
+    // Sans profil, on invite à le compléter pour une comparaison locale
+    return [{
+      id: 'logement', titre: 'Logement',
+      constats: [
+        ...(constats.length ? constats : [`Le logement représente ${revenus ? Math.round(effort * 100) : '—'} % de vos revenus.`]),
+        'Indiquez votre ville et votre surface pour le comparer aux loyers de votre commune.',
+      ],
+      actions: ASTUCES.logement.slice(0, 2), economie, part: effort, repere: REPERES.logement, profilManquant: true,
+    }];
+  }
+  if (!economie) return [];
+  const actions = [...ASTUCES.logement];
+  if (v.encadrement && principal > reference) {
+    actions.unshift(v.encadrement === 2 ? ASTUCES.loyerEncadrePartiel : ASTUCES.loyerEncadre);
+  }
+  return [{ id: 'logement', titre: 'Logement', constats, actions, economie, part: effort, repere: REPERES.logement }];
 }
 
 export function calculerPistes({ transactions, profil = {} }, fin) {
@@ -25,47 +95,9 @@ export function calculerPistes({ transactions, profil = {} }, fin) {
   const depenses = somme(recentes.filter((t) => t.type === 'depense')) / n;
   const pistes = [];
 
-  // Logement : taux d'effort et comparaison au loyer moyen local
+  // Logement : taux d'effort, puis comparaison au loyer moyen de la commune
   const logement = moyenne('logement');
-  const lieu = ville(profil.ville);
-  const surface = Number(profil.surface) || 0;
-  if (logement > 0) {
-    // Le poste peut mélanger loyer et énergie : on isole le loyer quand le libellé le permet
-    const loyer = somme(recentes.filter((t) => t.categorie === 'logement' && /loyer/i.test(t.libelle))) / n || logement;
-    const loyerLocal = lieu && surface ? lieu.loyerM2 * surface : 0;
-    const effort = revenus > 0 ? logement / revenus : 0;
-    const constats = [];
-    let economie = 0;
-
-    if (effort > REPERES.logement) {
-      constats.push(`Le logement absorbe ${Math.round(effort * 100)} % de vos revenus, au-delà du tiers généralement recommandé.`);
-      economie = Math.max(economie, logement - REPERES.logement * revenus);
-    }
-    if (loyerLocal && loyer > loyerLocal * 1.1) {
-      constats.push(`Votre loyer (${euros(loyer)}) dépasse d'environ ${Math.round((loyer / loyerLocal - 1) * 100)} % le loyer moyen d'un ${surface} m² à ${lieu.nom} (≈ ${euros(Math.round(loyerLocal))} charges comprises).`);
-      economie = Math.max(economie, loyer - loyerLocal);
-    } else if (loyerLocal && loyer > 0) {
-      constats.push(`Votre loyer (${euros(loyer)}) est dans la moyenne d'un ${surface} m² à ${lieu.nom} (≈ ${euros(Math.round(loyerLocal))}).`);
-    }
-
-    if (constats.length && (effort > REPERES.logement || economie > 0)) {
-      const actions = [...ASTUCES.logement];
-      if (lieu?.encadrement && loyer > loyerLocal) {
-        actions.unshift(lieu.encadrement === 'partiel' ? ASTUCES.loyerEncadrePartiel : ASTUCES.loyerEncadre);
-      }
-      pistes.push({
-        id: 'logement', titre: 'Logement', constats, actions, economie,
-        part: effort, repere: REPERES.logement,
-      });
-    } else if (!lieu || !surface) {
-      // Sans profil, on invite à le compléter pour une comparaison locale
-      pistes.push({
-        id: 'logement', titre: 'Logement',
-        constats: [`Le logement représente ${revenus ? Math.round(effort * 100) : '—'} % de vos revenus. Indiquez votre ville et votre surface pour le comparer aux loyers de votre secteur.`],
-        actions: ASTUCES.logement.slice(0, 2), economie: 0, part: effort, repere: REPERES.logement, profilManquant: true,
-      });
-    }
-  }
+  if (logement > 0) pistes.push(...pisteLogement({ recentes, n, logement, revenus, profil }));
 
   // Autres postes : part du revenu comparée au repère national
   for (const [id, repere] of Object.entries(REPERES)) {

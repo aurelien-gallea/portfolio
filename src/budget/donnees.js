@@ -78,21 +78,36 @@ function exemple() {
     ['abonnements', 'PRLV NETFLIX.COM', 12.99, 13.49, '08'],
     ['loisirs', 'PRLV SALLE DE SPORT FITNESS', 29.99, 29.99, '04'],
     ['abonnements', 'CB SPOTIFY P1A2B3', 11.12, 11.12, '19'],
-  ].flatMap(([cat, libelle, avant, maintenant, jour]) => [[prec, avant], [mois, maintenant]].map(([m, montant]) => ({
-    id: nouvelId(), type: 'depense', categorie: cat, libelle, montant, date: `${m}-${jour}`,
-  })));
+    // Contrats à comparer plutôt qu'à résilier
+    ['logement', 'PRLV EDF CLIENTS PARTICULIERS', 64.3, 64.3, '07'],
+    ['logement', 'PRLV MAIF ASSURANCE HABITATION', 18.4, 18.4, '10'],
+    // Classé en Abonnements, un seul passage pour l'instant
+    ['abonnements', 'CB DISNEY PLUS', null, 9.99, '21'],
+  ].flatMap(([cat, libelle, avant, maintenant, jour]) => [[prec, avant], [mois, maintenant]]
+    .filter(([, montant]) => montant !== null)
+    .map(([m, montant]) => ({
+      id: nouvelId(), type: 'depense', categorie: cat, libelle, montant, date: `${m}-${jour}`,
+    })));
   return {
+    // Données de démonstration : remplacées dès que l'utilisateur commence son propre budget
+    exemple: true,
     transactions: [...lignes(prec), ...lignes(mois), ...aClasser, ...abonnements],
     budgets: { courses: 350, loisirs: 120, restaurants: 100, transport: 150, shopping: 100 },
   };
 }
+
+export { exemple as donneesExemple };
 
 export function charger() {
   try {
     const brut = localStorage.getItem(CLE);
     if (brut) {
       const donnees = JSON.parse(brut);
-      if (Array.isArray(donnees.transactions)) return { budgets: {}, ...donnees };
+      if (Array.isArray(donnees.transactions)) {
+        // Exemple enregistré avant l'ajout du marqueur : reconnu à l'une de ses opérations
+        const exempleAncien = donnees.exemple === undefined && donnees.transactions.some((t) => t.libelle === 'CB BURGER KING 4974XXXX');
+        return { budgets: {}, ...donnees, ...(exempleAncien && { exemple: true }) };
+      }
     }
   } catch { /* stockage indisponible : on repart de l'exemple */ }
   return exemple();

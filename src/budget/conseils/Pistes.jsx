@@ -1,8 +1,8 @@
 import React, { useMemo, useState } from 'react';
-import { ExternalLink, Home, Lightbulb, AlertTriangle, ChevronDown, LocateFixed, Loader2, MapPin, Landmark, Repeat, TrendingUp, BadgePercent } from 'lucide-react';
+import { ExternalLink, Home, Lightbulb, AlertTriangle, ChevronDown, LocateFixed, Loader2, MapPin, Landmark, Repeat, TrendingUp, BadgePercent, X, Scale } from 'lucide-react';
 import { categorie, euros, nomMois } from '../donnees';
 import { calculerPistes, loyerDeReference, fraisBancaires } from './moteur';
-import { PARRAINAGE_BOURSOBANK } from './reperes';
+import { PARRAINAGE_BOURSOBANK, COMPARATEURS } from './reperes';
 import { detecterAbonnements } from './abonnements';
 import { chargerVilles, rechercherVilles, villeLaPlusProche, resumeVille, nomCourt } from './villes';
 
@@ -206,71 +206,133 @@ function FraisBancaires({ parMois }) {
 
 const FREQUENCE_COURTE = { mensuel: '/ mois', trimestriel: '/ trim.', annuel: '/ an' };
 
-// Scanner d'abonnements : prélèvements récurrents, hausses de prix, et économie si l'on résilie
-function ScannerAbonnements({ abonnements, aResilier, onBasculer }) {
-  const [tous, setTous] = useState(false);
-  if (abonnements.length === 0) {
-    return (
-      <div className="rounded-2xl border border-white/[0.06] bg-black/20 p-4 text-sm text-gray-500">
-        <span className="flex items-center gap-2 font-semibold text-white"><Repeat size={16} className="text-violet-400" /> Abonnements</span>
-        <p className="m-0 mt-1">Aucun prélèvement récurrent détecté pour l'instant : il faut au moins deux passages du même abonnement.</p>
-      </div>
-    );
-  }
+function LigneAbonnement({ a, coche, onBasculer, onRetirer }) {
+  return (
+    <li className={`group flex items-center gap-3 rounded-lg px-2.5 py-2 transition-colors ${coche ? 'bg-violet-500/15' : 'bg-white/[0.03] hover:bg-white/[0.06]'}`}>
+      {onBasculer ? (
+        <input
+          type="checkbox"
+          checked={coche}
+          onChange={onBasculer}
+          className="h-4 w-4 shrink-0 cursor-pointer accent-violet-500 [color-scheme:dark]"
+          aria-label={`Marquer ${a.nom} à résilier`}
+        />
+      ) : (
+        <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: categorie(a.categorie).couleur }} />
+      )}
+      <span className="min-w-0 flex-1">
+        <span className={`block truncate text-sm ${coche ? 'text-gray-400 line-through' : 'text-gray-100'}`}>{a.nom}</span>
+        {a.hausse > 0 ? (
+          <span className="flex items-center gap-1 text-[11px] text-amber-400"><TrendingUp size={11} /> +{euros(a.hausse)} de hausse</span>
+        ) : (
+          <span className="block text-[11px] text-gray-500">{a.suppose ? 'Classé en Abonnements' : `${euros(a.annuel)} / an`}</span>
+        )}
+      </span>
+      <span className="shrink-0 text-sm tabular-nums text-gray-300">
+        {euros(a.montant)} <span className="text-[11px] text-gray-500">{FREQUENCE_COURTE[a.frequence.id]}</span>
+      </span>
+      <button
+        type="button"
+        onClick={onRetirer}
+        className="shrink-0 cursor-pointer rounded-md border-0 bg-transparent p-1 text-gray-600 transition-colors hover:bg-white/10 hover:text-white"
+        title="Retirer du scanner (ce n'est pas un abonnement)"
+        aria-label={`Retirer ${a.nom} du scanner`}
+      >
+        <X size={14} />
+      </button>
+    </li>
+  );
+}
 
-  const totalAnnuel = abonnements.reduce((s, a) => s + a.annuel, 0);
-  const economie = abonnements.filter((a) => aResilier.includes(a.cle)).reduce((s, a) => s + a.annuel, 0);
-  const visibles = tous ? abonnements : abonnements.slice(0, 6);
+// Scanner d'abonnements : prélèvements récurrents et catégorie Abonnements.
+// Les contrats essentiels (énergie, assurance) sont à comparer plutôt qu'à résilier.
+function ScannerAbonnements({ abonnements, aResilier, retires, onBasculer, onRetirer, onRestaurer }) {
+  const [tous, setTous] = useState(false);
+  const actifs = abonnements.filter((a) => !retires.includes(a.cle));
+  const resiliables = actifs.filter((a) => !a.contrat);
+  const contrats = actifs.filter((a) => a.contrat);
+  const masques = abonnements.length - actifs.length;
+
+  const totalAnnuel = resiliables.reduce((s, a) => s + a.annuel, 0);
+  const economie = resiliables.filter((a) => aResilier.includes(a.cle)).reduce((s, a) => s + a.annuel, 0);
+  const visibles = tous ? resiliables : resiliables.slice(0, 6);
+  const typesContrats = [...new Set(contrats.map((c) => c.contrat))];
 
   return (
-    <div className="rounded-2xl border border-white/[0.06] bg-black/20 p-4">
-      <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
-        <span className="flex items-center gap-2 text-sm font-semibold text-white">
-          <Repeat size={16} className="text-violet-400" /> {abonnements.length} abonnement{abonnements.length > 1 ? 's' : ''} détecté{abonnements.length > 1 ? 's' : ''}
-        </span>
-        <span className="text-xs text-gray-400">
-          <strong className="text-sm tabular-nums text-white">{euros(totalAnnuel / 12)}</strong> / mois, soit {euros(totalAnnuel)} / an
-        </span>
+    <div className="space-y-4 rounded-2xl border border-white/[0.06] bg-black/20 p-4">
+      <div>
+        <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
+          <span className="flex items-center gap-2 text-sm font-semibold text-white">
+            <Repeat size={16} className="text-violet-400" /> Abonnements{resiliables.length > 0 && ` (${resiliables.length})`}
+          </span>
+          {resiliables.length > 0 && (
+            <span className="text-xs text-gray-400">
+              <strong className="text-sm tabular-nums text-white">{euros(totalAnnuel / 12)}</strong> / mois, soit {euros(totalAnnuel)} / an
+            </span>
+          )}
+        </div>
+
+        {resiliables.length === 0 ? (
+          <p className="m-0 text-sm text-gray-500">
+            Aucun abonnement détecté : il faut deux prélèvements réguliers du même service, ou une opération classée en « Abonnements ».
+          </p>
+        ) : (
+          <>
+            <ul className="m-0 grid list-none gap-1.5 p-0 xl:grid-cols-2">
+              {visibles.map((a) => (
+                <LigneAbonnement key={a.cle} a={a} coche={aResilier.includes(a.cle)} onBasculer={() => onBasculer(a.cle)} onRetirer={() => onRetirer(a.cle)} />
+              ))}
+            </ul>
+            {resiliables.length > 6 && (
+              <button type="button" onClick={() => setTous(!tous)} className={`${bouton} mt-1 w-full justify-center bg-transparent text-xs text-gray-400 hover:text-white`}>
+                {tous ? 'Afficher moins' : `Voir les ${resiliables.length - 6} autres`}
+              </button>
+            )}
+            <p className="m-0 mt-3 text-xs text-gray-400">
+              {economie > 0 ? (
+                <>En résiliant la sélection : <strong className="text-sm tabular-nums text-emerald-400">{euros(economie)} / an</strong> d'économie. La loi impose une résiliation en 3 clics pour les abonnements souscrits en ligne.</>
+              ) : (
+                "Cochez ceux que vous n'utilisez plus pour voir ce que leur résiliation vous ferait économiser. La croix retire ce qui n'est pas un abonnement."
+              )}
+            </p>
+          </>
+        )}
       </div>
 
-      <ul className="m-0 grid list-none gap-1.5 p-0 xl:grid-cols-2">
-        {visibles.map((a) => {
-          const coche = aResilier.includes(a.cle);
-          return (
-            <li key={a.cle}>
-              <label className={`flex cursor-pointer items-center gap-3 rounded-lg px-2.5 py-2 transition-colors ${coche ? 'bg-violet-500/15' : 'bg-white/[0.03] hover:bg-white/[0.06]'}`}>
-                <input type="checkbox" checked={coche} onChange={() => onBasculer(a.cle)} className="h-4 w-4 shrink-0 cursor-pointer accent-violet-500 [color-scheme:dark]" />
-                <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: categorie(a.categorie).couleur }} />
-                <span className="min-w-0 flex-1">
-                  <span className={`block truncate text-sm ${coche ? 'text-gray-400 line-through' : 'text-gray-100'}`}>{a.nom}</span>
-                  {a.hausse > 0 ? (
-                    <span className="flex items-center gap-1 text-[11px] text-amber-400"><TrendingUp size={11} /> +{euros(a.hausse)} de hausse</span>
-                  ) : (
-                    <span className="block text-[11px] text-gray-500">{euros(a.annuel)} / an</span>
-                  )}
-                </span>
-                <span className="shrink-0 text-sm tabular-nums text-gray-300">
-                  {euros(a.montant)} <span className="text-[11px] text-gray-500">{FREQUENCE_COURTE[a.frequence.id]}</span>
-                </span>
-              </label>
-            </li>
-          );
-        })}
-      </ul>
-
-      {abonnements.length > 6 && (
-        <button type="button" onClick={() => setTous(!tous)} className={`${bouton} mt-1 w-full justify-center bg-transparent text-xs text-gray-400 hover:text-white`}>
-          {tous ? 'Afficher moins' : `Voir les ${abonnements.length - 6} autres`}
-        </button>
+      {contrats.length > 0 && (
+        <div className="border-0 border-t border-solid border-white/[0.06] pt-4">
+          <div className="mb-2 flex flex-wrap items-baseline justify-between gap-2">
+            <span className="flex items-center gap-2 text-sm font-semibold text-white">
+              <Scale size={16} className="text-emerald-400" /> Contrats à comparer ({contrats.length})
+            </span>
+            <span className="text-xs text-gray-400">
+              <strong className="text-sm tabular-nums text-white">{euros(contrats.reduce((s, a) => s + a.annuel, 0))}</strong> / an
+            </span>
+          </div>
+          <p className="m-0 mb-2 text-xs text-gray-500">On ne les résilie pas, mais changer de fournisseur ou d'assureur fait souvent baisser la facture.</p>
+          <ul className="m-0 grid list-none gap-1.5 p-0 xl:grid-cols-2">
+            {contrats.map((a) => <LigneAbonnement key={a.cle} a={a} onRetirer={() => onRetirer(a.cle)} />)}
+          </ul>
+          <div className="mt-3 space-y-2">
+            {typesContrats.map((type) => (
+              <div key={type} className="flex flex-wrap items-center gap-2 text-xs">
+                <span className="text-gray-400">{COMPARATEURS[type].titre} :</span>
+                {COMPARATEURS[type].liens.map((l) => (
+                  <a key={l.url} href={l.url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 rounded-md bg-emerald-500/10 px-2 py-1 text-emerald-300 hover:bg-emerald-500/20 hover:text-emerald-200">
+                    {l.texte} <ExternalLink size={11} />
+                  </a>
+                ))}
+              </div>
+            ))}
+          </div>
+        </div>
       )}
 
-      <p className="m-0 mt-3 text-xs text-gray-400">
-        {economie > 0 ? (
-          <>En résiliant la sélection : <strong className="text-sm tabular-nums text-emerald-400">{euros(economie)} / an</strong> d'économie. La loi impose une résiliation en 3 clics pour les abonnements souscrits en ligne.</>
-        ) : (
-          'Cochez ceux que vous n\'utilisez plus pour voir ce que leur résiliation vous ferait économiser.'
-        )}
-      </p>
+      {masques > 0 && (
+        <button type="button" onClick={onRestaurer} className="cursor-pointer border-0 bg-transparent p-0 text-xs text-gray-500 underline decoration-white/20 underline-offset-2 hover:text-white">
+          {masques} élément{masques > 1 ? 's' : ''} retiré{masques > 1 ? 's' : ''} du scanner : tout réafficher
+        </button>
+      )}
     </div>
   );
 }
@@ -329,13 +391,14 @@ function Piste({ piste, ouverte, onBasculer }) {
   );
 }
 
-export default function Pistes({ donnees, mois, onProfil, onAResilier }) {
+export default function Pistes({ donnees, mois, onModifier }) {
   const { pistes, mois: fenetre } = useMemo(() => calculerPistes(donnees, mois), [donnees, mois]);
   const frais = useMemo(() => fraisBancaires(donnees.transactions, mois), [donnees.transactions, mois]);
   const abonnements = useMemo(() => detecterAbonnements(donnees.transactions), [donnees.transactions]);
   const aResilier = donnees.aResilier ?? [];
+  const retires = donnees.abonnementsRetires ?? [];
   const basculerResiliation = (cle) =>
-    onAResilier(aResilier.includes(cle) ? aResilier.filter((c) => c !== cle) : [...aResilier, cle]);
+    onModifier({ aResilier: aResilier.includes(cle) ? aResilier.filter((c) => c !== cle) : [...aResilier, cle] });
   const [ouverte, setOuverte] = useState(null);
   const [toutes, setToutes] = useState(false);
   const profil = donnees.profil ?? {};
@@ -346,7 +409,7 @@ export default function Pistes({ donnees, mois, onProfil, onAResilier }) {
   const gainMensuel =
     pistes.filter((p) => !p.urgent && p.id !== 'logement').reduce((s, p) => s + p.economie, 0) +
     frais +
-    abonnements.filter((a) => aResilier.includes(a.cle)).reduce((s, a) => s + a.mensuel, 0);
+    abonnements.filter((a) => aResilier.includes(a.cle) && !a.contrat && !retires.includes(a.cle)).reduce((s, a) => s + a.mensuel, 0);
 
   return (
     <div className="rounded-2xl border border-white/[0.06] bg-white/[0.03] p-5">
@@ -369,7 +432,7 @@ export default function Pistes({ donnees, mois, onProfil, onAResilier }) {
 
       <div className="grid gap-4 lg:grid-cols-5">
         <div className="min-w-0 space-y-4 lg:col-span-2">
-          <Profil profil={profil} onModifier={onProfil} />
+          <Profil profil={profil} onModifier={(p) => onModifier({ profil: p })} />
           <FraisBancaires parMois={frais} />
         </div>
 
@@ -392,7 +455,14 @@ export default function Pistes({ donnees, mois, onProfil, onAResilier }) {
               </button>
             )}
           </div>
-          <ScannerAbonnements abonnements={abonnements} aResilier={aResilier} onBasculer={basculerResiliation} />
+          <ScannerAbonnements
+            abonnements={abonnements}
+            aResilier={aResilier}
+            retires={retires}
+            onBasculer={basculerResiliation}
+            onRetirer={(cle) => onModifier({ abonnementsRetires: [...retires, cle], aResilier: aResilier.filter((c) => c !== cle) })}
+            onRestaurer={() => onModifier({ abonnementsRetires: [] })}
+          />
         </div>
       </div>
     </div>

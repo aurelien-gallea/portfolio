@@ -2,13 +2,14 @@ import React, { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'rea
 import { Link } from 'react-router-dom';
 import {
   ArrowLeft, ChevronLeft, ChevronRight, Plus, Trash2, Pencil, Wallet, TrendingUp,
-  TrendingDown, PiggyBank, Download, Upload, Search, X, Target, Sparkles, Wand2,
+  TrendingDown, PiggyBank, Download, Upload, Search, X, Target, Sparkles, Wand2, Save, HelpCircle, Info,
 } from 'lucide-react';
 import { Anneau, Historique } from './Graphiques';
+import Guide from './Guide';
 import Pistes from './conseils/Pistes';
 import {
   CATEGORIES, categorie, charger, sauvegarder, nouvelId, cleMois, aujourdhui, decalerMois,
-  nomMois, euros, totaux, parCategorie, exporterCsv, importerCsv, empreinte, telecharger,
+  nomMois, euros, totaux, parCategorie, exporterCsv, importerCsv, empreinte, telecharger, donneesExemple,
 } from './donnees';
 
 // Fonctions IA chargées à la demande : les modèles ne sont téléchargés qu'à la première utilisation
@@ -236,6 +237,7 @@ export default function BudgetApp() {
   const [filtre, setFiltre] = useState('tout');
   const [assistant, setAssistant] = useState(false);
   const [categorisation, setCategorisation] = useState(false);
+  const [guide, setGuide] = useState(false);
   const [categorieFiltre, setCategorieFiltre] = useState(null);
   const fichier = useRef(null);
   const listeOperations = useRef(null);
@@ -285,13 +287,25 @@ export default function BudgetApp() {
 
   const tauxEpargne = resume.revenus > 0 ? Math.round((resume.solde / resume.revenus) * 100) : null;
 
+  // Budget vide, en gardant le profil logement : point de départ quand on quitte l'exemple
+  const budgetVide = (d) => ({ transactions: [], budgets: {}, ...(d.profil && { profil: d.profil }) });
+
   const enregistrer = (t) => {
-    setDonnees((d) => ({
-      ...d,
-      transactions: t.id
-        ? d.transactions.map((x) => (x.id === t.id ? t : x))
-        : [...d.transactions, { ...t, id: nouvelId() }],
-    }));
+    // Première opération saisie sur l'exemple : démarrer un vrai budget, ou continuer à explorer
+    const demarrer = !t.id && donnees.exemple && window.confirm(
+      'Vous êtes sur les données d\'exemple.\n\n' +
+      'OK : effacer l\'exemple et démarrer votre propre budget avec cette opération.\n' +
+      'Annuler : l\'ajouter simplement à l\'exemple pour l\'explorer.'
+    );
+    setDonnees((d) => {
+      const base = demarrer ? budgetVide(d) : d;
+      return {
+        ...base,
+        transactions: t.id
+          ? base.transactions.map((x) => (x.id === t.id ? t : x))
+          : [...base.transactions, { ...t, id: nouvelId() }],
+      };
+    });
     setMois(cleMois(t.date));
     setFormulaire(null);
   };
@@ -308,6 +322,26 @@ export default function BudgetApp() {
     if (!/\.json$/i.test(f.name)) {
       try {
         const { transactions: lues, ignorees } = importerCsv(texte);
+        if (lues.length === 0) {
+          window.alert(`Aucune opération lisible dans ce fichier${ignorees ? ` (${ignorees} ligne(s) ignorée(s))` : ''}. Consultez le mode d'emploi pour les formats acceptés.`);
+          return;
+        }
+
+        // Sur l'exemple, le relevé remplace les données de démonstration au lieu de s'y mélanger
+        if (donnees.exemple) {
+          const vues = new Set();
+          const uniques = lues.filter((t) => !vues.has(empreinte(t)) && vues.add(empreinte(t)));
+          if (window.confirm(
+            `${uniques.length} opération(s) trouvée(s) dans « ${f.name} ».\n\n` +
+            'Les données d\'exemple vont être effacées et remplacées par votre relevé.' +
+            (ignorees ? `\n(${ignorees} ligne(s) illisible(s) ignorée(s))` : '')
+          )) {
+            setDonnees((d) => ({ ...budgetVide(d), transactions: uniques }));
+            setMois(cleMois(uniques.map((t) => t.date).sort().at(-1)));
+          }
+          return;
+        }
+
         const connues = new Set(transactions.map(empreinte));
         const nouvelles = lues.filter((t) => !connues.has(empreinte(t)));
         const doublons = lues.length - nouvelles.length;
@@ -317,7 +351,11 @@ export default function BudgetApp() {
         }
         const details = [doublons && `${doublons} doublon(s) ignoré(s)`, ignorees && `${ignorees} ligne(s) illisible(s)`]
           .filter(Boolean).join(', ');
-        if (window.confirm(`Ajouter ${nouvelles.length} opération(s) à votre budget ?${details ? `\n(${details})` : ''}`)) {
+        if (window.confirm(
+          `Ajouter ${nouvelles.length} opération(s) de « ${f.name} » à votre budget ?\n\n` +
+          `Vos ${transactions.length} opération(s) actuelle(s) sont conservées : l'import ajoute, il ne remplace pas.` +
+          (details ? `\n(${details})` : '')
+        )) {
           setDonnees((d) => ({ ...d, transactions: [...d.transactions, ...nouvelles] }));
           setMois(cleMois(nouvelles.map((t) => t.date).sort().at(-1)));
         }
@@ -330,7 +368,12 @@ export default function BudgetApp() {
     try {
       const lu = JSON.parse(texte);
       if (!Array.isArray(lu.transactions)) throw new Error();
-      if (window.confirm(`Remplacer vos données par ${lu.transactions.length} opérations importées ?`)) {
+      if (window.confirm(
+        `Restaurer la sauvegarde « ${f.name} » (${lu.transactions.length} opérations) ?\n\n` +
+        (donnees.exemple
+          ? 'Les données d\'exemple seront remplacées.'
+          : `Attention : elle REMPLACE toutes vos données actuelles (${transactions.length} opérations, plafonds et profil).`)
+      )) {
         setDonnees({ budgets: {}, ...lu });
       }
     } catch {
@@ -347,9 +390,20 @@ export default function BudgetApp() {
   };
 
   const reinitialiser = () => {
-    if (window.confirm('Effacer toutes les opérations et plafonds ? Pensez à exporter une sauvegarde avant.')) {
-      setDonnees({ transactions: [], budgets: {} });
+    const message = donnees.exemple
+      ? 'Effacer les données d\'exemple et partir d\'un budget vide ?'
+      : `Effacer définitivement vos ${transactions.length} opérations, vos plafonds et vos abonnements cochés ?\n\nCliquez d'abord sur « Sauvegarde » si vous voulez pouvoir les récupérer.`;
+    if (window.confirm(message)) setDonnees(budgetVide);
+  };
+
+  const revoirExemple = () => {
+    if (donnees.exemple || window.confirm(
+      `Remplacer vos ${transactions.length} opérations par les données d'exemple ?\n\nCliquez d'abord sur « Sauvegarde » pour pouvoir revenir à votre budget.`
+    )) {
+      setDonnees(donneesExemple());
+      setMois(cleMois(aujourdhui()));
     }
+    setGuide(false);
   };
 
   // Regroupe la liste par jour
@@ -385,18 +439,71 @@ export default function BudgetApp() {
             <button type="button" onClick={() => telecharger(exporterCsv(transactions), 'budget.csv', 'text/csv;charset=utf-8')} className={`${bouton} bg-white/5 text-gray-300 hover:bg-white/10`} title="Exporter en CSV (Excel)">
               <Download size={16} /> CSV
             </button>
-            <button type="button" onClick={() => telecharger(JSON.stringify(donnees, null, 2), 'budget-sauvegarde.json', 'application/json')} className={`${bouton} bg-white/5 text-gray-300 hover:bg-white/10`} title="Sauvegarder toutes les données">
-              <Download size={16} /> Sauvegarde
+            <button type="button" onClick={() => telecharger(JSON.stringify(donnees, null, 2), 'budget-sauvegarde.json', 'application/json')} className={`${bouton} bg-white/5 text-gray-300 hover:bg-white/10`} title="Télécharger une sauvegarde complète (.json), à réimporter pour restaurer ou changer d'appareil">
+              <Save size={16} /> Sauvegarde
             </button>
-            <button type="button" onClick={() => fichier.current?.click()} className={`${bouton} bg-white/5 text-gray-300 hover:bg-white/10`} title="Importer un CSV (relevé bancaire ou export) ou restaurer une sauvegarde JSON">
+            <button type="button" onClick={() => fichier.current?.click()} className={`${bouton} bg-white/5 text-gray-300 hover:bg-white/10`} title="Relevé bancaire CSV : ajouté à vos données. Sauvegarde .json : remplace tout.">
               <Upload size={16} /> Importer
             </button>
-            <button type="button" onClick={reinitialiser} className={`${bouton} bg-white/5 text-gray-400 hover:bg-red-500/20 hover:text-red-300`} title="Tout effacer" aria-label="Tout effacer">
+            <button type="button" onClick={reinitialiser} className={`${bouton} bg-white/5 text-gray-400 hover:bg-red-500/20 hover:text-red-300`} title="Tout effacer et repartir d'un budget vide" aria-label="Tout effacer">
               <Trash2 size={16} />
+            </button>
+            <button type="button" onClick={() => setGuide(true)} className={`${bouton} bg-orange-500/10 text-orange-300 hover:bg-orange-500/20`}>
+              <HelpCircle size={16} /> Mode d'emploi
             </button>
             <input ref={fichier} type="file" accept=".csv,.txt,text/csv,application/json,.json" className="hidden" onChange={importer} />
           </div>
         </header>
+
+        {donnees.exemple && (
+          <div className="flex flex-col gap-4 rounded-2xl border border-orange-500/25 bg-gradient-to-r from-orange-500/[0.12] to-orange-500/[0.03] p-5 lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex gap-3">
+              <Info size={20} className="mt-0.5 shrink-0 text-orange-400" />
+              <div>
+                <p className="m-0 font-semibold text-white">Vous explorez des données d'exemple</p>
+                <p className="m-0 mt-1 text-sm text-gray-400">
+                  Importez le relevé CSV de votre banque : il remplacera l'exemple. Tout reste dans votre navigateur, rien n'est envoyé.
+                </p>
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-2 lg:shrink-0">
+              <button type="button" onClick={() => fichier.current?.click()} className={`${bouton} bg-orange-500 text-black hover:bg-orange-400`}>
+                <Upload size={16} /> Importer mon relevé
+              </button>
+              <button type="button" onClick={reinitialiser} className={`${bouton} bg-white/5 text-gray-200 hover:bg-white/10`}>
+                Partir de zéro
+              </button>
+              <button type="button" onClick={() => setGuide(true)} className={`${bouton} bg-transparent text-gray-400 hover:text-white`}>
+                <HelpCircle size={16} /> Comment ça marche ?
+              </button>
+            </div>
+          </div>
+        )}
+
+        {!donnees.exemple && transactions.length === 0 && (
+          <div className="flex flex-col gap-4 rounded-2xl border border-white/10 bg-white/[0.03] p-5 lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex gap-3">
+              <Info size={20} className="mt-0.5 shrink-0 text-sky-400" />
+              <div>
+                <p className="m-0 font-semibold text-white">Votre budget est vide</p>
+                <p className="m-0 mt-1 text-sm text-gray-400">
+                  Importez le relevé CSV de votre banque (le plus rapide), restaurez une sauvegarde .json, ou saisissez vos opérations à la main.
+                </p>
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-2 lg:shrink-0">
+              <button type="button" onClick={() => fichier.current?.click()} className={`${bouton} bg-orange-500 text-black hover:bg-orange-400`}>
+                <Upload size={16} /> Importer un fichier
+              </button>
+              <button type="button" onClick={() => setFormulaire(formulaireVide())} className={`${bouton} bg-white/5 text-gray-200 hover:bg-white/10`}>
+                <Plus size={16} /> Saisir une opération
+              </button>
+              <button type="button" onClick={() => setGuide(true)} className={`${bouton} bg-transparent text-gray-400 hover:text-white`}>
+                <HelpCircle size={16} /> Mode d'emploi
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Sélecteur de mois */}
         <div className="flex items-center justify-between rounded-2xl border border-white/[0.06] bg-white/[0.03] p-2">
@@ -432,8 +539,7 @@ export default function BudgetApp() {
         <Pistes
           donnees={donnees}
           mois={mois}
-          onProfil={(profil) => setDonnees((d) => ({ ...d, profil }))}
-          onAResilier={(aResilier) => setDonnees((d) => ({ ...d, aResilier }))}
+          onModifier={(champs) => setDonnees((d) => ({ ...d, ...champs }))}
         />
 
         <div className="grid gap-6 lg:grid-cols-5">
@@ -560,6 +666,16 @@ export default function BudgetApp() {
           </div>
         </div>
       </div>
+
+      {guide && (
+        <Fenetre titre="Mode d'emploi" onFermer={() => setGuide(false)}>
+          <Guide
+            exemple={!!donnees.exemple}
+            onImporter={() => { setGuide(false); fichier.current?.click(); }}
+            onRevoirExemple={revoirExemple}
+          />
+        </Fenetre>
+      )}
 
       {categorisation && (
         <Fenetre titre="Catégorisation automatique" onFermer={() => setCategorisation(false)}>

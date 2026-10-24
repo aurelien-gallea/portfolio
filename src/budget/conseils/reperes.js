@@ -8,6 +8,22 @@
 // Lien de parrainage BoursoBank affiché dans l'encart « Frais bancaires » (vide = encart sans lien)
 export const PARRAINAGE_BOURSOBANK = 'https://bour.so/p/Rm3e8DB2z0Q';
 
+// Comparateurs proposés pour les contrats repérés par le scanner (énergie, assurances)
+export const COMPARATEURS = {
+  energie: {
+    titre: 'Électricité et gaz',
+    liens: [{ texte: 'Comparateur officiel (médiateur de l\'énergie)', url: 'https://comparateur-offres.energie-info.fr' }],
+  },
+  assurance: {
+    titre: 'Assurances et mutuelle',
+    liens: [
+      { texte: 'LeLynx', url: 'https://www.lelynx.fr' },
+      { texte: 'LesFurets', url: 'https://www.lesfurets.com' },
+      { texte: 'Assurland', url: 'https://www.assurland.com' },
+    ],
+  },
+};
+
 // Taux d'endettement maximal recommandé par le Haut Conseil de stabilité financière (HCSF)
 export const ENDETTEMENT_MAX = 0.35;
 
@@ -28,7 +44,7 @@ const lien = (texte, url) => ({ texte, url });
 export const ASTUCES = {
   logement: [
     lien('Simulez vos droits à l\'aide au logement (APL, ALS) : la simulation prend 5 minutes', 'https://www.caf.fr/allocataires/aides-et-demarches/mes-demarches'),
-    lien('Comparez votre offre d\'électricité et de gaz avec le comparateur public du médiateur de l\'énergie', 'https://comparateur.energie-info.fr'),
+    lien('Comparez votre offre d\'électricité et de gaz avec le comparateur public du médiateur de l\'énergie', 'https://comparateur-offres.energie-info.fr'),
     lien('Vérifiez si vous avez droit au chèque énergie', 'https://chequeenergie.gouv.fr'),
     { texte: 'Remettez votre assurance habitation en concurrence : elle est résiliable à tout moment après un an (loi Hamon)' },
   ],

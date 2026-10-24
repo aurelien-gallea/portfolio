@@ -5,16 +5,16 @@ import './Projects.css';
 
 const projectsData = [
   {
-    id: 16,
-    title: 'Thermique ou électrique ?',
-    link: '/thermique-vs-electrique/',
-    image: './image/thermique-vs-electrique.svg',
-  },
-  {
     id: 15,
     title: 'Mon Budget',
     link: '/budget/',
     image: './image/budget.svg',
+  },
+  {
+    id: 16,
+    title: 'Thermique ou électrique ?',
+    link: '/thermique-vs-electrique/',
+    image: './image/thermique-vs-electrique.svg',
   },
   {
     id: 14,

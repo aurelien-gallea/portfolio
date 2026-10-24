@@ -5,6 +5,12 @@ import './Projects.css';
 
 const projectsData = [
   {
+    id: 15,
+    title: 'Mon Budget',
+    link: '/budget/',
+    image: './image/budget.svg',
+  },
+  {
     id: 14,
     title: 'Zombie Rules',
     link: '/survival-game/',

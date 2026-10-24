@@ -5,6 +5,7 @@ import PortfolioApp from './PortfolioApp';
 import CinetechApp from './cinetech/App';
 import PkmnApp from './pkmnfinder/App';
 import SurvivalGameApp from './survival-game/App';
+import BudgetApp from './budget/App';
 
 // Page non référencée : chargée seulement quand on ouvre son adresse
 const ScalperApp = lazy(() => import('./scalper/App'));
@@ -18,6 +19,7 @@ function App() {
         <Route path="/cinetech-react/*" element={<CinetechApp />} />
         <Route path="/pkmnfinder/*" element={<PkmnApp />} />
         <Route path="/survival-game/*" element={<SurvivalGameApp />} />
+        <Route path="/budget/*" element={<BudgetApp />} />
         <Route path="/sn-8c3f3dd6be/*" element={<Suspense fallback={null}><ScalperApp /></Suspense>} />
       </Routes>
     </HashRouter>

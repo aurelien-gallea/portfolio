@@ -354,9 +354,14 @@ function Piste({ piste, ouverte, onBasculer }) {
             {piste.titre}
           </span>
           <span className="block text-xs text-gray-500">
-            {piste.repere != null && piste.part > 0
-              ? `${Math.round(piste.part * 100)} % de vos revenus · repère ≈ ${Math.round(piste.repere * 100)} %`
-              : piste.profilManquant ? 'Comparaison locale à compléter' : 'À regarder en priorité'}
+            {piste.repere != null && piste.part > 0 ? (
+              // Retour à la ligne autorisé seulement entre les deux morceaux
+              <>
+                <span className="whitespace-nowrap">{Math.round(piste.part * 100)}&nbsp;% de vos revenus</span>
+                {' · '}
+                <span className="whitespace-nowrap">repère ≈ {Math.round(piste.repere * 100)}&nbsp;%</span>
+              </>
+            ) : piste.profilManquant ? 'Comparaison locale à compléter' : 'À regarder en priorité'}
           </span>
         </span>
         {piste.economie > 0 && (

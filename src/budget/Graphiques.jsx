@@ -21,7 +21,7 @@ export function Anneau({ parts, total, selection, onChoisir }) {
   const actif = enAvant ? parts.find((p) => p.id === enAvant) : null;
 
   return (
-    <div className="flex flex-col items-center gap-5 sm:flex-row sm:items-center">
+    <div className="flex flex-col items-center gap-5 sm:flex-row sm:items-center lg:flex-col">
       <svg viewBox="0 0 180 180" className="h-44 w-44 shrink-0 -rotate-90">
         <circle cx="90" cy="90" r={rayon} fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth="22" />
         {parts.map((p) => {
@@ -57,7 +57,7 @@ export function Anneau({ parts, total, selection, onChoisir }) {
         </g>
       </svg>
 
-      <ul className="m-0 w-full list-none space-y-1 p-0 text-sm">
+      <ul className="m-0 w-full min-w-0 list-none space-y-1 p-0 text-sm">
         {parts.map((p) => (
           <li key={p.id}>
             <button
@@ -70,11 +70,11 @@ export function Anneau({ parts, total, selection, onChoisir }) {
                 selection === p.id ? 'bg-white/10' : 'bg-transparent hover:bg-white/5'
               }`}
             >
-              <span className={`flex items-center gap-2 ${selection === p.id ? 'text-white' : 'text-gray-300'}`}>
-                <span className="h-2.5 w-2.5 rounded-full" style={{ background: p.couleur }} />
-                {p.nom}
+              <span className={`flex min-w-0 items-center gap-2 ${selection === p.id ? 'text-white' : 'text-gray-300'}`}>
+                <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: p.couleur }} />
+                <span className="truncate">{p.nom}</span>
               </span>
-              <span className="tabular-nums text-gray-400">
+              <span className="shrink-0 whitespace-nowrap tabular-nums text-gray-400">
                 {euros(p.montant)} · {Math.round((p.montant / total) * 100)}&nbsp;%
               </span>
             </button>

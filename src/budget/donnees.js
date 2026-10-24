@@ -116,6 +116,150 @@ export function exporterCsv(transactions) {
   return '﻿' + [entete, ...lignes].join('\n');
 }
 
+// --- Import CSV : notre propre export ou un relevé bancaire ---
+
+const sansAccent = (s) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().trim();
+
+// Mots-clés pour deviner la catégorie d'une ligne de relevé bancaire
+const MOTS_CLES = {
+  // Avant transport : « uber eats » doit primer sur « uber »
+  restaurants: ['restaurant', 'resto', 'mcdo', 'mcdonald', 'burger', 'kfc', 'deliveroo', 'uber eats', 'just eat', 'pizza', 'boulangerie', 'cafe'],
+  logement: ['loyer', 'edf', 'engie', 'eau ', 'veolia', 'assurance hab', 'syndic', 'charges'],
+  courses: ['carrefour', 'leclerc', 'auchan', 'lidl', 'intermarche', 'super u', 'monoprix', 'franprix', 'casino', 'aldi', 'picard', 'marche'],
+  transport: ['sncf', 'ratp', 'total', 'esso', 'shell', 'bp ', 'uber', 'blablacar', 'peage', 'parking', 'carburant', 'essence', 'navigo'],
+  loisirs: ['cinema', 'fnac', 'steam', 'playstation', 'concert', 'decathlon', 'cultura'],
+  sante: ['pharmacie', 'medecin', 'docteur', 'dentiste', 'mutuelle', 'hopital', 'cpam'],
+  abonnements: ['netflix', 'spotify', 'deezer', 'disney', 'canal', 'free', 'orange', 'sfr', 'bouygues', 'sosh', 'amazon prime', 'abonnement'],
+  shopping: ['amazon', 'zara', 'h&m', 'ikea', 'cdiscount', 'vinted', 'leroy merlin'],
+  salaire: ['salaire', 'paie', 'virement employeur'],
+  aides: ['caf', 'pole emploi', 'france travail', 'apl', 'remboursement'],
+};
+
+function devinerCategorie(texte, type) {
+  const t = sansAccent(texte);
+  const permises = CATEGORIES[type].map((c) => c.id);
+  // Nom de catégorie exact (cas de notre propre export)
+  const exacte = CATEGORIES[type].find((c) => sansAccent(c.nom) === t || c.id === t);
+  if (exacte) return exacte.id;
+  for (const [id, mots] of Object.entries(MOTS_CLES)) {
+    if (permises.includes(id) && mots.some((m) => t.includes(m))) return id;
+  }
+  return type === 'revenu' ? 'autre-revenu' : 'autre';
+}
+
+function lireLignes(texte) {
+  texte = texte.replace(/^﻿/, '');
+  const premiere = texte.split(/\r?\n/).find((l) => l.trim()) ?? '';
+  const separateur = [';', '\t', ','].sort((a, b) => premiere.split(b).length - premiere.split(a).length)[0];
+
+  const lignes = [];
+  let ligne = [];
+  let cellule = '';
+  let guillemets = false;
+  for (let i = 0; i < texte.length; i++) {
+    const c = texte[i];
+    if (guillemets) {
+      if (c === '"' && texte[i + 1] === '"') { cellule += '"'; i++; }
+      else if (c === '"') guillemets = false;
+      else cellule += c;
+    } else if (c === '"') guillemets = true;
+    else if (c === separateur) { ligne.push(cellule.trim()); cellule = ''; }
+    else if (c === '\n' || c === '\r') {
+      if (c === '\r' && texte[i + 1] === '\n') i++;
+      ligne.push(cellule.trim());
+      if (ligne.some(Boolean)) lignes.push(ligne);
+      ligne = [];
+      cellule = '';
+    } else cellule += c;
+  }
+  ligne.push(cellule.trim());
+  if (ligne.some(Boolean)) lignes.push(ligne);
+  return lignes;
+}
+
+function lireDate(s) {
+  s = s.trim();
+  let m = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
+  if (m) return `${m[1]}-${m[2].padStart(2, '0')}-${m[3].padStart(2, '0')}`;
+  m = s.match(/^(\d{1,2})[/.-](\d{1,2})[/.-](\d{2,4})/);
+  if (m) {
+    const annee = m[3].length === 2 ? `20${m[3]}` : m[3];
+    return `${annee}-${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')}`;
+  }
+  return null;
+}
+
+function lireMontant(s) {
+  if (!s) return NaN;
+  let n = s.replace(/[€\s  ]/g, '').replace(/EUR/i, '');
+  // "1.234,56" ou "1234,56" -> virgule décimale ; "1,234.56" -> point décimal
+  if (n.includes(',') && n.lastIndexOf(',') > n.lastIndexOf('.')) n = n.replace(/\./g, '').replace(',', '.');
+  else n = n.replace(/,/g, '');
+  return parseFloat(n);
+}
+
+const COLONNES = {
+  date: ['date', 'date operation', 'date de l\'operation', 'date comptable', 'date valeur'],
+  libelle: ['libelle', 'description', 'libelle operation', 'label', 'intitule', 'detail', 'operation', 'nature'],
+  montant: ['montant', 'amount', 'valeur', 'somme'],
+  debit: ['debit', 'debits'],
+  credit: ['credit', 'credits'],
+  type: ['type'],
+  categorie: ['categorie', 'category'],
+};
+
+export function importerCsv(texte) {
+  const lignes = lireLignes(texte);
+  if (lignes.length < 2) throw new Error('Le fichier ne contient aucune ligne.');
+
+  // La ligne d'en-tête est la première qui contient une colonne "date"
+  const indexEntete = lignes.findIndex((l) => l.some((c) => sansAccent(c).startsWith('date')));
+  if (indexEntete === -1) throw new Error('Colonne « date » introuvable.');
+  const entete = lignes[indexEntete].map(sansAccent);
+  const col = {};
+  for (const [cle, noms] of Object.entries(COLONNES)) {
+    const i = entete.findIndex((h) => noms.includes(h));
+    col[cle] = i === -1 ? entete.findIndex((h) => noms.some((n) => h.startsWith(n))) : i;
+  }
+  if (col.montant === -1 && col.debit === -1 && col.credit === -1) {
+    throw new Error('Colonne « montant » (ou « débit » / « crédit ») introuvable.');
+  }
+
+  const transactions = [];
+  let ignorees = 0;
+  for (const l of lignes.slice(indexEntete + 1)) {
+    const date = col.date >= 0 ? lireDate(l[col.date] ?? '') : null;
+    let montant;
+    let type;
+    if (col.montant >= 0 && !isNaN(lireMontant(l[col.montant]))) {
+      montant = lireMontant(l[col.montant]);
+      const typeLu = col.type >= 0 ? sansAccent(l[col.type] ?? '') : '';
+      type = typeLu.startsWith('rev') || typeLu.startsWith('cred') ? 'revenu'
+        : typeLu.startsWith('dep') || typeLu.startsWith('deb') ? 'depense'
+        : montant < 0 ? 'depense' : 'revenu';
+    } else {
+      const debit = Math.abs(lireMontant(l[col.debit]) || 0);
+      const credit = Math.abs(lireMontant(l[col.credit]) || 0);
+      montant = credit || -debit;
+      type = credit ? 'revenu' : 'depense';
+    }
+    montant = Math.round(Math.abs(montant) * 100) / 100;
+    if (!date || !montant) { ignorees++; continue; }
+
+    const libelle = (col.libelle >= 0 ? l[col.libelle] : '')?.replace(/\s+/g, ' ').slice(0, 60) ?? '';
+    const indice = col.categorie >= 0 && l[col.categorie] ? l[col.categorie] : libelle;
+    const cat = devinerCategorie(indice, type);
+    transactions.push({
+      id: nouvelId(), type, categorie: cat, date, montant,
+      libelle: libelle || categorie(cat).nom,
+    });
+  }
+  return { transactions, ignorees };
+}
+
+// Empreinte d'une opération pour éviter les doublons à l'import
+export const empreinte = (t) => `${t.date}|${t.type}|${t.montant}|${sansAccent(t.libelle)}`;
+
 export function telecharger(contenu, nom, type) {
   const url = URL.createObjectURL(new Blob([contenu], { type }));
   const a = document.createElement('a');

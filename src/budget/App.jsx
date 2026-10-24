@@ -7,7 +7,7 @@ import {
 import { Anneau, Historique } from './Graphiques';
 import {
   CATEGORIES, categorie, charger, sauvegarder, nouvelId, cleMois, aujourdhui, decalerMois,
-  nomMois, euros, totaux, parCategorie, exporterCsv, telecharger,
+  nomMois, euros, totaux, parCategorie, exporterCsv, importerCsv, empreinte, telecharger,
 } from './donnees';
 
 const champ =
@@ -273,8 +273,32 @@ export default function BudgetApp() {
     const f = e.target.files?.[0];
     e.target.value = '';
     if (!f) return;
+    const texte = await f.text();
+
+    if (!/\.json$/i.test(f.name)) {
+      try {
+        const { transactions: lues, ignorees } = importerCsv(texte);
+        const connues = new Set(transactions.map(empreinte));
+        const nouvelles = lues.filter((t) => !connues.has(empreinte(t)));
+        const doublons = lues.length - nouvelles.length;
+        if (nouvelles.length === 0) {
+          window.alert(`Aucune nouvelle opération à importer${doublons ? ` (${doublons} déjà présentes)` : ''}.`);
+          return;
+        }
+        const details = [doublons && `${doublons} doublon(s) ignoré(s)`, ignorees && `${ignorees} ligne(s) illisible(s)`]
+          .filter(Boolean).join(', ');
+        if (window.confirm(`Ajouter ${nouvelles.length} opération(s) à votre budget ?${details ? `\n(${details})` : ''}`)) {
+          setDonnees((d) => ({ ...d, transactions: [...d.transactions, ...nouvelles] }));
+          setMois(cleMois(nouvelles.map((t) => t.date).sort().at(-1)));
+        }
+      } catch (err) {
+        window.alert(`Import CSV impossible : ${err.message}`);
+      }
+      return;
+    }
+
     try {
-      const lu = JSON.parse(await f.text());
+      const lu = JSON.parse(texte);
       if (!Array.isArray(lu.transactions)) throw new Error();
       if (window.confirm(`Remplacer vos données par ${lu.transactions.length} opérations importées ?`)) {
         setDonnees({ budgets: {}, ...lu });
@@ -326,13 +350,13 @@ export default function BudgetApp() {
             <button type="button" onClick={() => telecharger(JSON.stringify(donnees, null, 2), 'budget-sauvegarde.json', 'application/json')} className={`${bouton} bg-white/5 text-gray-300 hover:bg-white/10`} title="Sauvegarder toutes les données">
               <Download size={16} /> Sauvegarde
             </button>
-            <button type="button" onClick={() => fichier.current?.click()} className={`${bouton} bg-white/5 text-gray-300 hover:bg-white/10`} title="Restaurer une sauvegarde">
+            <button type="button" onClick={() => fichier.current?.click()} className={`${bouton} bg-white/5 text-gray-300 hover:bg-white/10`} title="Importer un CSV (relevé bancaire ou export) ou restaurer une sauvegarde JSON">
               <Upload size={16} /> Importer
             </button>
             <button type="button" onClick={reinitialiser} className={`${bouton} bg-white/5 text-gray-400 hover:bg-red-500/20 hover:text-red-300`} title="Tout effacer">
               <RotateCcw size={16} />
             </button>
-            <input ref={fichier} type="file" accept="application/json,.json" className="hidden" onChange={importer} />
+            <input ref={fichier} type="file" accept=".csv,.txt,text/csv,application/json,.json" className="hidden" onChange={importer} />
           </div>
         </header>
 

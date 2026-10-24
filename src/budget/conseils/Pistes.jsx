@@ -46,6 +46,12 @@ function ChoixVille({ ville, onChoisir }) {
     setLocalisation({ etat: 'repos', message });
   };
 
+  const effacer = () => {
+    onChoisir(null);
+    setSaisie('');
+    setLocalisation({ etat: 'repos', message: '' });
+  };
+
   const localiser = () => {
     if (!navigator.geolocation) {
       setLocalisation({ etat: 'erreur', message: "La géolocalisation n'est pas disponible dans ce navigateur." });
@@ -73,7 +79,7 @@ function ChoixVille({ ville, onChoisir }) {
       <div className="relative">
         <MapPin size={15} className={`pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 ${ville ? 'text-orange-400' : 'text-gray-600'}`} />
         <input
-          className={`${champ} pl-9 pr-11 ${ville && !saisie ? 'placeholder:text-white' : ''}`}
+          className={`${champ} pl-9 ${ville ? 'pr-20' : 'pr-11'} ${ville && !saisie ? 'placeholder:text-white' : ''}`}
           placeholder={ville ? libelleVille(ville) : 'Nom ou code postal…'}
           value={saisie}
           onFocus={() => { charger(); setOuvert(true); }}
@@ -100,6 +106,17 @@ function ChoixVille({ ville, onChoisir }) {
               </li>
             ))}
           </ul>
+        )}
+        {ville && (
+          <button
+            type="button"
+            onClick={effacer}
+            className="absolute right-10 top-1/2 flex -translate-y-1/2 cursor-pointer items-center rounded-lg border-0 bg-transparent p-1.5 text-gray-500 transition-colors hover:bg-white/10 hover:text-white"
+            title="Retirer la ville"
+            aria-label={`Retirer la ville ${libelleVille(ville)}`}
+          >
+            <X size={16} />
+          </button>
         )}
         <button
           type="button"

@@ -12,7 +12,7 @@ const Hero = () => {
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.8 }}
         >
-          <h1>Software Product Engineer</h1>
+          <h1>Software Product Engineer / Forward Deployed Engineer</h1>
           <p>
             Spécialisé en <strong>Angular</strong>, <strong>React</strong>, <strong>ASP.NET</strong> et <strong>Développement IA</strong>.<br/>
             À l'aise avec divers modèles (<strong>ChatGPT</strong>, <strong>Claude</strong>, <strong>Gemini</strong>, <strong>Mistral</strong>) et passionné par les <strong>automatisations (Workflows & Agents IA)</strong>.

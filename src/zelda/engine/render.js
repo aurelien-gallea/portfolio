@@ -46,89 +46,94 @@ function rect(ctx, color, x, y, w = 1, h = 1) {
 
 // Sprites 16x16 dessinés pixel par pixel ('.' = transparent)
 const HERO_PALETTE = {
-  k: '#1d1426', // contour
-  G: '#1f7a34', // vert foncé
-  g: '#3fb24a', // vert
-  l: '#8fe07c', // reflet du bonnet
-  h: '#f2c443', // cheveux blonds
-  H: '#c98f22', // cheveux ombrés
+  k: '#1a1426', // contour
+  h: '#3f8cff', // cheveux bleus
+  H: '#2350c8', // cheveux ombrés
+  l: '#a6d4ff', // reflet des cheveux
   s: '#ffd2a6', // peau
   S: '#e09a6c', // peau ombrée
-  e: '#1d3557', // yeux
+  e: '#121a38', // yeux
   w: '#ffffff', // reflet des yeux
+  a: '#b9c5d8', // armure
+  A: '#6c7c98', // armure ombrée
+  m: '#eef4fc', // reflet métal
+  r: '#c8383c', // écharpe et tunique
+  R: '#8a2026', // rouge ombré
   b: '#8a4f24', // cuir
   B: '#5a3214', // cuir foncé
   y: '#f6cf3a', // boucle dorée
-  u: '#3b6fd6', // bouclier
-  U: '#26489a', // bouclier ombré
+  u: '#a9b8cf', // bouclier
+  U: '#5d6d8a', // bouclier ombré
 };
 
 const BODY_FRONT = [
-  '..kkGggggggGkk..',
-  '.kskGggggggGksk.',
-  '.kSkbbbyybbbkSk.',
-  '..kkGggggggGkk..',
-  '...kGGgggGGGk...',
+  '.kAAkrrrrrrkAAk.',
+  '.kmakAammaAkamk.',
+  '.kskbbbyybbbksk.',
+  '..kkrRrrrrRrkk..',
+  '...kBBbbbbBBk...',
 ];
 const BODY_BACK = [
-  '..kkGggggggGkk..',
-  '.kskGggggggGksk.',
-  '.kSkbbbbbbbbkSk.',
-  '..kkGggggggGkk..',
-  '...kGGgggGGGk...',
+  '.kAAkrrrrrrkAAk.',
+  '.kmakAaaaaAkamk.',
+  '.kskbbbbbbbbksk.',
+  '..kkrRrrrrRrkk..',
+  '...kBBbbbbBBk...',
 ];
 const FEET_A = ['..kBBk....kBBk..', '..kkkk....kkkk..'];
 const FEET_B = ['...kBBk..kBBk...', '....kk....kk....'];
 
+// Cheveux en pétard : des mèches dressées sur le dessus de la tête
 const HEAD_DOWN = [
-  '.....kkkkkk.....',
-  '....kGggglGk....',
-  '...kGggggllgk...',
-  '..kGgggggggggk..',
-  '..khhhhhhhhhhk..',
-  '.kshHhhhhhhhHhsk',
-  'kSshwesssswehssk',
-  '.kshessSSssehsk.',
-  '..kSssssssssSk..',
-  '...kkSsssssSkk..',
+  '..k..k.kk.k..k..',
+  '.khk.khhhhk.khk.',
+  '.khhkhhlhhhkhhk.',
+  'khhhhhllhhhhhhhk',
+  'khlhhhhhhhhhhlhk',
+  'kHhhHhhhhhhHhhHk',
+  '.kHHhsssssshHHk.',
+  '.kSswesssswesSk.',
+  '..kSsesssssesk..',
+  '...kkSssssSkk...',
   '.....kkkkkk.....',
 ];
 const HEAD_UP = [
-  '.....kkkkkk.....',
-  '....kGggggGk....',
-  '...kGggggggGk...',
-  '..kGgggggggggk..',
-  '..kGgggggggggk..',
-  '.khhGgggggggGhk.',
-  'kShhhGgggggGhhSk',
-  '.khHhhGgggGhHhk.',
-  '..khHhhGGhhHhk..',
-  '...kkhHhhHhkk...',
+  '..k..k.kk.k..k..',
+  '.khk.khhhhk.khk.',
+  '.khhkhhlhhhkhhk.',
+  'khhhhhllhhhhhhhk',
+  'khlhhhhhhhhhhlhk',
+  'khhhhhHhhHhhhhhk',
+  'kShhHhhhhhhHhhSk',
+  '.khhhHhhhhHhhhk.',
+  '..kHhhHhhHhhHk..',
+  '...kkSssssSkk...',
   '.....kkkkkk.....',
 ];
 const HEAD_SIDE = [
-  '....kkkkkk......',
-  '...kGgggglk.....',
-  '..kGggggggllk...',
-  '.kGggggggggggk..',
-  'kGgkhhhhhhhhhk..',
-  'kGkhHhhhssssssk.',
-  '.kkhHhhsssswesk.',
-  '..kShhhsssseSssk',
-  '...kSHhssssSSkk.',
-  '....kkSssssSk...',
+  '....k.k.kk......',
+  '..kkhkhkhhk.....',
+  '.khhhhhhlhhk....',
+  'khhhhhhllhhhk...',
+  'kkhhhhhhhhhhhk..',
+  '..khhhHhhhHhhhk.',
+  '.khhhhHhssHsssk.',
+  'kHhhhSHsssssesk.',
+  '..kkhSsssssSsk..',
+  '....kkSsssSkk...',
   '......kkkkkk....',
 ];
 const BODY_SIDE = [
-  '.....kGgggGk....',
-  '....kGgggsgGk...',
+  '.....krrrrrk....',
+  '....kmaaaAak....',
   '....kbbbbybbk...',
-  '....kGgggggGk...',
-  '....kGGggGGk....',
+  '....kRrrrrrRk...',
+  '....kBBbbBBk....',
 ];
 const FEET_SIDE_A = ['...kBBk..kBBk...', '...kkkk..kkkk...'];
 const FEET_SIDE_B = ['.....kBBkBBk....', '.....kkkkkkk....'];
 
+// Petit bouclier rond en acier
 const SHIELD = ['.kkkk.', 'kuuuuk', 'kuyyUk', 'kuyyUk', 'kuuuUk', '.kUUk.', '..kk..'];
 const SHIELD_SIDE = ['.kk.', 'kuuk', 'kuyk', 'kuyk', 'kuUk', 'kUUk', '.kk.'];
 
@@ -194,7 +199,49 @@ export function drawHero(ctx, p, t) {
   const x = snap(p.x), y = snap(p.y);
   groundShadow(ctx, x + 8, y + 15, 6, 2);
   if (p.invuln > 0 && Math.floor(t * 20) % 2 === 0) return;
-  blit(ctx, refined(48, 48, c => heroLo(c, { ...p, x: 16, y: 16 }, t)), x - 16, y - 16);
+  const swinging = p.attack > 0 && p.swing !== undefined;
+  // Lame pointée vers le haut : elle passe derrière le héros
+  const behind = swinging && Math.sin(p.swing) < -0.3;
+  if (behind) drawSwing(ctx, p, x, y);
+  blit(ctx, refined(48, 48, c => heroLo(c, { ...p, x: 16, y: 16, attack: 0 }, t)), x - 16, y - 16);
+  if (swinging && !behind) drawSwing(ctx, p, x, y);
+}
+
+function swordLo(ctx) {
+  rect(ctx, HERO_PALETTE.k, 0, 6, 4, 4);
+  rect(ctx, HERO_PALETTE.b, 1, 7, 2, 2);
+  rect(ctx, HERO_PALETTE.k, 3, 4, 3, 8);
+  rect(ctx, HERO_PALETTE.y, 4, 5, 1, 6);
+  rect(ctx, HERO_PALETTE.k, 6, 6, 9, 4);
+  rect(ctx, HERO_PALETTE.k, 15, 7, 1, 2);
+  rect(ctx, C.blade, 6, 7, 9, 2);
+  rect(ctx, '#ffffff', 6, 7, 7, 1);
+}
+
+// Traînée du coup puis lame orientée selon l'angle courant
+function drawSwing(ctx, p, x, y) {
+  const cx = x + 8, cy = y + 10;
+  const a0 = Math.min(p.swingFrom, p.swing), a1 = Math.max(p.swingFrom, p.swing);
+  const fade = Math.min(1, p.attack / 0.12);
+  if (a1 - a0 > 0.05) {
+    ctx.fillStyle = `rgba(255,255,255,${0.42 * fade})`;
+    ctx.beginPath();
+    ctx.arc(cx, cy, 17, a0, a1);
+    ctx.arc(cx, cy, 9, a1, a0, true);
+    ctx.fill();
+    ctx.fillStyle = `rgba(190,235,255,${0.5 * fade})`;
+    ctx.beginPath();
+    // Bord d'attaque plus vif, juste derrière la lame (le coup tourne vers les angles décroissants)
+    const lead = Math.min(a1, p.swing + 0.5);
+    ctx.arc(cx, cy, 17, p.swing, lead);
+    ctx.arc(cx, cy, 14, lead, p.swing, true);
+    ctx.fill();
+  }
+  ctx.save();
+  ctx.translate(cx, cy);
+  ctx.rotate(p.swing);
+  blit(ctx, refined(16, 16, swordLo), 2, -8);
+  ctx.restore();
 }
 
 function heroLo(ctx, p, t) {

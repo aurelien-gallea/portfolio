@@ -31,14 +31,15 @@ const hitBox = e => (e.size === 32 ? { x: e.x + 3, y: e.y + 3, w: 26, h: 27 } : 
 const centerOf = b => ({ x: b.x + b.w / 2, y: b.y + b.h / 2 });
 const randomDir = () => DIRS[Math.floor(Math.random() * 4)];
 
-function swordBox(p) {
-  const { x, y } = p;
-  switch (p.dir) {
-    case 'up': return { x: x + 4, y: y - 10, w: 8, h: 14 };
-    case 'down': return { x: x + 4, y: y + 12, w: 8, h: 14 };
-    case 'left': return { x: x - 10, y: y + 6, w: 14, h: 8 };
-    default: return { x: x + 12, y: y + 6, w: 14, h: 8 };
-  }
+// Coup d'épée en arc : la lame part du côté droit du héros et balaie jusque devant lui
+const FACING = { right: 0, down: Math.PI / 2, left: Math.PI, up: -Math.PI / 2 };
+const SWEEP_TIME = 0.14;
+const SWORD_REACH = [5, 9, 13, 16];
+
+function swingAngle(p) {
+  const k = Math.min(1, (ATTACK_TIME - p.attack) / SWEEP_TIME);
+  const eased = 1 - (1 - k) ** 2;
+  return p.swingFrom + (FACING[p.dir] - 0.2 - p.swingFrom) * eased;
 }
 
 export function createGame({ onHud, onMessage, onGameOver, onVictory }) {
@@ -243,6 +244,8 @@ export function createGame({ onHud, onMessage, onGameOver, onVictory }) {
     const p = s.player;
     p.attack = ATTACK_TIME;
     p.swingHits = new Set();
+    p.swingFrom = FACING[p.dir] + Math.PI / 2;
+    p.swing = p.swingFrom;
     sfx.play('sword');
     if (p.hp === p.maxHp && !s.projectiles.some(pr => pr.kind === 'beam')) {
       const [dx, dy] = DIRV[p.dir];
@@ -269,6 +272,26 @@ export function createGame({ onHud, onMessage, onGameOver, onVictory }) {
           message('Un secret ! Un réceptacle de cœur était caché ici.');
         } else if (Math.random() < 0.25) {
           s.pickups.push({ kind: 'rupee', x: c * TILE, y: row * TILE, life: 8 });
+        }
+      }
+    }
+  }
+
+  // Teste la lame sur tout l'angle parcouru depuis la frame précédente, pour ne rien traverser
+  function sweep(p, from, to) {
+    const cx = p.x + 8, cy = p.y + 10;
+    const steps = Math.max(1, Math.ceil(Math.abs(to - from) / 0.12));
+    for (let i = 0; i <= steps; i++) {
+      const a = from + ((to - from) * i) / steps;
+      for (const d of SWORD_REACH) {
+        const box = { x: cx + Math.cos(a) * d - 2, y: cy + Math.sin(a) * d - 2, w: 4, h: 4 };
+        cutBushes(box);
+        for (const e of [...s.enemies]) {
+          if (p.swingHits.has(e) || !overlap(box, hitBox(e))) continue;
+          p.swingHits.add(e);
+          const ec = centerOf(hitBox(e));
+          const kx = ec.x - cx, ky = ec.y - cy;
+          hurtEnemy(e, 1, Math.abs(kx) > Math.abs(ky) ? (kx > 0 ? 'right' : 'left') : (ky > 0 ? 'down' : 'up'));
         }
       }
     }
@@ -318,17 +341,11 @@ export function createGame({ onHud, onMessage, onGameOver, onVictory }) {
       if (p.kb.t <= 0) p.kb = null;
       p.moving = false;
     } else if (p.attack > 0) {
+      const prev = p.swing;
       p.attack = Math.max(0, p.attack - dt);
+      p.swing = swingAngle(p);
       p.moving = false;
-      if (p.attack < ATTACK_TIME - 0.03 && p.attack > 0.04) {
-        const sb = swordBox(p);
-        cutBushes(sb);
-        for (const e of [...s.enemies]) {
-          if (p.swingHits.has(e) || !overlap(sb, hitBox(e))) continue;
-          p.swingHits.add(e);
-          hurtEnemy(e, 1, p.dir);
-        }
-      }
+      if (p.attack > 0.04) sweep(p, prev, p.swing);
     } else {
       // input.dirs : directions maintenues, la plus récente en dernier
       const dirs = input.dirs;

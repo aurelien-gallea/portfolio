@@ -17,16 +17,16 @@ const projectsData = [
     image: './image/thermique-vs-electrique.svg',
   },
   {
-    id: 17,
-    title: 'Zelda 2D (en cours de dev)',
-    link: '/zelda-2d/',
-    image: './image/zelda-2d.svg',
-  },
-  {
     id: 14,
     title: 'Zombie Rules',
     link: '/survival-game/',
     image: './image/zombie-rules.jpg',
+  },
+  {
+    id: 17,
+    title: 'Zelda 2D (en cours de dev)',
+    link: '/zelda-2d/',
+    image: './image/zelda-2d.svg',
   },
   {
     id: 13,

@@ -2,8 +2,8 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowLeft, Play, Pause, RefreshCw, Skull, Trophy, ShieldAlert, Smartphone } from 'lucide-react';
 import GameCanvas from './components/GameCanvas';
-import HUD from './components/HUD';
-import MobileControls from './components/MobileControls';
+import HUD, { HealthCard, ScoreChip, CompactObjective, SystemButtons, ActiveWeapon, RootedBanner } from './components/HUD';
+import { Joystick, ActionButtons } from './components/MobileControls';
 import ControlsPanel from './components/ControlsPanel';
 import { DIFFICULTIES } from './engine/config';
 import { sounds } from './utils/audio';
@@ -262,6 +262,21 @@ const SurvivalGameApp = () => {
       {/* PLAYING & PAUSED STATE */}
       {gameState !== 'menu' && (
         <div className="flex w-full h-full">
+          {/* Touch: stats + joystick in the left column, outside the play area */}
+          {isTouch && (
+            <aside
+              className="w-[120px] shrink-0 h-full flex flex-col items-center justify-between gap-1.5 py-2 pr-1 select-none touch-none"
+              style={{ paddingLeft: 'max(8px, env(safe-area-inset-left))' }}
+            >
+              <div className="w-full flex flex-col gap-1.5">
+                <HealthCard hud={hud} className="w-full !px-2" />
+                <ScoreChip hud={hud} className="w-full !px-2" />
+                <CompactObjective hud={hud} />
+              </div>
+              <Joystick onMove={setMobileMove} />
+            </aside>
+          )}
+
           <div className={`relative flex-1 min-w-0 h-full ${isTouch ? '' : 'lg:py-14'}`}>
             {/* Game Canvas Engine */}
             <GameCanvas
@@ -278,23 +293,31 @@ const SurvivalGameApp = () => {
               mobileSwitchTrigger={mobileSwitchTrigger}
             />
 
-            {/* HUD Overlay */}
-            <HUD hud={hud} onPause={togglePause} onToggleMute={toggleMute} />
+            {/* HUD Overlay (desktop) — on touch only the web alert sits over the game */}
+            {isTouch ? <RootedBanner hud={hud} /> : <HUD hud={hud} onPause={togglePause} onToggleMute={toggleMute} />}
+          </div>
 
-            {/* Mobile Touch Overlay */}
-            {isTouch && (
-              <MobileControls
-                onMove={setMobileMove}
+          {/* Touch: system buttons, weapon and actions in the right column */}
+          {isTouch ? (
+            <aside
+              className="w-[132px] shrink-0 h-full flex flex-col items-center justify-between gap-1.5 py-2 pl-1 select-none touch-none"
+              style={{ paddingRight: 'max(8px, env(safe-area-inset-right))' }}
+            >
+              <div className="flex flex-col items-center gap-2">
+                <SystemButtons hud={hud} onPause={togglePause} onToggleMute={toggleMute} />
+                <ActiveWeapon hud={hud} />
+              </div>
+              <ActionButtons
                 onFire={() => setMobileFireTrigger(prev => prev + 1)}
                 onReload={() => setMobileReloadTrigger(prev => prev + 1)}
                 onKnife={() => setMobileKnifeTrigger(prev => prev + 1)}
                 onSwitch={() => setMobileSwitchTrigger(prev => prev + 1)}
               />
-            )}
-          </div>
-
-          {/* Desktop side panel: controls & resource legend */}
-          {!isTouch && <ControlsPanel />}
+            </aside>
+          ) : (
+            /* Desktop side panel: controls & resource legend */
+            <ControlsPanel />
+          )}
         </div>
       )}
 

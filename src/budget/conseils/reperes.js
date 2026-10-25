@@ -7,6 +7,8 @@
 // Autres postes : arrondis au-dessus des parts moyennes de la consommation des ménages (INSEE).
 // Lien de parrainage BoursoBank affiché dans l'encart « Frais bancaires » (vide = encart sans lien)
 export const PARRAINAGE_BOURSOBANK = 'https://bour.so/p/Rm3e8DB2z0Q';
+// Lien de parrainage Trade Republic affiché dans l'encart « Épargne » (vide = encart masqué)
+export const PARRAINAGE_TRADE_REPUBLIC = 'https://refnocode.trade.re/m3vc9dhx';
 
 // Comparateurs proposés pour les contrats repérés par le scanner (énergie, assurances)
 export const COMPARATEURS = {

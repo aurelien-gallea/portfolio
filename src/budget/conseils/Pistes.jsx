@@ -1,8 +1,8 @@
 import React, { useMemo, useState } from 'react';
-import { ExternalLink, Home, Lightbulb, AlertTriangle, ChevronDown, LocateFixed, Loader2, MapPin, Landmark, Repeat, TrendingUp, BadgePercent, X, Scale } from 'lucide-react';
+import { ExternalLink, Home, Lightbulb, AlertTriangle, ChevronDown, LocateFixed, Loader2, MapPin, Landmark, Repeat, TrendingUp, BadgePercent, X, Scale, PiggyBank } from 'lucide-react';
 import { categorie, euros, nomMois } from '../donnees';
 import { calculerPistes, loyerDeReference, fraisBancaires } from './moteur';
-import { PARRAINAGE_BOURSOBANK, COMPARATEURS } from './reperes';
+import { PARRAINAGE_BOURSOBANK, PARRAINAGE_TRADE_REPUBLIC, COMPARATEURS } from './reperes';
 import { detecterAbonnements } from './abonnements';
 import { chargerVilles, rechercherVilles, villeLaPlusProche, resumeVille, nomCourt } from './villes';
 
@@ -221,7 +221,35 @@ function FraisBancaires({ parMois }) {
   );
 }
 
-const FREQUENCE_COURTE = { mensuel: '/ mois', trimestriel: '/ trim.', annuel: '/ an' };
+// Encart épargne : rémunérer l'argent mis de côté (lien de parrainage Trade Republic)
+function Epargne() {
+  if (!PARRAINAGE_TRADE_REPUBLIC) return null;
+  return (
+    <div className="rounded-xl border border-violet-500/25 bg-violet-500/[0.07] p-4">
+      <span className="mb-2 flex items-center gap-2 text-sm font-semibold text-white">
+        <PiggyBank size={16} className="text-violet-400" /> Faire travailler votre épargne
+      </span>
+      <p className="m-0 text-sm text-gray-300">
+        L'argent qui dort sur un compte courant ne rapporte rien. Trade Republic rémunère les liquidités non investies,
+        à un taux variable qui suit les taux de la BCE, et propose l'arrondi des paiements par carte pour épargner sans y penser.
+      </p>
+      <a
+        href={PARRAINAGE_TRADE_REPUBLIC}
+        target="_blank"
+        rel="noreferrer sponsored"
+        className={`${bouton} mt-3 w-full justify-center bg-violet-500 text-black hover:bg-violet-400 hover:text-black`}
+      >
+        Ouvrir un compte Trade Republic <ExternalLink size={14} />
+      </a>
+      <p className="m-0 mt-2 text-[11px] leading-snug text-gray-500">
+        Rémunération et options sous conditions (voir leur site). Investir en bourse comporte un risque de perte en capital ; ceci n'est pas un conseil en investissement.
+        Lien de parrainage : il peut vous donner droit à une prime de bienvenue, et m'en rapporte une aussi.
+      </p>
+    </div>
+  );
+}
+
+const FREQUENCE_COURTE ={ mensuel: '/ mois', trimestriel: '/ trim.', annuel: '/ an' };
 
 function LigneAbonnement({ a, coche, onBasculer, onRetirer }) {
   return (
@@ -487,6 +515,7 @@ export default function Pistes({ donnees, mois, onModifier }) {
             <div className="min-w-0 space-y-4 lg:col-span-2">
               <Profil profil={profil} onModifier={(p) => onModifier({ profil: p })} />
               <FraisBancaires parMois={frais} />
+              <Epargne />
             </div>
 
             <div className="min-w-0 space-y-4 lg:col-span-3">

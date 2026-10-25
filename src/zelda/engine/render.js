@@ -87,12 +87,12 @@ const BODY_BACK = [
 const FEET_A = ['..kBBk....kBBk..', '..kkkk....kkkk..'];
 const FEET_B = ['...kBBk..kBBk...', '....kk....kk....'];
 
-// Chapeau d'aventurier en feutre avec un ruban rouge et une plume vers l'arrière, mèches bleues sur les côtés
+// Chapeau d'aventurier en feutre avec un ruban rouge et une plume plantée sur le côté, couchée vers l'arrière, mèches bleues sur les côtés
 const HEAD_DOWN = [
-  '....kkkkkkkk.kfk',
-  '...kLtttttttkFfk',
-  '...kLLttttttTkFk',
-  '..krrrrrrrrrrk..',
+  '....kkkkkkkk....',
+  '...kLtttttttk...',
+  '...kLLttttttTkkk',
+  '..krrrrrrrrrrFfk',
   'kTttttttttttttTk',
   '.kTTTTTTTTTTTTk.',
   '.khHssssssssHhk.',
@@ -102,10 +102,10 @@ const HEAD_DOWN = [
   '.....kkkkkk.....',
 ];
 const HEAD_UP = [
-  'kfk.kkkkkkkk....',
-  'kfFkLtttttttk...',
-  'kFkkLLttttttTk..',
-  '..krrrrrrrrrrk..',
+  '....kkkkkkkk....',
+  '...kLtttttttk...',
+  'kkkkLLttttttTk..',
+  'kfFrrrrrrrrrrk..',
   'kTttttttttttttTk',
   '.kTTTTTTTTTTTTk.',
   '.khhhhhhhhhhhhk.',
@@ -115,10 +115,10 @@ const HEAD_UP = [
   '.....kkkkkk.....',
 ];
 const HEAD_SIDE = [
-  '.kfk.kkkkkkk....',
-  'kFfkkLttttttk...',
-  '.kFfkLLtttttTk..',
-  '..kFrrrrrrrrrk..',
+  '.....kkkkkkk....',
+  'kk..kLttttttk...',
+  'kffkkLLtttttTk..',
+  '.kFffFrrrrrrrk..',
   '.kTttttttttttttk',
   '..kTTTTTTTTTTTk.',
   '..khhHhsssssssk.',

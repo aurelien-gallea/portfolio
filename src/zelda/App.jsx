@@ -33,33 +33,48 @@ const Heart = ({ fill }) => (
 );
 
 const MiniMap = ({ room }) => (
-  <div className="grid grid-cols-3 gap-0.5 p-1 bg-black/60 rounded" title="Carte">
+  <div className="grid grid-cols-3 gap-1 p-1.5 bg-black/60 rounded-md border border-white/10 w-fit" title="Carte">
     {[0, 1, 2].flatMap(y => [0, 1, 2].map(x => {
       const here = room === `${x},${y}` || (room === 'cave' && x === 2 && y === 0);
-      return <div key={`${x},${y}`} className={`w-2.5 h-1.5 ${here ? 'bg-emerald-400' : 'bg-white/20'}`} />;
+      const dungeon = x === 2 && y === 0;
+      return (
+        <div
+          key={`${x},${y}`}
+          className={`w-6 h-4 rounded-sm ${here ? 'bg-emerald-400 shadow-[0_0_6px_rgba(52,211,153,0.8)]' : 'bg-white/15'} ${dungeon ? 'ring-1 ring-amber-400/60' : ''}`}
+        />
+      );
     }))}
   </div>
 );
 
-const Hud = ({ hud }) => {
+// Cœurs posés en haut à droite de l'écran de jeu
+const Hearts = ({ hud }) => {
   const hearts = [];
   for (let i = 0; i < hud.maxHp / 2; i++) hearts.push(Math.max(0, Math.min(2, hud.hp - i * 2)));
   return (
-    <div className="flex items-center justify-between gap-3 px-3 py-1.5 bg-black rounded-md font-mono text-xs">
-      <div className="flex items-center gap-3">
-        <MiniMap room={hud.room} />
-        <div className="hidden sm:block text-gray-300 truncate max-w-[12rem]">{hud.zone}</div>
-      </div>
-      <div className="flex items-center gap-3">
-        <span className="text-emerald-400 font-bold">◆ {hud.rupees}</span>
-        <span className={hud.hasKey ? 'opacity-100' : 'opacity-20'} title="Clé du donjon">🗝️</span>
-        <div className="flex gap-0.5 flex-wrap max-w-[9rem]">
-          {hearts.map((f, i) => <Heart key={i} fill={f} />)}
-        </div>
-      </div>
+    <div className="absolute top-1.5 right-1.5 flex flex-wrap justify-end gap-0.5 max-w-[40%] px-1.5 py-1 rounded bg-black/45 pointer-events-none">
+      {hearts.map((f, i) => <Heart key={i} fill={f} />)}
     </div>
   );
 };
+
+// Carte, zone, rubis et clé, sur le côté de l'écran de jeu
+const SidePanel = ({ hud }) => (
+  <div className="flex flex-col gap-2 font-mono text-xs">
+    <MiniMap room={hud.room} />
+    <div className="text-gray-300 text-[11px] leading-tight">{hud.zone}</div>
+    <div className="flex items-center gap-3">
+      <span className="text-emerald-400 font-bold">◆ {hud.rupees}</span>
+      <span className={hud.hasKey ? 'opacity-100' : 'opacity-20'} title="Clé du donjon">🗝️</span>
+    </div>
+  </div>
+);
+
+// Plus grande taille de l'écran de jeu (bordure comprise) qui tient dans la zone mesurée
+const BORDER = 8;
+function fitWidth(rect) {
+  return Math.max(120, Math.floor(Math.min(rect.width, ((rect.height - BORDER) * 256) / 176 + BORDER)));
+}
 
 const ZeldaApp = () => {
   const [gameState, setGameState] = useState('menu'); // menu, playing, paused, gameover, victory
@@ -129,9 +144,18 @@ const ZeldaApp = () => {
   const portraitBlock = isTouch && !landscape;
   const sideControls = isTouch && inGame;
 
-  const canvasWidth = sideControls
-    ? 'min(calc(100vw - 300px), calc((100dvh - 52px) * 256 / 176))'
-    : 'min(100%, calc((100dvh - 140px) * 256 / 176))';
+  // La taille de l'écran de jeu suit l'espace réellement disponible (barres du navigateur comprises)
+  const fitRef = useRef(null);
+  const [canvasWidth, setCanvasWidth] = useState(0);
+  useEffect(() => {
+    const el = fitRef.current;
+    if (!el) return undefined;
+    const update = () => setCanvasWidth(fitWidth(el.getBoundingClientRect()));
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    update();
+    return () => ro.disconnect();
+  }, [inGame, sideControls]);
 
   const pauseButton = (gameState === 'playing' || gameState === 'paused') && (
     <button
@@ -149,9 +173,8 @@ const ZeldaApp = () => {
   );
 
   const screen = (
-    <div className="relative mx-auto" style={{ width: canvasWidth }}>
-      <Hud hud={hud} />
-      <div className="relative mt-1.5 border-4 border-black rounded-lg shadow-2xl shadow-emerald-900/30">
+    <div ref={fitRef} className="flex-1 min-w-0 min-h-0 flex items-center justify-center">
+      <div className="relative border-4 border-black rounded-lg shadow-2xl shadow-emerald-900/30" style={{ width: canvasWidth || undefined }}>
         <GameCanvas
           key={restartKey}
           paused={gameState !== 'playing' || portraitBlock}
@@ -161,6 +184,7 @@ const ZeldaApp = () => {
           onGameOver={stats => { setResult(stats); setGameState('gameover'); }}
           onVictory={stats => { setResult(stats); setGameState('victory'); }}
         />
+        <Hearts hud={hud} />
 
         {toast && gameState === 'playing' && (
           <div className="absolute left-1/2 -translate-x-1/2 bottom-1.5 sm:bottom-3 w-max max-w-[90%] px-2 py-1 sm:px-3 sm:py-2 bg-black/85 border sm:border-2 border-white/80 rounded text-white text-[9px] leading-tight sm:text-sm font-mono text-center pointer-events-none">
@@ -205,7 +229,7 @@ const ZeldaApp = () => {
   );
 
   return (
-    <div className={`fixed inset-0 bg-[#0b120c] text-white font-sans select-none ${sideControls ? 'overflow-hidden touch-none' : 'overflow-y-auto'}`}>
+    <div className={`fixed inset-0 flex flex-col bg-[#0b120c] text-white font-sans select-none ${sideControls ? 'overflow-hidden touch-none' : 'overflow-y-auto'}`}>
       {portraitBlock && (
         <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center gap-5 p-8 bg-[#0b120c] text-center">
           <div className="w-20 h-20 rounded-3xl bg-emerald-500/15 border border-emerald-400/40 text-emerald-300 flex items-center justify-center">
@@ -269,18 +293,19 @@ const ZeldaApp = () => {
         </main>
       ) : sideControls ? (
         // Paysage tactile : boutons système et joystick à gauche, écran au centre, épée à droite
-        <main className="flex h-[100dvh] items-stretch gap-2 px-2 py-2" style={{ paddingLeft: 'max(0.5rem, env(safe-area-inset-left))', paddingRight: 'max(0.5rem, env(safe-area-inset-right))' }}>
-          <div className="flex flex-col flex-1 min-w-[130px]">
+        <main className="flex flex-1 min-h-0 items-stretch gap-2 px-2 py-2" style={{ paddingLeft: 'max(0.5rem, env(safe-area-inset-left))', paddingRight: 'max(0.5rem, env(safe-area-inset-right))', paddingBottom: 'max(0.5rem, env(safe-area-inset-bottom))' }}>
+          <div className="flex flex-col gap-2 w-[136px] shrink-0">
             <div className="flex gap-2">
               <Link to="/" className="p-2 rounded-full bg-white/10 border border-white/10" aria-label="Portfolio"><ArrowLeft size={16} /></Link>
               {pauseButton}
             </div>
-            <div className="flex-1">
+            <SidePanel hud={hud} />
+            <div className="flex-1 min-h-0">
               <Joystick controls={controls} />
             </div>
           </div>
-          <div className="flex items-center">{screen}</div>
-          <div className="flex flex-col flex-1 min-w-[130px] items-end">
+          {screen}
+          <div className="flex flex-col w-[136px] shrink-0 items-end">
             {muteButton}
             <div className="flex-1 flex items-end justify-center w-full pb-4">
               <AttackButton controls={controls} />
@@ -288,7 +313,13 @@ const ZeldaApp = () => {
           </div>
         </main>
       ) : (
-        <main className="px-3 pb-4">{screen}</main>
+        <main className="flex flex-1 min-h-0 gap-4 px-3 sm:px-6 pb-4">
+          <aside className="w-40 shrink-0 pt-1">
+            <SidePanel hud={hud} />
+          </aside>
+          {screen}
+          <div className="hidden lg:block w-40 shrink-0" />
+        </main>
       )}
     </div>
   );

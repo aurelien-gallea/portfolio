@@ -50,6 +50,8 @@ const HERO_PALETTE = {
   t: '#8a5a32', // chapeau
   T: '#5a3820', // chapeau ombré
   L: '#bb8650', // reflet du chapeau
+  f: '#f6f2e8', // plume
+  F: '#c8bca8', // plume ombrée
   h: '#3f8cff', // cheveux bleus
   H: '#2350c8', // cheveux ombrés
   s: '#ffd2a6', // peau
@@ -85,11 +87,11 @@ const BODY_BACK = [
 const FEET_A = ['..kBBk....kBBk..', '..kkkk....kkkk..'];
 const FEET_B = ['...kBBk..kBBk...', '....kk....kk....'];
 
-// Chapeau d'aventurier en feutre avec un ruban rouge, mèches bleues sur les côtés
+// Chapeau d'aventurier en feutre avec un ruban rouge et une plume vers l'arrière, mèches bleues sur les côtés
 const HEAD_DOWN = [
-  '....kkkkkkkk....',
-  '...kLtttttttk...',
-  '...kLLttttttTk..',
+  '....kkkkkkkk.kfk',
+  '...kLtttttttkFfk',
+  '...kLLttttttTkFk',
   '..krrrrrrrrrrk..',
   'kTttttttttttttTk',
   '.kTTTTTTTTTTTTk.',
@@ -100,9 +102,9 @@ const HEAD_DOWN = [
   '.....kkkkkk.....',
 ];
 const HEAD_UP = [
-  '....kkkkkkkk....',
-  '...kLtttttttk...',
-  '...kLLttttttTk..',
+  'kfk.kkkkkkkk....',
+  'kfFkLtttttttk...',
+  'kFkkLLttttttTk..',
   '..krrrrrrrrrrk..',
   'kTttttttttttttTk',
   '.kTTTTTTTTTTTTk.',
@@ -113,10 +115,10 @@ const HEAD_UP = [
   '.....kkkkkk.....',
 ];
 const HEAD_SIDE = [
-  '.....kkkkkkk....',
-  '....kLttttttk...',
-  '....kLLtttttTk..',
-  '...krrrrrrrrrk..',
+  '.kfk.kkkkkkk....',
+  'kFfkkLttttttk...',
+  '.kFfkLLtttttTk..',
+  '..kFrrrrrrrrrk..',
   '.kTttttttttttttk',
   '..kTTTTTTTTTTTk.',
   '..khhHhsssssssk.',

@@ -1,10 +1,9 @@
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Sword } from 'lucide-react';
 
 // Huit secteurs de 45° autour du centre (0 = droite, sens horaire)
 const SECTORS = [['right'], ['right', 'down'], ['down'], ['down', 'left'], ['left'], ['left', 'up'], ['up'], ['up', 'right']];
-const BASE = 120;        // diamètre du socle en px
-const TRAVEL = 42;       // course maximale de la manette
+const BASE = 120;        // diamètre maximal du socle en px
 const DEADZONE = 0.28;   // en dessous, le héros ne bouge pas
 
 const buzz = ms => { try { navigator.vibrate?.(ms); } catch { /* non supporté */ } };
@@ -18,13 +17,25 @@ export const Joystick = ({ controls }) => {
   const [base, setBase] = useState(null); // centre du socle quand le pouce est posé
   const [knob, setKnob] = useState({ x: 0, y: 0 });
   const [dirs, setDirs] = useState([]);
+  // Le socle rétrécit si la zone est plus petite (écrans bas)
+  const [size, setSize] = useState(BASE);
+  const travel = size * 0.35;
+
+  useEffect(() => {
+    const ro = new ResizeObserver(([entry]) => {
+      const { width, height } = entry.contentRect;
+      setSize(Math.max(72, Math.min(BASE, width, height)));
+    });
+    ro.observe(zone.current);
+    return () => ro.disconnect();
+  }, []);
 
   const steer = (e, center) => {
     const dx = e.clientX - center.x, dy = e.clientY - center.y;
     const dist = Math.hypot(dx, dy);
-    const k = dist > TRAVEL ? TRAVEL / dist : 1;
+    const k = dist > travel ? travel / dist : 1;
     setKnob({ x: dx * k, y: dy * k });
-    const next = dist < TRAVEL * DEADZONE ? [] : SECTORS[(Math.round(Math.atan2(dy, dx) / (Math.PI / 4)) + 8) % 8];
+    const next = dist < travel * DEADZONE ? [] : SECTORS[(Math.round(Math.atan2(dy, dx) / (Math.PI / 4)) + 8) % 8];
     controls.current.dirs = next;
     if (next.join() !== last.current) {
       last.current = next.join();
@@ -40,8 +51,8 @@ export const Joystick = ({ controls }) => {
     const rect = zone.current.getBoundingClientRect();
     // Le socle reste entièrement dans la zone
     const center = {
-      x: Math.min(Math.max(e.clientX, rect.left + BASE / 2), rect.right - BASE / 2),
-      y: Math.min(Math.max(e.clientY, rect.top + BASE / 2), rect.bottom - BASE / 2),
+      x: Math.min(Math.max(e.clientX, rect.left + size / 2), rect.right - size / 2),
+      y: Math.min(Math.max(e.clientY, rect.top + size / 2), rect.bottom - size / 2),
     };
     baseRef.current = center;
     setBase(center);
@@ -76,9 +87,9 @@ export const Joystick = ({ controls }) => {
       <div
         className={`absolute rounded-full border-2 transition-opacity ${base ? 'border-white/30 bg-white/10 opacity-100' : 'border-white/15 bg-white/5 opacity-60'}`}
         style={{
-          width: BASE, height: BASE,
-          left: center ? center.left - BASE / 2 : `calc(50% - ${BASE / 2}px)`,
-          top: center ? center.top - BASE / 2 : `calc(100% - ${BASE + 16}px)`,
+          width: size, height: size,
+          left: center ? center.left - size / 2 : `calc(50% - ${size / 2}px)`,
+          top: center ? center.top - size / 2 : `calc(100% - ${size + 8}px)`,
         }}
       >
         {[['up', 'left-1/2 top-1 -translate-x-1/2', '▲'], ['down', 'left-1/2 bottom-1 -translate-x-1/2', '▼'],
@@ -86,8 +97,8 @@ export const Joystick = ({ controls }) => {
           <span key={d} className={`absolute text-[10px] ${cls} ${dirs.includes(d) ? 'text-emerald-300' : 'text-white/35'}`}>{glyph}</span>
         ))}
         <div
-          className={`absolute left-1/2 top-1/2 w-14 h-14 -ml-7 -mt-7 rounded-full border-2 shadow-lg ${dirs.length ? 'bg-emerald-400/80 border-emerald-200/70' : 'bg-white/35 border-white/50'} ${base ? '' : 'transition-transform duration-150'}`}
-          style={{ transform: `translate(${knob.x}px, ${knob.y}px)` }}
+          className={`absolute left-1/2 top-1/2 rounded-full border-2 shadow-lg ${dirs.length ? 'bg-emerald-400/80 border-emerald-200/70' : 'bg-white/35 border-white/50'} ${base ? '' : 'transition-transform duration-150'}`}
+          style={{ width: size * 0.46, height: size * 0.46, margin: -size * 0.23, transform: `translate(${knob.x}px, ${knob.y}px)` }}
         />
       </div>
     </div>

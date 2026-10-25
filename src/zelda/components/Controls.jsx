@@ -1,26 +1,29 @@
 import React, { useRef, useState } from 'react';
 
-// Croix directionnelle : on peut glisser le doigt d'une direction à l'autre
+// Huit secteurs de 45° autour du centre (0 = droite, sens horaire)
+const SECTORS = [['right'], ['right', 'down'], ['down'], ['down', 'left'], ['left'], ['left', 'up'], ['up'], ['up', 'right']];
+
+// Croix directionnelle : on peut glisser le doigt d'une direction à l'autre, diagonales comprises
 export const DPad = ({ controls }) => {
   const ref = useRef(null);
-  const [active, setActive] = useState(null);
+  const [active, setActive] = useState([]);
 
   const update = e => {
     const rect = ref.current.getBoundingClientRect();
     const dx = e.clientX - (rect.left + rect.width / 2);
     const dy = e.clientY - (rect.top + rect.height / 2);
-    const dir = Math.hypot(dx, dy) < 10 ? null
-      : Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 'right' : 'left') : (dy > 0 ? 'down' : 'up');
-    controls.current.dir = dir;
-    setActive(dir);
+    const sector = Math.round(Math.atan2(dy, dx) / (Math.PI / 4));
+    const dirs = Math.hypot(dx, dy) < 10 ? [] : SECTORS[(sector + 8) % 8];
+    controls.current.dirs = dirs;
+    setActive(dirs);
   };
   const release = () => {
-    controls.current.dir = null;
-    setActive(null);
+    controls.current.dirs = [];
+    setActive([]);
   };
 
   const arm = (dir, cls) => (
-    <div className={`absolute w-12 h-12 rounded-lg border border-white/15 flex items-center justify-center text-white/70 text-lg ${cls} ${active === dir ? 'bg-emerald-500/60' : 'bg-white/10'}`}>
+    <div className={`absolute w-12 h-12 rounded-lg border border-white/15 flex items-center justify-center text-white/70 text-lg ${cls} ${active.includes(dir) ? 'bg-emerald-500/60' : 'bg-white/10'}`}>
       {{ up: '▲', down: '▼', left: '◀', right: '▶' }[dir]}
     </div>
   );

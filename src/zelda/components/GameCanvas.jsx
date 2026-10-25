@@ -1,6 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { createGame } from '../engine/game';
 import { W, H } from '../engine/world';
+import { S } from '../engine/pixel';
 
 const KEY_DIRS = {
   arrowup: 'up', z: 'up', w: 'up',
@@ -32,7 +33,7 @@ const GameCanvas = ({ paused, controls, onHud, onMessage, onGameOver, onVictory 
     });
     game.start();
 
-    // La dernière direction pressée l'emporte, comme sur NES
+    // Directions maintenues dans l'ordre d'appui : deux touches = diagonale
     let held = [];
     let attackQueued = false;
 
@@ -62,7 +63,7 @@ const GameCanvas = ({ paused, controls, onHud, onMessage, onGameOver, onVictory 
       if (!pausedRef.current) {
         const touch = controls.current;
         const input = {
-          dir: held[held.length - 1] || touch.dir,
+          dirs: held.length ? held : touch.dirs,
           attack: attackQueued || touch.attack,
         };
         attackQueued = false;
@@ -87,8 +88,8 @@ const GameCanvas = ({ paused, controls, onHud, onMessage, onGameOver, onVictory 
   return (
     <canvas
       ref={canvasRef}
-      width={W}
-      height={H}
+      width={W * S}
+      height={H * S}
       className="block w-full h-auto rounded-md"
       style={{ imageRendering: 'pixelated', aspectRatio: `${W} / ${H}` }}
     />

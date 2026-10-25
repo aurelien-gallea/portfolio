@@ -70,7 +70,7 @@ const ZeldaApp = () => {
   const [muted, setMuted] = useState(sfx.muted);
   const [isTouch] = useState(isTouchDevice);
   const [landscape, setLandscape] = useState(() => window.innerWidth > window.innerHeight);
-  const controls = useRef({ dir: null, attack: false });
+  const controls = useRef({ dirs: [], attack: false });
   const toastTimer = useRef(null);
 
   useEffect(() => {
@@ -101,7 +101,7 @@ const ZeldaApp = () => {
 
   const start = () => {
     sfx.init();
-    controls.current = { dir: null, attack: false };
+    controls.current = { dirs: [], attack: false };
     setHud(INITIAL_HUD);
     setResult(null);
     setRestartKey(k => k + 1);

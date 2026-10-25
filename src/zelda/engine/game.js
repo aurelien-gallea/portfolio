@@ -5,6 +5,7 @@ import {
 } from './world';
 import { roomCanvas, drawHero, drawEnemy, drawProjectile, drawPickup, drawChest, drawEffect } from './render';
 import { sfx } from './audio';
+import { S } from './pixel';
 
 const DIRV = { up: [0, -1], down: [0, 1], left: [-1, 0], right: [1, 0] };
 const DIRS = Object.keys(DIRV);
@@ -83,6 +84,8 @@ export function createGame({ onHud, onMessage, onGameOver, onVictory }) {
           if (!canExit) return true;
           const side = row < 0 ? 'up' : row >= ROWS ? 'down' : c < 0 ? 'left' : 'right';
           if (!r.neighbors[side]) return true;
+          // On ne passe que si l'écran voisin est libre au même endroit
+          if (solidAt(s.rooms[r.neighbors[side]], (c + COLS) % COLS, (row + ROWS) % ROWS)) return true;
           continue;
         }
         if (solidAt(r, c, row)) return true;
@@ -327,14 +330,21 @@ export function createGame({ onHud, onMessage, onGameOver, onVictory }) {
         }
       }
     } else {
-      const dir = input.dir;
-      if (dir) {
-        p.dir = dir;
+      // input.dirs : directions maintenues, la plus récente en dernier
+      const dirs = input.dirs;
+      const dx = (dirs.includes('right') ? 1 : 0) - (dirs.includes('left') ? 1 : 0);
+      const dy = (dirs.includes('down') ? 1 : 0) - (dirs.includes('up') ? 1 : 0);
+      if (dx || dy) {
+        // En diagonale, on garde le regard actuel s'il fait partie du mouvement
+        const active = dirs.filter(d => (DIRV[d][0] && DIRV[d][0] === dx) || (DIRV[d][1] && DIRV[d][1] === dy));
+        if (!active.includes(p.dir) || !(dx && dy)) p.dir = active[active.length - 1];
         p.moving = true;
         const v = PLAYER_SPEED * dt;
-        const [dx, dy] = DIRV[dir];
-        // Alignement sur une grille de 8 px sur l'axe perpendiculaire (passages étroits)
-        if (dx) {
+        if (dx && dy) {
+          move(p, playerBox, dx * v * Math.SQRT1_2, 0, true);
+          move(p, playerBox, 0, dy * v * Math.SQRT1_2, true);
+        } else if (dx) {
+          // Alignement sur une grille de 8 px sur l'axe perpendiculaire (passages étroits)
           const off = Math.round(p.y / 8) * 8 - p.y;
           if (off) move(p, playerBox, 0, clamp(off, -v, v), true);
           move(p, playerBox, dx * v, 0, true);
@@ -343,7 +353,7 @@ export function createGame({ onHud, onMessage, onGameOver, onVictory }) {
           if (off) move(p, playerBox, clamp(off, -v, v), 0, true);
           move(p, playerBox, 0, dy * v, true);
         }
-        checkDoor(dir);
+        if (dy < 0) checkDoor('up');
       } else {
         p.moving = false;
       }
@@ -632,7 +642,7 @@ export function createGame({ onHud, onMessage, onGameOver, onVictory }) {
   }
 
   function drawScene(ctx, r, ox, oy, withEntities) {
-    ctx.drawImage(roomCanvas(r), ox, oy);
+    ctx.drawImage(roomCanvas(r), ox, oy, W, H);
     if (chestVisible(r)) {
       ctx.save();
       ctx.translate(ox, oy);
@@ -651,6 +661,8 @@ export function createGame({ onHud, onMessage, onGameOver, onVictory }) {
   }
 
   function render(ctx) {
+    // Le canvas est en double résolution : on dessine toujours en unités de jeu
+    ctx.setTransform(S, 0, 0, S, 0, 0);
     ctx.imageSmoothingEnabled = false;
     ctx.fillStyle = '#000';
     ctx.fillRect(0, 0, W, H);

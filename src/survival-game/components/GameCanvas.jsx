@@ -1,7 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { sounds } from '../utils/audio';
 import { MAP_W, MAP_H, DIFFICULTIES, ZOMBIE_TYPES, WEAPONS, SPIT } from '../engine/config';
-import { generateLevel, makeZombie, pickZombieType, randomFreePoint } from '../engine/level';
+import { generateLevel, makeZombie, pickZombieType, randomFreePoint, roomAt } from '../engine/level';
 import { moveCircle, pointInRect, hasLineOfSight, rayLength, buildNavGrid, updateFlowField, flowDirection, pathDistance } from '../engine/physics';
 import {
   buildStaticLayer, createDecalLayer, stampBlood,
@@ -118,6 +118,8 @@ const GameCanvas = ({
       webs: [],
       webPatches: [],
       nextDrop: 0,
+      nextCollapse: 0,
+      nextExploreDrop: 30000,
       flicker: 0,
       navTimer: 0,
       safeTimer: 0,
@@ -558,7 +560,8 @@ const GameCanvas = ({
 
     const startHorde = () => {
       s.horde = { active: true, remaining: diff.horde, nextSpawn: s.clock + 2500, startedAt: s.clock };
-      s.nextDrop = s.clock + 1600;
+      s.nextDrop = s.clock + 900;
+      s.nextCollapse = s.clock + 6000;
       s.zombies.forEach(alertZombie);
       sounds.playAlarm();
       s.shake = 12;
@@ -579,15 +582,16 @@ const GameCanvas = ({
       return !s.drops.some(d => Math.hypot(x - d.x, y - d.y) < 50);
     };
 
-    const scheduleDrop = () => {
+    // mode 'escape': mostly on the route to the exit · 'ring': all around the player · 'near': a lone scare while exploring
+    const scheduleDrop = (mode = 'escape') => {
       const p = s.player;
       const door = s.level.exitDoor;
       const toExit = Math.atan2(door.y + door.h / 2 - p.y, door.x + door.w / 2 - p.x);
-      // Most drops land on the escape route to cut the player off, the rest right beside them
-      const ahead = Math.random() < 0.65;
+      const ahead = mode === 'escape' && Math.random() < 0.65;
+      const [minDist, spread] = mode === 'near' ? [110, 130] : mode === 'ring' ? [95, 170] : ahead ? [130, 170] : [90, 110];
       for (let attempt = 0; attempt < 25; attempt++) {
         const angle = ahead ? toExit + (Math.random() - 0.5) * 1.3 : Math.random() * Math.PI * 2;
-        const dist = ahead ? 130 + Math.random() * 170 : 90 + Math.random() * 110;
+        const dist = minDist + Math.random() * spread;
         const x = p.x + Math.cos(angle) * dist;
         const y = p.y + Math.sin(angle) * dist;
         if (!isFreeSpot(x, y, 26) || !hasLineOfSight(p.x, p.y, x, y, s.level.solids)) continue;
@@ -596,8 +600,9 @@ const GameCanvas = ({
         const type = spitters < 2 && Math.random() < 0.4 ? 'spitter' : pickZombieType(diff);
         s.drops.push({ x, y, type, timer: duration, duration, dust: 0 });
         sounds.playCeilingCrack();
-        return;
+        return true;
       }
+      return false;
     };
 
     const landDrop = (d) => {
@@ -987,19 +992,36 @@ const GameCanvas = ({
         s.horde.nextSpawn = s.clock + (difficulty === 'hard' ? 1800 : 2600);
       }
 
-      // Ceiling drops get more frequent the longer the escape lasts
+      // Ceiling drops: occasional scares while exploring, a relentless rain during the escape
+      const liveCount = s.zombies.filter(z => !z.dead && z.falling === undefined).length;
+      const room = diff.maxZombies - liveCount - s.drops.length;
       if (s.horde.active) {
         const escapeSec = (s.clock - s.horde.startedAt) / 1000;
-        const live = s.zombies.filter(z => !z.dead && z.falling === undefined).length;
         if (s.clock >= s.nextDrop) {
-          if (live + s.drops.length < diff.maxZombies) {
-            scheduleDrop();
-            // After a while they start coming through in pairs
-            if (escapeSec > 20 && Math.random() < 0.35) scheduleDrop();
-          }
+          // Pairs, then triples, as the escape drags on
+          const count = 1 + (escapeSec > 8 && Math.random() < 0.5 ? 1 : 0) + (escapeSec > 25 && Math.random() < 0.35 ? 1 : 0);
+          for (let i = 0; i < Math.min(count, room); i++) scheduleDrop();
           const interval = Math.max(diff.dropMin, diff.dropStart - escapeSec * diff.dropRamp);
           s.nextDrop = s.clock + interval * 1000 * (0.75 + Math.random() * 0.5);
         }
+        // Periodic collapse: a whole ring of zombies crashes down around the player
+        if (s.clock >= s.nextCollapse) {
+          const size = Math.min(diff.collapseSize + Math.floor(escapeSec / 30), room);
+          for (let i = 0; i < size; i++) scheduleDrop('ring');
+          if (size > 0) {
+            s.shake = Math.max(s.shake, 10);
+            showBanner("LE PLAFOND S'EFFONDRE",'Ils tombent tout autour de vous !', '#f97316', 1.6);
+          }
+          s.nextCollapse = s.clock + diff.collapseEvery * 1000;
+        }
+      } else if (diff.exploreDrop && s.clock >= s.nextExploreDrop) {
+        // No clear spot in view (tight corridor…): try again shortly
+        const inSafeZone = roomAt(s.level, s.player.x, s.player.y).id === s.level.startRoom.id;
+        const dropped = room > 0 && !inSafeZone && scheduleDrop('near');
+        s.nextExploreDrop = s.clock + (dropped ? diff.exploreDrop * 1000 * (0.7 + Math.random() * 0.6) : 1500);
+      }
+
+      if (s.drops.length) {
         s.drops.forEach(d => {
           d.timer -= dtSec;
           d.dust -= dtSec;
@@ -1010,7 +1032,10 @@ const GameCanvas = ({
           if (d.timer <= 0) landDrop(d);
         });
         s.drops = s.drops.filter(d => d.timer > 0);
+      }
 
+      if (s.horde.active) {
+        const escapeSec = (s.clock - s.horde.startedAt) / 1000;
         // Failing emergency lights
         if (s.flicker <= 0 && Math.random() < dtSec * (0.25 + Math.min(0.5, escapeSec * 0.01))) s.flicker = 0.12 + Math.random() * 0.25;
         s.flicker = Math.max(0, s.flicker - dtSec);

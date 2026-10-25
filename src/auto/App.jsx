@@ -1,9 +1,10 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
-  ArrowLeft, Fuel, Zap, Gauge, CalendarClock, Leaf, PiggyBank, RotateCcw, Info, Landmark, Search, ChevronDown,
+  ArrowLeft, Fuel, Zap, Gauge, CalendarClock, Leaf, PiggyBank, RotateCcw, Info, Landmark, Search, ChevronDown, Lightbulb,
 } from 'lucide-react';
 import { Courbes, Repartition, COULEURS } from './Graphiques';
+import Conseils from './Conseils';
 import { CATALOGUE, CATALOGUE_ELECTRIQUE, rechercher, estimer, estimerElectrique } from './catalogue';
 import {
   CARBURANTS, CLES_THERMIQUE, CLES_ELECTRIQUE, extraire, identique,
@@ -195,6 +196,7 @@ function Catalogue({ type, valeurs, couleur, onChoisir }) {
 
 export default function AutoApp() {
   const [d, setD] = useState(charger);
+  const [conseils, setConseils] = useState(false);
   useEffect(() => sauvegarder(d), [d]);
 
   const maj = (section, cle) => (v) => setD((x) => ({ ...x, [section]: { ...x[section], [cle]: v } }));
@@ -279,10 +281,19 @@ export default function AutoApp() {
               <p className="m-0 text-xs text-gray-500">Garder sa voiture ou passer à l'électrique : le vrai coût, année par année</p>
             </div>
           </div>
-          <button type="button" onClick={reinitialiser} className={`${bouton} bg-white/5 text-gray-400 hover:bg-white/10 hover:text-white`}>
-            <RotateCcw size={16} /> Valeurs par défaut
-          </button>
+          <div className="flex flex-wrap gap-2">
+            <button type="button" onClick={() => setConseils(true)} className={`${bouton} bg-emerald-500/10 text-emerald-300 hover:bg-emerald-500/20`}>
+              <Lightbulb size={16} /> Conseils
+            </button>
+            <button type="button" onClick={reinitialiser} className={`${bouton} bg-white/5 text-gray-400 hover:bg-white/10 hover:text-white`}>
+              <RotateCcw size={16} /> Valeurs par défaut
+            </button>
+          </div>
         </header>
+
+        {conseils && (
+          <Conseils d={d} sim={sim} seuil={seuil} pointMort={pointMort} onFermer={() => setConseils(false)} />
+        )}
 
         {/* Verdict */}
         <div

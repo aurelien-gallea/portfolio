@@ -182,7 +182,7 @@ function FraisBancaires({ parMois }) {
     <div className="rounded-xl border border-sky-500/25 bg-sky-500/[0.07] p-4">
       <div className="mb-2 flex items-center justify-between gap-2">
         <span className="flex items-center gap-2 text-sm font-semibold text-white">
-          <Landmark size={16} className="text-sky-400" /> Frais bancaires
+          <Landmark size={16} className="shrink-0 text-sky-400" /> Frais bancaires et primes généreuses
         </span>
         {parMois > 0 && (
           <span className="text-right">

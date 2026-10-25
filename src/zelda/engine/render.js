@@ -47,9 +47,11 @@ function rect(ctx, color, x, y, w = 1, h = 1) {
 // Sprites 16x16 dessinés pixel par pixel ('.' = transparent)
 const HERO_PALETTE = {
   k: '#1a1426', // contour
+  t: '#8a5a32', // chapeau
+  T: '#5a3820', // chapeau ombré
+  L: '#bb8650', // reflet du chapeau
   h: '#3f8cff', // cheveux bleus
   H: '#2350c8', // cheveux ombrés
-  l: '#a6d4ff', // reflet des cheveux
   s: '#ffd2a6', // peau
   S: '#e09a6c', // peau ombrée
   e: '#121a38', // yeux
@@ -83,43 +85,43 @@ const BODY_BACK = [
 const FEET_A = ['..kBBk....kBBk..', '..kkkk....kkkk..'];
 const FEET_B = ['...kBBk..kBBk...', '....kk....kk....'];
 
-// Cheveux en pétard : des mèches dressées sur le dessus de la tête
+// Chapeau d'aventurier en feutre avec un ruban rouge, mèches bleues sur les côtés
 const HEAD_DOWN = [
-  '..k..k.kk.k..k..',
-  '.khk.khhhhk.khk.',
-  '.khhkhhlhhhkhhk.',
-  'khhhhhllhhhhhhhk',
-  'khlhhhhhhhhhhlhk',
-  'kHhhHhhhhhhHhhHk',
-  '.kHHhsssssshHHk.',
-  '.kSswesssswesSk.',
+  '....kkkkkkkk....',
+  '...kLtttttttk...',
+  '...kLLttttttTk..',
+  '..krrrrrrrrrrk..',
+  'kTttttttttttttTk',
+  '.kTTTTTTTTTTTTk.',
+  '.khHssssssssHhk.',
+  '.kHswesssswesHk.',
   '..kSsesssssesk..',
   '...kkSssssSkk...',
   '.....kkkkkk.....',
 ];
 const HEAD_UP = [
-  '..k..k.kk.k..k..',
-  '.khk.khhhhk.khk.',
-  '.khhkhhlhhhkhhk.',
-  'khhhhhllhhhhhhhk',
-  'khlhhhhhhhhhhlhk',
-  'khhhhhHhhHhhhhhk',
-  'kShhHhhhhhhHhhSk',
-  '.khhhHhhhhHhhhk.',
-  '..kHhhHhhHhhHk..',
+  '....kkkkkkkk....',
+  '...kLtttttttk...',
+  '...kLLttttttTk..',
+  '..krrrrrrrrrrk..',
+  'kTttttttttttttTk',
+  '.kTTTTTTTTTTTTk.',
+  '.khhhhhhhhhhhhk.',
+  '.kShHhhhhhhHhSk.',
+  '..kHhHhhhhHhHk..',
   '...kkSssssSkk...',
   '.....kkkkkk.....',
 ];
 const HEAD_SIDE = [
-  '....k.k.kk......',
-  '..kkhkhkhhk.....',
-  '.khhhhhhlhhk....',
-  'khhhhhhllhhhk...',
-  'kkhhhhhhhhhhhk..',
-  '..khhhHhhhHhhhk.',
-  '.khhhhHhssHsssk.',
-  'kHhhhSHsssssesk.',
-  '..kkhSsssssSsk..',
+  '.....kkkkkkk....',
+  '....kLttttttk...',
+  '....kLLtttttTk..',
+  '...krrrrrrrrrk..',
+  '.kTttttttttttttk',
+  '..kTTTTTTTTTTTk.',
+  '..khhHhsssssssk.',
+  '..kHhhSsssswesk.',
+  '...kHSssssssesk.',
   '....kkSsssSkk...',
   '......kkkkkk....',
 ];

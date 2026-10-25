@@ -1,8 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowLeft, Pause, Play, Volume2, VolumeX, RefreshCw, Hammer } from 'lucide-react';
+import { ArrowLeft, Pause, Play, Volume2, VolumeX, RefreshCw, Hammer, Smartphone } from 'lucide-react';
 import GameCanvas from './components/GameCanvas';
-import { DPad, AttackButton } from './components/Controls';
+import { Joystick, AttackButton } from './components/Controls';
 import { sfx } from './engine/audio';
 
 const isTouchDevice = () =>
@@ -99,8 +99,19 @@ const ZeldaApp = () => {
     toastTimer.current = setTimeout(() => setToast(null), 3200);
   };
 
+  // Sur mobile : plein écran puis verrouillage en paysage (Android ; iOS garde l'écran « tourne ton téléphone »)
+  const lockLandscape = async () => {
+    try {
+      if (!document.fullscreenElement) await document.documentElement.requestFullscreen?.({ navigationUI: 'hide' });
+      await screen.orientation?.lock?.('landscape');
+    } catch {
+      // Refusé ou non supporté
+    }
+  };
+
   const start = () => {
     sfx.init();
+    if (isTouch) lockLandscape();
     controls.current = { dirs: [], attack: false };
     setHud(INITIAL_HUD);
     setResult(null);
@@ -115,13 +126,27 @@ const ZeldaApp = () => {
   };
 
   const inGame = gameState !== 'menu';
-  const sideControls = isTouch && landscape;
+  const portraitBlock = isTouch && !landscape;
+  const sideControls = isTouch && inGame;
 
   const canvasWidth = sideControls
-    ? 'min(calc(100vw - 360px), calc((100dvh - 70px) * 256 / 176))'
-    : isTouch
-      ? 'min(100%, calc((100dvh - 330px) * 256 / 176))'
-      : 'min(100%, calc((100dvh - 140px) * 256 / 176))';
+    ? 'min(calc(100vw - 300px), calc((100dvh - 52px) * 256 / 176))'
+    : 'min(100%, calc((100dvh - 140px) * 256 / 176))';
+
+  const pauseButton = (gameState === 'playing' || gameState === 'paused') && (
+    <button
+      onClick={() => setGameState(g => (g === 'playing' ? 'paused' : 'playing'))}
+      className="p-2 rounded-full bg-white/10 hover:bg-white/20 border border-white/10"
+      aria-label="Pause"
+    >
+      {gameState === 'paused' ? <Play size={16} /> : <Pause size={16} />}
+    </button>
+  );
+  const muteButton = (
+    <button onClick={toggleMute} className="p-2 rounded-full bg-white/10 hover:bg-white/20 border border-white/10" aria-label="Son">
+      {muted ? <VolumeX size={16} /> : <Volume2 size={16} />}
+    </button>
+  );
 
   const screen = (
     <div className="relative mx-auto" style={{ width: canvasWidth }}>
@@ -129,7 +154,7 @@ const ZeldaApp = () => {
       <div className="relative mt-1.5 border-4 border-black rounded-lg shadow-2xl shadow-emerald-900/30">
         <GameCanvas
           key={restartKey}
-          paused={gameState !== 'playing'}
+          paused={gameState !== 'playing' || portraitBlock}
           controls={controls}
           onHud={setHud}
           onMessage={showToast}
@@ -180,27 +205,33 @@ const ZeldaApp = () => {
   );
 
   return (
-    <div className="fixed inset-0 bg-[#0b120c] text-white overflow-y-auto font-sans select-none">
-      <header className="flex items-center justify-between px-3 sm:px-6 py-2">
-        <Link to="/" className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/10 hover:bg-white/20 text-gray-300 hover:text-white border border-white/10 text-xs transition-all">
-          <ArrowLeft size={16} /> Portfolio
-        </Link>
-        <h1 className="font-mono font-black tracking-widest text-emerald-400 text-sm sm:text-base">ZELDA 2D</h1>
-        <div className="flex gap-2">
-          {inGame && (gameState === 'playing' || gameState === 'paused') && (
-            <button
-              onClick={() => setGameState(g => (g === 'playing' ? 'paused' : 'playing'))}
-              className="p-2 rounded-full bg-white/10 hover:bg-white/20 border border-white/10"
-              aria-label="Pause"
-            >
-              {gameState === 'paused' ? <Play size={16} /> : <Pause size={16} />}
-            </button>
-          )}
-          <button onClick={toggleMute} className="p-2 rounded-full bg-white/10 hover:bg-white/20 border border-white/10" aria-label="Son">
-            {muted ? <VolumeX size={16} /> : <Volume2 size={16} />}
-          </button>
+    <div className={`fixed inset-0 bg-[#0b120c] text-white font-sans select-none ${sideControls ? 'overflow-hidden touch-none' : 'overflow-y-auto'}`}>
+      {portraitBlock && (
+        <div className="fixed inset-0 z-[100] flex flex-col items-center justify-center gap-5 p-8 bg-[#0b120c] text-center">
+          <div className="w-20 h-20 rounded-3xl bg-emerald-500/15 border border-emerald-400/40 text-emerald-300 flex items-center justify-center">
+            <Smartphone size={44} style={{ animation: 'zelda-rotate 2.4s ease-in-out infinite' }} />
+          </div>
+          <style>{'@keyframes zelda-rotate{0%,20%{transform:rotate(0)}50%,80%{transform:rotate(90deg)}100%{transform:rotate(0)}}'}</style>
+          <h2 className="font-mono font-black text-xl tracking-wider">TOURNE TON TÉLÉPHONE</h2>
+          <p className="text-gray-400 text-sm max-w-xs leading-relaxed">Zelda 2D se joue à l'horizontale, avec le joystick à gauche et l'épée à droite.</p>
+          <Link to="/" className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/10 text-gray-300 border border-white/10 text-xs">
+            <ArrowLeft size={16} /> Portfolio
+          </Link>
         </div>
-      </header>
+      )}
+
+      {!sideControls && (
+        <header className="flex items-center justify-between px-3 sm:px-6 py-2">
+          <Link to="/" className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/10 hover:bg-white/20 text-gray-300 hover:text-white border border-white/10 text-xs transition-all">
+            <ArrowLeft size={16} /> Portfolio
+          </Link>
+          <h1 className="font-mono font-black tracking-widest text-emerald-400 text-sm sm:text-base">ZELDA 2D</h1>
+          <div className="flex gap-2">
+            {inGame && pauseButton}
+            {muteButton}
+          </div>
+        </header>
+      )}
 
       {gameState === 'menu' ? (
         <main className="max-w-3xl mx-auto px-4 py-6 sm:py-10 text-center space-y-6">
@@ -233,25 +264,31 @@ const ZeldaApp = () => {
           </div>
           <div className="bg-white/5 border border-white/10 rounded-xl p-3 text-[11px] font-mono text-gray-400 grid grid-cols-1 sm:grid-cols-2 gap-2 text-left">
             <p><span className="text-white font-bold">🎮 Clavier :</span> Flèches / ZQSD bouger · Espace ou J épée · Échap pause · M son</p>
-            <p><span className="text-white font-bold">📱 Mobile :</span> Croix pour bouger · Bouton ÉPÉE pour frapper</p>
+            <p><span className="text-white font-bold">📱 Mobile :</span> En paysage · Pouce gauche n'importe où pour le joystick · Bouton ÉPÉE pour frapper</p>
           </div>
         </main>
       ) : sideControls ? (
-        <main className="flex items-center justify-between gap-2 px-3 pb-2">
-          <DPad controls={controls} />
-          {screen}
-          <AttackButton controls={controls} />
-        </main>
-      ) : (
-        <main className="px-3 pb-4">
-          {screen}
-          {isTouch && (
-            <div className="flex items-center justify-between max-w-md mx-auto mt-4 px-2">
-              <DPad controls={controls} />
+        // Paysage tactile : boutons système et joystick à gauche, écran au centre, épée à droite
+        <main className="flex h-[100dvh] items-stretch gap-2 px-2 py-2" style={{ paddingLeft: 'max(0.5rem, env(safe-area-inset-left))', paddingRight: 'max(0.5rem, env(safe-area-inset-right))' }}>
+          <div className="flex flex-col flex-1 min-w-[130px]">
+            <div className="flex gap-2">
+              <Link to="/" className="p-2 rounded-full bg-white/10 border border-white/10" aria-label="Portfolio"><ArrowLeft size={16} /></Link>
+              {pauseButton}
+            </div>
+            <div className="flex-1">
+              <Joystick controls={controls} />
+            </div>
+          </div>
+          <div className="flex items-center">{screen}</div>
+          <div className="flex flex-col flex-1 min-w-[130px] items-end">
+            {muteButton}
+            <div className="flex-1 flex items-end justify-center w-full pb-4">
               <AttackButton controls={controls} />
             </div>
-          )}
+          </div>
         </main>
+      ) : (
+        <main className="px-3 pb-4">{screen}</main>
       )}
     </div>
   );

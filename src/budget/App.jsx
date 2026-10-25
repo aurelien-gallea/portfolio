@@ -8,7 +8,7 @@ import { Anneau, Historique } from './Graphiques';
 import Guide from './Guide';
 import Pistes from './conseils/Pistes';
 import {
-  CATEGORIES, categorie, charger, sauvegarder, nouvelId, cleMois, aujourdhui, decalerMois,
+  CATEGORIES, categorie, sousCategorie, devinerSousCategorie, charger, sauvegarder, nouvelId, cleMois, aujourdhui, decalerMois,
   nomMois, euros, totaux, parCategorie, exporterCsv, importerCsv, empreinte, telecharger, donneesExemple,
 } from './donnees';
 
@@ -22,7 +22,7 @@ const carte = 'rounded-2xl border border-white/[0.06] bg-white/[0.03] p-5';
 const bouton = 'inline-flex cursor-pointer items-center gap-2 rounded-xl border-0 px-3 py-2 text-sm font-medium transition-colors';
 
 const formulaireVide = () => ({
-  type: 'depense', categorie: 'courses', libelle: '', montant: '', date: aujourdhui(),
+  type: 'depense', categorie: 'courses', sousCategorie: null, libelle: '', montant: '', date: aujourdhui(),
 });
 
 function Formulaire({ initial, onValider, onAnnuler }) {
@@ -31,7 +31,9 @@ function Formulaire({ initial, onValider, onAnnuler }) {
   const maj = (cle) => (e) => setF({ ...f, [cle]: e.target.value });
 
   const changerType = (type) =>
-    setF({ ...f, type, categorie: CATEGORIES[type][0].id });
+    setF({ ...f, type, categorie: CATEGORIES[type][0].id, sousCategorie: null });
+
+  const choix = categorie(f.categorie);
 
   const valider = (e) => {
     e.preventDefault();
@@ -42,6 +44,7 @@ function Formulaire({ initial, onValider, onAnnuler }) {
       ...f,
       montant: Math.round(montant * 100) / 100,
       libelle: f.libelle.trim() || categorie(f.categorie).nom,
+      sousCategorie: f.sousCategorie ?? devinerSousCategorie(f.categorie, [f.libelle]),
     });
   };
 
@@ -94,7 +97,7 @@ function Formulaire({ initial, onValider, onAnnuler }) {
             <button
               key={c.id}
               type="button"
-              onClick={() => setF({ ...f, categorie: c.id })}
+              onClick={() => setF({ ...f, categorie: c.id, sousCategorie: c.id === f.categorie ? f.sousCategorie : null })}
               className={`${bouton} border px-2.5 py-1.5 text-xs ${
                 f.categorie === c.id ? 'text-white' : 'border-white/10 bg-transparent text-gray-400 hover:text-white'
               }`}
@@ -107,7 +110,29 @@ function Formulaire({ initial, onValider, onAnnuler }) {
         </div>
       </div>
 
-      {erreur && <p className="text-sm text-red-400">{erreur}</p>}
+      {choix.sous.length > 0 && (
+        <div className="space-y-1">
+          <span className="text-xs text-gray-400">Précision (facultatif)</span>
+          <div className="flex flex-wrap gap-1.5">
+            {choix.sous.map((s) => (
+              <button
+                key={s.id}
+                type="button"
+                onClick={() => setF({ ...f, sousCategorie: f.sousCategorie === s.id ? null : s.id })}
+                aria-pressed={f.sousCategorie === s.id}
+                className={`${bouton} border px-2 py-1 text-xs ${
+                  f.sousCategorie === s.id ? 'text-white' : 'border-white/10 bg-transparent text-gray-400 hover:text-white'
+                }`}
+                style={f.sousCategorie === s.id ? { background: `${choix.couleur}33`, borderColor: choix.couleur } : undefined}
+              >
+                {s.nom}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {erreur &&<p className="text-sm text-red-400">{erreur}</p>}
 
       <div className="flex justify-end gap-2 pt-2">
         <button type="button" onClick={onAnnuler} className={`${bouton} bg-white/5 text-gray-300 hover:bg-white/10`}>
@@ -239,6 +264,8 @@ export default function BudgetApp() {
   const [categorisation, setCategorisation] = useState(false);
   const [guide, setGuide] = useState(false);
   const [categorieFiltre, setCategorieFiltre] = useState(null);
+  // Sous-catégorie filtrée dans la catégorie choisie ('aucune' = opérations sans précision)
+  const [sousFiltre, setSousFiltre] = useState(null);
   const fichier = useRef(null);
   const listeOperations = useRef(null);
 
@@ -246,6 +273,7 @@ export default function BudgetApp() {
   const choisirCategorie = (id) => {
     const nouvelle = categorieFiltre === id ? null : id;
     setCategorieFiltre(nouvelle);
+    setSousFiltre(null);
     if (nouvelle) setFiltre('tout');
     if (nouvelle &&window.matchMedia('(max-width: 1023px)').matches) {
       listeOperations.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -280,8 +308,23 @@ export default function BudgetApp() {
   const visibles = duMois.filter((t) =>
     (filtre === 'tout' || t.type === filtre) &&
     (!categorieFiltre || t.categorie === categorieFiltre) &&
-    (!recherche || `${t.libelle} ${categorie(t.categorie).nom}`.toLowerCase().includes(recherche.toLowerCase()))
+    (!sousFiltre || (t.sousCategorie || 'aucune') === sousFiltre) &&
+    (!recherche || `${t.libelle} ${categorie(t.categorie).nom} ${sousCategorie(t.sousCategorie)?.nom ?? ''}`.toLowerCase().includes(recherche.toLowerCase()))
   );
+
+  // Détail de la catégorie filtrée par sous-catégorie, pour voir ce qui pèse dedans
+  const detailSous = useMemo(() => {
+    if (!categorieFiltre) return [];
+    const sommes = {};
+    for (const t of duMois) {
+      if (t.type !== 'depense' || t.categorie !== categorieFiltre) continue;
+      const cle = t.sousCategorie || 'aucune';
+      sommes[cle] = (sommes[cle] ?? 0) + t.montant;
+    }
+    return Object.entries(sommes)
+      .map(([id, montant]) => ({ id, nom: sousCategorie(id)?.nom ?? 'Sans précision', montant }))
+      .sort((a, b) => (a.id === 'aucune') - (b.id === 'aucune') || b.montant - a.montant);
+  }, [duMois, categorieFiltre]);
 
   const nonClassees = transactions.filter((t) => t.categorie === 'autre' || t.categorie === 'autre-revenu').length;
 
@@ -392,7 +435,9 @@ export default function BudgetApp() {
   const appliquerCategories = (nouvelles) => {
     setDonnees((d) => ({
       ...d,
-      transactions: d.transactions.map((t) => (nouvelles[t.id] ? { ...t, categorie: nouvelles[t.id] } : t)),
+      transactions: d.transactions.map((t) => (nouvelles[t.id]
+        ? { ...t, categorie: nouvelles[t.id], sousCategorie: devinerSousCategorie(nouvelles[t.id], [t.libelle]) }
+        : t)),
     }));
     setCategorisation(false);
   };
@@ -603,9 +648,28 @@ export default function BudgetApp() {
                       </span>
                     )}
                   </span>
-                  <button type="button" onClick={() => setCategorieFiltre(null)} className={`${bouton} bg-white/5 py-1 text-xs text-gray-300 hover:bg-white/10`}>
+                  <button type="button" onClick={() => choisirCategorie(categorieFiltre)} className={`${bouton} bg-white/5 py-1 text-xs text-gray-300 hover:bg-white/10`}>
                     <X size={14} /> Toutes les catégories
                   </button>
+                  {detailSous.length > 1 && (
+                    <div className="flex w-full flex-wrap gap-1.5 pt-1">
+                      {detailSous.map((s) => (
+                        <button
+                          key={s.id}
+                          type="button"
+                          onClick={() => setSousFiltre(sousFiltre === s.id ? null : s.id)}
+                          aria-pressed={sousFiltre === s.id}
+                          className={`${bouton} gap-1.5 border px-2 py-1 text-xs ${
+                            sousFiltre === s.id ? 'text-white' : 'border-white/10 bg-black/20 text-gray-300 hover:text-white'
+                          }`}
+                          style={sousFiltre === s.id ? { background: `${c.couleur}33`, borderColor: c.couleur } : undefined}
+                        >
+                          {s.nom}
+                          <span className="whitespace-nowrap tabular-nums text-gray-400">{euros(s.montant)}</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
               );
             })()}
@@ -650,7 +714,9 @@ export default function BudgetApp() {
                             </span>
                             <div className="min-w-0 flex-1">
                               <div className="truncate text-sm text-gray-100">{t.libelle}</div>
-                              <div className="text-xs text-gray-500">{c.nom}</div>
+                              <div className="truncate text-xs text-gray-500">
+                                {c.nom}{sousCategorie(t.sousCategorie) && ` · ${sousCategorie(t.sousCategorie).nom}`}
+                              </div>
                             </div>
                             <span className={`shrink-0 text-sm font-semibold tabular-nums ${t.type === 'revenu' ? 'text-emerald-400' : 'text-gray-200'}`}>
                               {t.type === 'revenu' ? '+' : '−'}{euros(t.montant)}

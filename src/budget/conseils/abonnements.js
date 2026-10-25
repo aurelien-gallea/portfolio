@@ -4,7 +4,7 @@ import { aujourdhui, cleMois } from '../donnees';
 
 // Paiements récurrents qu'on ne « résilie » pas : loyer, crédit, et l'eau (fournisseur imposé par la commune)
 const EXCLUS = /loyer|pr[eê]t|cr[eé]dit|emprunt|[eé]ch[eé]ance|salaire|virement|veolia|suez|saur\b|\beau\b/i;
-const CATEGORIES_EXCLUES = ['courses', 'restaurants'];
+const CATEGORIES_EXCLUES = ['courses', 'restaurants', 'credits'];
 const PRELEVEMENT = /^(prlv|pr[eé]l[eè]vement)/i;
 
 // Contrats essentiels : on ne les résilie pas, on fait jouer la concurrence
@@ -12,7 +12,15 @@ const CONTRATS = [
   { id: 'energie', motif: /\b(edf|engie|totalenergies|total energies|ekwateur|ohm|mint|octopus|vattenfall|eni|gaz|electricite|energie)\b/ },
   { id: 'assurance', motif: /\b(assurance|assur|maif|macif|matmut|maaf|gmf|axa|allianz|groupama|mma|direct assurance|leocare|lovys|luko|mutuelle|harmonie|mgen|alan)\b/ },
 ];
-const typeContrat = (cle) => CONTRATS.find((c) => c.motif.test(cle))?.id ?? null;
+// Sous-catégories qui désignent à coup sûr un contrat à comparer
+const SOUS_CONTRATS = {
+  'logement-energie': 'energie',
+  'logement-assurance': 'assurance',
+  'transport-assurance': 'assurance',
+  'sante-mutuelle': 'assurance',
+  'animaux-assurance': 'assurance',
+};
+const typeContrat = (cle, sous) => SOUS_CONTRATS[sous] ?? CONTRATS.find((c) => c.motif.test(cle))?.id ?? null;
 
 const FREQUENCES = [
   { id: 'mensuel', nom: 'mensuel', jours: [20, 40], parMois: 1 },
@@ -94,7 +102,7 @@ export function detecterAbonnements(transactions, reference = aujourdhui()) {
       cle,
       nom: titre(cle),
       categorie: derniere.categorie,
-      contrat: typeContrat(cle),
+      contrat: typeContrat(cle, derniere.sousCategorie),
       montant: derniere.montant,
       frequence: f,
       suppose: classe,

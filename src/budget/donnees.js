@@ -1,27 +1,104 @@
 // Catégories, stockage local et utilitaires de calcul du budget
 
+// Chaque catégorie a des sous-catégories facultatives ; « motif » sert à les deviner
+// à partir du libellé ou de la catégorie de la banque (texte sans accents, en minuscules)
 export const CATEGORIES = {
   depense: [
-    { id: 'logement', nom: 'Logement', couleur: '#f97316' },
-    { id: 'courses', nom: 'Courses', couleur: '#22c55e' },
-    { id: 'transport', nom: 'Transport', couleur: '#3b82f6' },
-    { id: 'loisirs', nom: 'Loisirs', couleur: '#a855f7' },
-    { id: 'sante', nom: 'Santé', couleur: '#ef4444' },
-    { id: 'abonnements', nom: 'Abonnements', couleur: '#06b6d4' },
-    { id: 'restaurants', nom: 'Restaurants', couleur: '#eab308' },
-    { id: 'shopping', nom: 'Shopping', couleur: '#ec4899' },
-    { id: 'autre', nom: 'Autre', couleur: '#94a3b8' },
+    { id: 'logement', nom: 'Logement', couleur: '#f97316', sous: [
+      { id: 'logement-loyer', nom: 'Loyer ou crédit immobilier', motif: /loyer|immobilier|credit immo|pret immo/ },
+      { id: 'logement-assurance', nom: 'Assurance habitation', motif: /assurance|habitation|multirisque|\bmrh\b|maif|macif|matmut|\bgan\b|\baxa\b|allianz|groupama|generali|\bmma\b|maaf|\bgmf\b|luko|leocare|lovys|acheel/ },
+      { id: 'logement-energie', nom: 'Électricité et gaz', motif: /\bedf\b|engie|electricite|\bgaz\b|energie|ekwateur|enercoop|ohm|mint/ },
+      { id: 'logement-eau', nom: 'Eau', motif: /\beau\b|veolia|suez|saur/ },
+      { id: 'logement-charges', nom: 'Charges, travaux et taxes', motif: /charges|syndic|copropriete|travaux|entretien|taxe fonciere|taxe d.habitation/ },
+    ] },
+    { id: 'courses', nom: 'Courses', couleur: '#22c55e', sous: [
+      { id: 'courses-supermarche', nom: 'Supermarché', motif: /carrefour|leclerc|auchan|lidl|intermarche|super u|hyper u|monoprix|franprix|casino|aldi|picard|netto|cora|thiriet|supermarche|hypermarche/ },
+      { id: 'courses-proximite', nom: 'Boulangerie, marché, primeur', motif: /boulangerie|marche|primeur|boucherie|fromagerie|epicerie|coquieres/ },
+    ] },
+    { id: 'transport', nom: 'Transport', couleur: '#3b82f6', sous: [
+      { id: 'transport-carburant', nom: 'Carburant', motif: /carburant|carbu|essence|gazole|station|total|esso|shell|\bbp\b|avia|\bdac\b/ },
+      { id: 'transport-commun', nom: 'Transports en commun et train', motif: /ratp|sncf|\bter\b|navigo|\bbus\b|metro|tram|transports quotidiens|\brtm\b|\btcl\b|blablacar/ },
+      { id: 'transport-peage', nom: 'Péage et parking', motif: /peage|autoroute|vinci|sanef|aprr|parking|stationnement|indigo/ },
+      { id: 'transport-entretien', nom: 'Entretien et réparation', motif: /entretien|reparation|garage|norauto|feu vert|speedy|midas|controle technique|pneu|lavage|nickel chrome/ },
+      { id: 'transport-assurance', nom: 'Assurance véhicule', motif: /assurance|laka|maif|macif|matmut|\baxa\b|allianz|groupama|\bmma\b|maaf|\bgmf\b|direct assurance|olivier|leocare/ },
+    ] },
+    { id: 'sante', nom: 'Santé', couleur: '#ef4444', sous: [
+      { id: 'sante-pharmacie', nom: 'Pharmacie', motif: /pharmacie|\bphie\b|parapharmacie/ },
+      { id: 'sante-medecin', nom: 'Médecin et soins', motif: /medecin|docteur|\bdr\b|kine|hopital|clinique|laboratoire|infirm|osteo|doctolib|consultation/ },
+      { id: 'sante-optique-dentaire', nom: 'Optique et dentaire', motif: /optique|opticien|optic|dentiste|dentaire|orthodont|lunettes|krys|afflelou|atol/ },
+      { id: 'sante-mutuelle', nom: 'Mutuelle', motif: /mutuelle|complementaire sante|harmonie|mgen|\balan\b|malakoff|ag2r|swiss life|april/ },
+    ] },
+    { id: 'animaux', nom: 'Animaux', couleur: '#d97706', sous: [
+      { id: 'animaux-veterinaire', nom: 'Vétérinaire', motif: /veterinaire|\bveto|vetetoi|anicura|clinique vet/ },
+      { id: 'animaux-alimentation', nom: 'Nourriture et accessoires', motif: /zooplus|animalis|maxi zoo|wanimo|croquette|animalerie|jardiland|truffaut/ },
+      { id: 'animaux-assurance', nom: 'Assurance animaux', motif: /santevet|assur o poil|kozoo|dalma|bulle bleue|assurance/ },
+    ] },
+    { id: 'abonnements', nom: 'Abonnements', couleur: '#06b6d4', sous: [
+      { id: 'abonnements-telecom', nom: 'Téléphone et internet', motif: /bouygues|orange|\bsfr\b|\bfree\b|sosh|red by|telephon|internet|\bbox\b/ },
+      { id: 'abonnements-streaming', nom: 'Streaming et musique', motif: /netflix|spotify|deezer|disney|canal|prime video|amazon prime|apple tv|youtube|crunchyroll|multimedia/ },
+      { id: 'abonnements-sport', nom: 'Salle de sport', motif: /fitness|basic.?fit|salle de sport|keep cool|neoness|on air|l.orange bleue/ },
+      { id: 'abonnements-numerique', nom: 'Logiciels, cloud, jeux et presse', motif: /apple\.com|icloud|google|microsoft|adobe|dropbox|chatgpt|openai|anthropic|presse|journal|square.?enix|playstation|xbox|nintendo/ },
+    ] },
+    { id: 'restaurants', nom: 'Restaurants', couleur: '#eab308', sous: [
+      { id: 'restaurants-rapide', nom: 'Fast-food', motif: /mcdo|mcdonald|burger|kfc|quick|subway|five guys|tacos|domino/ },
+      { id: 'restaurants-livraison', nom: 'Livraison', motif: /deliveroo|uber.?eats|just eat|dejbox/ },
+      { id: 'restaurants-restaurant', nom: 'Restaurant', motif: /restaurant|resto|brasserie|bistro|sushi|pizza|creperie|traiteur/ },
+      { id: 'restaurants-cafe', nom: 'Café, bar, boulangerie', motif: /cafe|\bbar\b|\bpub\b|starbucks|columbus|quanta|boulangerie|feuillette|\bpaul\b/ },
+    ] },
+    { id: 'loisirs', nom: 'Loisirs', couleur: '#a855f7', sous: [
+      { id: 'loisirs-sorties', nom: 'Sorties et culture', motif: /cinema|concert|theatre|musee|spectacle|fnac|cultura|sortie|culture|bowling|billet/ },
+      { id: 'loisirs-sport', nom: 'Sport', motif: /decathlon|sport|intersport|piscine|club/ },
+      { id: 'loisirs-jeux', nom: 'Jeux vidéo', motif: /steam|playstation|nintendo|xbox|micromania|square.?enix|humble|epic games|instant gaming|jeux/ },
+      { id: 'loisirs-voyages', nom: 'Voyages et vacances', motif: /hotel|airbnb|booking|voyage|vacances|camping|ryanair|easyjet|air france|transavia/ },
+    ] },
+    { id: 'shopping', nom: 'Shopping', couleur: '#ec4899', sous: [
+      { id: 'shopping-vetements', nom: 'Vêtements et chaussures', motif: /zara|h&m|kiabi|celio|uniqlo|zalando|vinted|vetement|habillement|chaussure|foot locker|jules|primark|bershka|shein/ },
+      { id: 'shopping-high-tech', nom: 'High-tech', motif: /boulanger|darty|apple store|ldlc|electronique|informatique|materiel\.net/ },
+      { id: 'shopping-maison', nom: 'Maison et bricolage', motif: /ikea|leroy merlin|castorama|\bbut\b|conforama|maisons du monde|bricolage|jardinage|mobilier|electromenager|decoration|\baction\b/ },
+      { id: 'shopping-beaute', nom: 'Beauté et coiffeur', motif: /sephora|nocibe|marionnaud|coiffeur|coiffure|bien-etre|beaute|parfum|yves rocher|majic/ },
+      { id: 'shopping-cadeaux', nom: 'Cadeaux, livres, jouets', motif: /cadeau|interflor|fleur|livres|librairie|jouet|king jouet/ },
+      { id: 'shopping-en-ligne', nom: 'Achats en ligne', motif: /amazon|amzn|\bamz\b|cdiscount|aliexpress|temu|ebay|paypal/ },
+    ] },
+    { id: 'credits', nom: 'Crédits', couleur: '#6366f1', sous: [
+      { id: 'credits-conso', nom: 'Crédit conso', motif: /conso|renouvelable|cofidis|cetelem|sofinco|franfinance|younited|floa|oney|pret perso|crcam/ },
+      { id: 'credits-auto', nom: 'Crédit auto, LOA', motif: /credit auto|\bloa\b|\blld\b|leasing/ },
+    ] },
+    { id: 'autre', nom: 'Autre', couleur: '#94a3b8', sous: [
+      { id: 'autre-frais', nom: 'Frais bancaires', motif: /frais|cotisation|agios|commission|bourso protect|tenue de compte/ },
+      { id: 'autre-retraits', nom: 'Retraits d\'espèces', motif: /retrait|\bdab\b|\bcash\b/ },
+      { id: 'autre-impots', nom: 'Impôts et amendes', motif: /impot|dgfip|tresor public|amende|\bantai\b/ },
+      { id: 'autre-dons', nom: 'Dons', motif: /\bdons?\b|association|croix rouge|restos du coeur|unicef|cagnotte|leetchi/ },
+      { id: 'autre-virements', nom: 'Virements à des proches', motif: /^vir|virement/ },
+    ] },
   ],
   revenu: [
-    { id: 'salaire', nom: 'Salaire', couleur: '#10b981' },
-    { id: 'freelance', nom: 'Freelance', couleur: '#14b8a6' },
-    { id: 'aides', nom: 'Aides', couleur: '#84cc16' },
-    { id: 'autre-revenu', nom: 'Autre', couleur: '#64748b' },
+    { id: 'salaire', nom: 'Salaire', couleur: '#10b981', sous: [] },
+    { id: 'freelance', nom: 'Freelance', couleur: '#14b8a6', sous: [] },
+    { id: 'aides', nom: 'Aides', couleur: '#84cc16', sous: [
+      { id: 'aides-caf', nom: 'CAF, APL', motif: /\bcaf\b|\bapl\b|allocation|prime d.activite/ },
+      { id: 'aides-chomage', nom: 'France Travail', motif: /pole emploi|france travail|chomage/ },
+      { id: 'aides-sante', nom: 'Remboursements santé', motif: /cpam|ameli|mutuelle|sante/ },
+    ] },
+    { id: 'autre-revenu', nom: 'Autre', couleur: '#64748b', sous: [
+      { id: 'autre-revenu-virements', nom: 'Virements reçus', motif: /^vir|virement/ },
+      { id: 'autre-revenu-interets', nom: 'Intérêts', motif: /interets/ },
+    ] },
   ],
 };
 
 const TOUTES = [...CATEGORIES.depense, ...CATEGORIES.revenu];
 export const categorie = (id) => TOUTES.find((c) => c.id === id) ?? CATEGORIES.depense.at(-1);
+export const sousCategorie = (id) => (id ? TOUTES.flatMap((c) => c.sous).find((s) => s.id === id) ?? null : null);
+
+// Sous-catégorie la plus probable parmi celles de la catégorie, d'après un ou plusieurs textes
+export function devinerSousCategorie(categorieId, textes) {
+  const { sous } = categorie(categorieId);
+  for (const texte of textes.filter(Boolean).map(sansAccent)) {
+    const trouvee = sous.find((s) => s.motif.test(texte));
+    if (trouvee) return trouvee.id;
+  }
+  return null;
+}
 
 const CLE = 'budget-portfolio-v1';
 
@@ -88,15 +165,25 @@ function exemple() {
     .map(([m, montant]) => ({
       id: nouvelId(), type: 'depense', categorie: cat, libelle, montant, date: `${m}-${jour}`,
     })));
+  const animaux = [{ id: nouvelId(), type: 'depense', categorie: 'animaux', libelle: 'CB CLINIQUE VETERINAIRE', montant: 48, date: `${mois}-17` }];
   return {
     // Données de démonstration : remplacées dès que l'utilisateur commence son propre budget
     exemple: true,
-    transactions: [...lignes(prec), ...lignes(mois), ...aClasser, ...abonnements],
+    transactions: [...lignes(prec), ...lignes(mois), ...aClasser, ...abonnements, ...animaux]
+      .map((t) => ({ ...t, sousCategorie: devinerSousCategorie(t.categorie, [t.libelle]) })),
     budgets: { courses: 350, loisirs: 120, restaurants: 100, transport: 150, shopping: 100 },
   };
 }
 
 export { exemple as donneesExemple };
+
+// Opérations enregistrées avant les sous-catégories : on retente « Autre » avec les nouvelles
+// catégories (Animaux, Crédits…) et on devine la sous-catégorie, une seule fois
+function completerCategories(t) {
+  if (t.sousCategorie !== undefined) return t;
+  const cat = t.categorie === 'autre' || t.categorie === 'autre-revenu' ? devinerCategorie(t.libelle, t.type) : t.categorie;
+  return { ...t, categorie: cat, sousCategorie: devinerSousCategorie(cat, [t.libelle]) };
+}
 
 export function charger() {
   try {
@@ -106,7 +193,13 @@ export function charger() {
       if (Array.isArray(donnees.transactions)) {
         // Exemple enregistré avant l'ajout du marqueur : reconnu à l'une de ses opérations
         const exempleAncien = donnees.exemple === undefined && donnees.transactions.some((t) => t.libelle === 'CB BURGER KING 4974XXXX');
-        return { budgets: {}, ...donnees, ...(exempleAncien && { exemple: true }) };
+        const estExemple = donnees.exemple || exempleAncien;
+        return {
+          budgets: {},
+          ...donnees,
+          ...(exempleAncien && { exemple: true }),
+          transactions: estExemple ? donnees.transactions : donnees.transactions.map(completerCategories),
+        };
       }
     }
   } catch { /* stockage indisponible : on repart de l'exemple */ }
@@ -146,9 +239,12 @@ const FORMULE = /^[=+\-@\t\r]/;
 const sansFormule = (texte) => (FORMULE.test(texte) ? `'${texte}` : texte);
 
 export function exporterCsv(transactions) {
-  const entete = 'date;type;categorie;libelle;montant';
+  const entete = 'date;type;categorie;sous-categorie;libelle;montant';
   const lignes = transactions.map((t) =>
-    [t.date, t.type, categorie(t.categorie).nom, `"${sansFormule(t.libelle).replace(/"/g, '""')}"`, t.montant.toFixed(2).replace('.', ',')].join(';')
+    [
+      t.date, t.type, categorie(t.categorie).nom, sousCategorie(t.sousCategorie)?.nom ?? '',
+      `"${sansFormule(t.libelle).replace(/"/g, '""')}"`, t.montant.toFixed(2).replace('.', ','),
+    ].join(';')
   );
   return '﻿' + [entete, ...lignes].join('\n');
 }
@@ -159,13 +255,16 @@ const sansAccent = (s) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase
 
 // Mots-clés pour deviner la catégorie d'une ligne de relevé bancaire
 const MOTS_CLES = {
+  animaux: ['veterinaire', 'vetetoi', 'anicura', 'zooplus', 'animalis', 'maxi zoo', 'wanimo', 'santevet', 'croquette'],
+  credits: ['cofidis', 'cetelem', 'sofinco', 'franfinance', 'younited', 'credit conso', 'pret perso', 'echeance pret', 'credit auto'],
   // Avant transport : « uber eats » doit primer sur « uber »
-  restaurants: ['restaurant', 'resto', 'mcdo', 'mcdonald', 'burger', 'kfc', 'deliveroo', 'uber eats', 'just eat', 'pizza', 'boulangerie', 'cafe'],
+  restaurants: ['restaurant', 'resto', 'mcdo', 'mcdonald', 'burger', 'kfc', 'deliveroo', 'uber eats', 'just eat', 'dejbox', 'pizza', 'sushi', 'bistro', 'brasserie', 'creperie', 'boulangerie', 'cafe'],
   logement: ['loyer', 'edf', 'engie', 'eau ', 'veolia', 'assurance hab', 'syndic', 'charges'],
+  // Avant courses : « DAC AUCHAN CARBU » est un plein, pas des courses
+  transport: ['sncf', 'ratp', 'total', 'esso', 'shell', 'bp ', 'uber', 'blablacar', 'peage', 'parking', 'carburant', 'carbu', ' dac', 'essence', 'navigo'],
   courses: ['carrefour', 'leclerc', 'auchan', 'lidl', 'intermarche', 'super u', 'monoprix', 'franprix', 'casino', 'aldi', 'picard', 'marche'],
-  transport: ['sncf', 'ratp', 'total', 'esso', 'shell', 'bp ', 'uber', 'blablacar', 'peage', 'parking', 'carburant', 'essence', 'navigo'],
-  loisirs: ['cinema', 'fnac', 'steam', 'playstation', 'concert', 'decathlon', 'cultura'],
-  sante: ['pharmacie', 'medecin', 'docteur', 'dentiste', 'mutuelle', 'hopital', 'cpam'],
+  loisirs: ['cinema', 'fnac', 'steam', 'playstation', 'nintendo', 'square-enix', 'square enix', 'humble', 'micromania', 'concert', 'decathlon', 'cultura'],
+  sante: ['pharmacie', 'phie ', 'medecin', 'docteur', 'dentiste', 'opticien', 'mutuelle', 'hopital', 'cpam', 'doctolib'],
   abonnements: ['netflix', 'spotify', 'deezer', 'disney', 'canal', 'free', 'orange', 'sfr', 'bouygues', 'sosh', 'amazon prime', 'abonnement'],
   shopping: ['amazon', 'amzn', 'amz ', 'zara', 'h&m', 'ikea', 'cdiscount', 'vinted', 'leroy merlin'],
   salaire: ['salaire', 'paie', 'virement employeur'],
@@ -174,10 +273,12 @@ const MOTS_CLES = {
 
 // Catégories fournies par les banques (BoursoBank, Crédit Agricole…) ramenées aux nôtres ; l'ordre compte
 const CATEGORIES_BANQUE = {
+  animaux: /animaux|animal|veterinaire/,
   abonnements: /telephon|multimedia|internet|abonnement|streaming/,
   restaurants: /restaurant|restauration|fast.?food/,
   courses: /alimentation|supermarche|hypermarche|courses|epicerie/,
-  logement: /loyer|logement|habitation|electricite|energie|\bgaz\b|\beau\b|charges/,
+  logement: /loyer|logement|habitation|electricite|energie|\bgaz\b|\beau\b|charges|credit immobilier|pret immobilier/,
+  credits: /credit|emprunt|\bprets?\b/,
   transport: /carburant|transport|\bauto\b|\bmoto\b|peage|parking|stationnement|vehicule/,
   sante: /sante|pharmacie|medecin|medical|mutuelle|optique|dentaire/,
   shopping: /shopping|vetement|habillement|chaussure|livres|mobilier|electromenager|electronique|informatique|bricolage|jardinage|bien-etre|beaute|cadeau|equipement/,
@@ -271,8 +372,9 @@ const COLONNES = {
   debit: ['debit', 'debits', 'sortie', 'sorties', 'paid out', 'withdrawal'],
   credit: ['credit', 'credits', 'entree', 'entrees', 'paid in', 'deposit'],
   type: ['type'],
-  categorie: ['categorie', 'category', 'sous-categorie'],
+  categorie: ['categorie', 'category'],
   parente: ['categorie parente', 'parent category'],
+  sous: ['sous-categorie', 'sous categorie', 'subcategory'],
 };
 
 function trouverColonne(entete, noms) {
@@ -366,8 +468,12 @@ export function importerCsv(texte) {
 
     const libelle = (col.libelle >= 0 ? l[col.libelle] : '')?.replace(/^'(?=[=+\-@])/, '').replace(/\s+/g, ' ').slice(0, 60) ?? '';
     const cat = devinerCategorie(libelle, type, categoriesBanque);
+    // Sous-catégorie : nom exact (notre export), sinon devinée comme la catégorie
+    const sousLue = sansAccent(l[col.sous] ?? '');
+    const sous = categorie(cat).sous.find((s) => sousLue && sansAccent(s.nom) === sousLue)?.id
+      ?? devinerSousCategorie(cat, [libelle, ...categoriesBanque]);
     transactions.push({
-      id: nouvelId(), type, categorie: cat, date, montant,
+      id: nouvelId(), type, categorie: cat, sousCategorie: sous, date, montant,
       libelle: libelle || categorie(cat).nom,
     });
   }

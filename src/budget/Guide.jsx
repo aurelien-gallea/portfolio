@@ -74,7 +74,7 @@ export default function Guide({ exemple, onImporter, onRevoirExemple }) {
         <ul className="m-0 list-disc space-y-1 pl-4">
           <li><strong>Pistes pour alléger votre budget</strong> : vos postes comparés aux repères français, et votre loyer au loyer moyen de votre commune (renseignez « Mon logement »).</li>
           <li><strong>Scanner d'abonnements</strong> : prélèvements récurrents et opérations classées en « Abonnements », hausses de prix, économie si vous résiliez. Les contrats d'énergie et d'assurance sont mis à part, avec des comparateurs ; la croix retire ce qui n'est pas un abonnement.</li>
-          <li><strong>Plafonds mensuels</strong> par catégorie, et clic sur une catégorie pour ne voir que ses opérations.</li>
+          <li><strong>Plafonds mensuels</strong> par catégorie, et clic sur une catégorie pour ne voir que ses opérations, détaillées par sous-catégorie (assurance habitation, vétérinaire, mutuelle…).</li>
           <li><strong>Assistant IA</strong> (bouton en bas à droite) : questions en langage naturel, avec un modèle qui tourne lui aussi dans votre navigateur.</li>
         </ul>
       </Section>

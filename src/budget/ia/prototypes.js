@@ -38,6 +38,15 @@ export const PROTOTYPES = {
     'consultation médecin, dentiste, kinésithérapeute, ophtalmologue',
     'mutuelle santé, hôpital, laboratoire d\'analyses médicales',
   ],
+  animaux: [
+    'clinique vétérinaire, consultation chez le vétérinaire',
+    'animalerie, croquettes et accessoires pour chien ou chat',
+    'assurance santé pour animaux',
+  ],
+  credits: [
+    'échéance de crédit à la consommation, prêt personnel',
+    'mensualité de crédit auto, location avec option d\'achat',
+  ],
   abonnements: [
     'abonnement de streaming vidéo ou musique',
     'forfait de téléphone mobile, box internet, opérateur télécom',

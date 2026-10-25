@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowLeft, Pause, Play, Volume2, VolumeX, RefreshCw, Hammer, Smartphone } from 'lucide-react';
+import { ArrowLeft, Pause, Play, Volume2, VolumeX, RefreshCw, Hammer, Smartphone, Maximize2, Minimize2 } from 'lucide-react';
 import GameCanvas from './components/GameCanvas';
 import { Joystick, AttackButton } from './components/Controls';
 import { sfx } from './engine/audio';
@@ -124,6 +124,29 @@ const ZeldaApp = () => {
     }
   };
 
+  // Rend l'écran au navigateur : sortie du plein écran et orientation libre
+  const releaseScreen = () => {
+    try { screen.orientation?.unlock?.(); } catch { /* non supporté */ }
+    if (document.fullscreenElement) document.exitFullscreen?.().catch(() => {});
+  };
+
+  const [isFullscreen, setIsFullscreen] = useState(() => !!document.fullscreenElement);
+  useEffect(() => {
+    const onChange = () => setIsFullscreen(!!document.fullscreenElement);
+    document.addEventListener('fullscreenchange', onChange);
+    return () => {
+      document.removeEventListener('fullscreenchange', onChange);
+      releaseScreen();
+    };
+  }, []);
+
+  // De retour au menu, on ne garde ni le plein écran ni le paysage forcé
+  useEffect(() => {
+    if (gameState === 'menu') releaseScreen();
+  }, [gameState]);
+
+  const toggleFullscreen = () => (document.fullscreenElement ? releaseScreen() : lockLandscape());
+
   const start = () => {
     sfx.init();
     if (isTouch) lockLandscape();
@@ -164,6 +187,11 @@ const ZeldaApp = () => {
       aria-label="Pause"
     >
       {gameState === 'paused' ? <Play size={16} /> : <Pause size={16} />}
+    </button>
+  );
+  const fullscreenButton = document.fullscreenEnabled && (
+    <button onClick={toggleFullscreen} className="p-2 rounded-full bg-white/10 hover:bg-white/20 border border-white/10" aria-label={isFullscreen ? 'Quitter le plein écran' : 'Plein écran'}>
+      {isFullscreen ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
     </button>
   );
   const muteButton = (
@@ -252,7 +280,7 @@ const ZeldaApp = () => {
           <h1 className="font-mono font-black tracking-widest text-emerald-400 text-sm sm:text-base">ZELDA 2D</h1>
           <div className="flex gap-2">
             {inGame && pauseButton}
-            {muteButton}
+            {fullscreenButton}{muteButton}
           </div>
         </header>
       )}
@@ -306,7 +334,7 @@ const ZeldaApp = () => {
           </div>
           {screen}
           <div className="flex flex-col w-[136px] shrink-0 items-end">
-            {muteButton}
+            <div className="flex gap-2">{fullscreenButton}{muteButton}</div>
             <div className="flex-1 flex items-end justify-center w-full pb-4">
               <AttackButton controls={controls} />
             </div>

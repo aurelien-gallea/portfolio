@@ -7,6 +7,7 @@ import PkmnApp from './pkmnfinder/App';
 import SurvivalGameApp from './survival-game/App';
 import BudgetApp from './budget/App';
 import AutoApp from './auto/App';
+import ZeldaApp from './zelda/App';
 
 // Page non référencée : chargée seulement quand on ouvre son adresse
 const ScalperApp = lazy(() => import('./scalper/App'));
@@ -22,6 +23,7 @@ function App() {
         <Route path="/survival-game/*" element={<SurvivalGameApp />} />
         <Route path="/budget/*" element={<BudgetApp />} />
         <Route path="/thermique-vs-electrique/*" element={<AutoApp />} />
+        <Route path="/zelda-2d/*" element={<ZeldaApp />} />
         <Route path="/sn-8c3f3dd6be/*" element={<Suspense fallback={null}><ScalperApp /></Suspense>} />
       </Routes>
     </HashRouter>

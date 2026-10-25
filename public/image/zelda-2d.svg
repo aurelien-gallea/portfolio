@@ -1,0 +1,51 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 240" shape-rendering="crispEdges" font-family="'Courier New', monospace">
+  <rect width="400" height="240" fill="#58a83f"/>
+  <!-- Bandeau HUD -->
+  <rect width="400" height="36" fill="#0b0b10"/>
+  <g fill="#e83a4f">
+    <path d="M300 12h8v4h4v-4h8v4h4v8h-4v4h-4v4h-4v4h-4v-4h-4v-4h-4v-4h-4v-8h4z"/>
+    <path d="M330 12h8v4h4v-4h8v4h4v8h-4v4h-4v4h-4v4h-4v-4h-4v-4h-4v-4h-4v-8h4z"/>
+  </g>
+  <path d="M360 12h8v4h4v-4h8v4h4v8h-4v4h-4v4h-4v4h-4v-4h-4v-4h-4v-4h-4v-8h4z" fill="#3a1418"/>
+  <text x="16" y="25" fill="#f2c230" font-size="15" font-weight="700" letter-spacing="2">ZELDA 2D</text>
+  <!-- Arbres -->
+  <g id="tree">
+    <rect x="12" y="44" width="40" height="36" fill="#164d20"/>
+    <rect x="16" y="40" width="32" height="44" fill="#1f6b2c"/>
+    <rect x="20" y="48" width="12" height="8" fill="#2f8f3a"/>
+    <rect x="28" y="80" width="8" height="12" fill="#6b4423"/>
+  </g>
+  <use href="#tree" x="48"/><use href="#tree" x="96"/><use href="#tree" x="288"/><use href="#tree" x="336"/>
+  <use href="#tree" y="96"/><use href="#tree" x="336" y="96"/>
+  <!-- Eau -->
+  <rect x="150" y="44" width="110" height="44" fill="#2f6fd0"/>
+  <rect x="160" y="56" width="16" height="3" fill="#6aa0ee"/><rect x="210" y="70" width="18" height="3" fill="#6aa0ee"/>
+  <!-- Chemin -->
+  <rect x="176" y="88" width="48" height="152" fill="#e2c98b"/>
+  <!-- Buissons -->
+  <g fill="#2e8b3a"><rect x="96" y="176" width="32" height="28"/><rect x="290" y="150" width="32" height="28"/></g>
+  <g fill="#57b55a"><rect x="102" y="182" width="8" height="5"/><rect x="296" y="156" width="8" height="5"/></g>
+  <!-- Héros (pixels de 4) -->
+  <g transform="translate(176 140) scale(3)">
+    <rect x="4" y="13" width="3" height="3" fill="#6b3d1c"/><rect x="9" y="13" width="3" height="3" fill="#6b3d1c"/>
+    <rect x="3" y="8" width="9" height="6" fill="#24792e"/><rect x="4" y="8" width="7" height="5" fill="#3fae49"/>
+    <rect x="4" y="11" width="7" height="1" fill="#6b3d1c"/>
+    <rect x="5" y="3" width="8" height="5" fill="#f3c38f"/><rect x="5" y="3" width="3" height="4" fill="#b06a26"/>
+    <rect x="10" y="5" width="1" height="2" fill="#0b0b10"/>
+    <rect x="4" y="1" width="9" height="3" fill="#24792e"/><rect x="1" y="3" width="4" height="2" fill="#3fae49"/>
+    <rect x="15" y="9" width="11" height="3" fill="#8a93a3"/><rect x="15" y="10" width="11" height="1" fill="#e4e8ef"/>
+    <rect x="13" y="7" width="2" height="7" fill="#b4861a"/>
+  </g>
+  <!-- Ennemi -->
+  <g transform="translate(270 112) scale(3)">
+    <rect x="2" y="3" width="12" height="11" fill="#8a2320"/><rect x="3" y="3" width="10" height="10" fill="#d6403a"/>
+    <rect x="4" y="4" width="3" height="2" fill="#f58a74"/>
+    <rect x="5" y="6" width="2" height="3" fill="#fff"/><rect x="9" y="6" width="2" height="3" fill="#fff"/>
+    <rect x="0" y="7" width="3" height="4" fill="#8a2320"/>
+  </g>
+  <!-- Rubis -->
+  <g transform="translate(120 112) scale(2)">
+    <rect x="4" y="4" width="8" height="8" fill="#1d8a35"/><rect x="5" y="2" width="6" height="12" fill="#1d8a35"/>
+    <rect x="6" y="3" width="4" height="10" fill="#3ad35a"/><rect x="6" y="4" width="1" height="3" fill="#fff"/>
+  </g>
+</svg>

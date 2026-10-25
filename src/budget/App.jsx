@@ -264,6 +264,7 @@ export default function BudgetApp() {
   const [assistant, setAssistant] = useState(false);
   const [categorisation, setCategorisation] = useState(false);
   const [guide, setGuide] = useState(false);
+  const [vueRepartition, setVueRepartition] = useState('depense');
   const [colonnes, setColonnes] = useState(null); // correspondance manuelle des colonnes d'un CSV
   const colonnesManuelles = useRef(false);
   const [categorieFiltre, setCategorieFiltre] = useState(null);
@@ -299,6 +300,7 @@ export default function BudgetApp() {
   const resume = useMemo(() => totaux(duMois), [duMois]);
   const repartition = useMemo(() => parCategorie(duMois), [duMois]);
   const depensesParCat = useMemo(() => Object.fromEntries(repartition.map((r) => [r.id, r.montant])), [repartition]);
+  const repartitionRevenus = useMemo(() => parCategorie(duMois, 'revenu'), [duMois]);
 
   const historique = useMemo(
     () => Array.from({ length: 6 }, (_, i) => {
@@ -618,8 +620,27 @@ export default function BudgetApp() {
           {/* Colonne graphiques */}
           <div className="min-w-0 space-y-6 lg:col-span-2">
             <div className={carte}>
-              <h3 className="mb-4 mt-0 font-semibold">Répartition des dépenses</h3>
-              <Anneau parts={repartition} total={resume.depenses} selection={categorieFiltre} onChoisir={choisirCategorie} />
+              <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+                <h3 className="m-0 font-semibold">Répartition des {vueRepartition === 'depense' ? 'dépenses' : 'revenus'}</h3>
+                <div className="flex rounded-xl bg-black/30 p-1" role="group" aria-label="Répartition affichée">
+                  {[['depense', 'Dépenses'], ['revenu', 'Revenus']].map(([id, nom]) => (
+                    <button
+                      key={id}
+                      type="button"
+                      onClick={() => setVueRepartition(id)}
+                      aria-pressed={vueRepartition === id}
+                      className={`${bouton} px-2.5 py-1 text-xs ${vueRepartition === id ? 'bg-white/10 text-white' : 'bg-transparent text-gray-400 hover:text-white'}`}
+                    >
+                      {nom}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              {vueRepartition === 'depense' ? (
+                <Anneau parts={repartition} total={resume.depenses} selection={categorieFiltre} onChoisir={choisirCategorie} />
+              ) : (
+                <Anneau parts={repartitionRevenus} total={resume.revenus} selection={categorieFiltre} onChoisir={choisirCategorie} vide="Aucun revenu ce mois-ci" />
+              )}
             </div>
             <div className={carte}>
               <h3 className="mb-4 mt-0 font-semibold">6 derniers mois</h3>
@@ -648,7 +669,7 @@ export default function BudgetApp() {
 
             {categorieFiltre && (() => {
               const c = categorie(categorieFiltre);
-              const depense = depensesParCat[c.id] ?? 0;
+              const depense = depensesParCat[c.id] ?? repartitionRevenus.find((r) => r.id === c.id)?.montant ?? 0;
               const plafond = budgets[c.id];
               return (
                 <div

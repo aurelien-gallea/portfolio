@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { euros, nomMois } from './donnees';
 
 // Anneau de répartition des dépenses par catégorie
-export function Anneau({ parts, total, selection, onChoisir }) {
+export function Anneau({ parts, total, selection, onChoisir, vide = 'Aucune dépense ce mois-ci' }) {
   const [survol, setSurvol] = useState(null);
   const rayon = 70;
   const circonference = 2 * Math.PI * rayon;
@@ -11,7 +11,7 @@ export function Anneau({ parts, total, selection, onChoisir }) {
   if (total === 0) {
     return (
       <div className="flex h-48 items-center justify-center text-sm text-gray-500">
-        Aucune dépense ce mois-ci
+        {vide}
       </div>
     );
   }

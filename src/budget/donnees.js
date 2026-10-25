@@ -222,10 +222,10 @@ export function totaux(transactions) {
   return { revenus, depenses, solde: revenus - depenses };
 }
 
-export function parCategorie(transactions) {
+export function parCategorie(transactions, type = 'depense') {
   const somme = {};
   for (const t of transactions) {
-    if (t.type !== 'depense') continue;
+    if (t.type !== type) continue;
     somme[t.categorie] = (somme[t.categorie] ?? 0) + t.montant;
   }
   return Object.entries(somme)

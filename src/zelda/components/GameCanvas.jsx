@@ -11,12 +11,14 @@ const KEY_DIRS = {
 };
 const ATTACK_KEYS = new Set([' ', 'j', 'k', 'enter']);
 
-// controls : ref partagée avec les commandes tactiles { dir, attack }
-const GameCanvas = ({ paused, controls, onHud, onMessage, onGameOver, onVictory }) => {
+// controls : ref partagée avec les commandes tactiles { dirs, vec, attack }
+// resume : point de reprise à restaurer au montage (la partie est recréée à chaque changement de key)
+const GameCanvas = ({ paused, controls, resume, onHud, onMessage, onGameOver, onVictory, onCheckpoint }) => {
   const canvasRef = useRef(null);
   const pausedRef = useRef(paused);
+  const resumeRef = useRef(resume);
   const callbacks = useRef({});
-  callbacks.current = { onHud, onMessage, onGameOver, onVictory };
+  callbacks.current = { onHud, onMessage, onGameOver, onVictory, onCheckpoint };
 
   useEffect(() => {
     pausedRef.current = paused;
@@ -30,6 +32,8 @@ const GameCanvas = ({ paused, controls, onHud, onMessage, onGameOver, onVictory 
       onMessage: v => callbacks.current.onMessage?.(v),
       onGameOver: v => callbacks.current.onGameOver?.(v),
       onVictory: v => callbacks.current.onVictory?.(v),
+      onCheckpoint: v => callbacks.current.onCheckpoint?.(v),
+      resume: resumeRef.current,
     });
     game.start();
 
@@ -64,6 +68,7 @@ const GameCanvas = ({ paused, controls, onHud, onMessage, onGameOver, onVictory 
         const touch = controls.current;
         const input = {
           dirs: held.length ? held : touch.dirs,
+          vec: held.length ? null : touch.vec,
           attack: attackQueued || touch.attack,
         };
         attackQueued = false;

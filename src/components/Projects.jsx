@@ -24,7 +24,7 @@ const projectsData = [
   },
   {
     id: 17,
-    title: 'Zelda 2D (en cours de dev)',
+    title: 'Zelda like 2D (en cours de dev)',
     link: '/zelda-2d/',
     image: './image/zelda-2d.svg',
   },

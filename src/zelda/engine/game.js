@@ -42,7 +42,8 @@ function swingAngle(p) {
   return p.swingFrom + (FACING[p.dir] - 0.2 - p.swingFrom) * eased;
 }
 
-export function createGame({ onHud, onMessage, onGameOver, onVictory }) {
+// resume : point de reprise enregistré à l'entrée du donjon, pour recommencer juste avant le boss
+export function createGame({ onHud, onMessage, onGameOver, onVictory, onCheckpoint, resume = null }) {
   const s = {
     rooms: createWorld(),
     roomKey: START_ROOM,
@@ -64,6 +65,28 @@ export function createGame({ onHud, onMessage, onGameOver, onVictory }) {
     doorMsg: 0,
     hudKey: '',
   };
+
+  if (resume) {
+    for (const [key, rows] of Object.entries(resume.tiles)) {
+      s.rooms[key].tiles = rows.map(row => row.split(''));
+      s.rooms[key].dirty = true;
+    }
+    Object.assign(s.flags, resume.flags);
+    Object.assign(s.player, {
+      rupees: resume.rupees, maxHp: resume.maxHp, hp: resume.maxHp, hasKey: resume.hasKey,
+      x: CAVE_ENTRY.x, y: CAVE_ENTRY.y, dir: 'up',
+    });
+    s.roomKey = CAVE_ROOM;
+    s.time = resume.time;
+  }
+
+  // Photo du monde et du héros à l'entrée du donjon
+  function saveCheckpoint() {
+    const tiles = {};
+    for (const [key, r] of Object.entries(s.rooms)) tiles[key] = r.tiles.map(row => row.join(''));
+    const p = s.player;
+    onCheckpoint?.({ tiles, flags: { ...s.flags }, rupees: p.rupees, maxHp: p.maxHp, hasKey: p.hasKey, time: s.time });
+  }
 
   const room = () => s.rooms[s.roomKey];
   const message = text => onMessage?.(text);
@@ -213,10 +236,12 @@ export function createGame({ onHud, onMessage, onGameOver, onVictory }) {
         p.dir = tr.dir;
         p.kb = null;
         spawnEnemies();
+        if (s.roomKey === CAVE_ROOM && !s.flags.bossDead) saveCheckpoint();
       }
       if (tr.t >= FADE_TIME) {
         s.transition = null;
-        message(room().name);
+        const bossAhead = s.roomKey === CAVE_ROOM && !s.flags.bossDead;
+        message(bossAhead ? `${room().name} · point de reprise enregistré` : room().name);
       }
     }
   }
@@ -348,18 +373,30 @@ export function createGame({ onHud, onMessage, onGameOver, onVictory }) {
       if (p.attack > 0.04) sweep(p, prev, p.swing);
     } else {
       // input.dirs : directions maintenues, la plus récente en dernier
+      // input.vec : direction analogique du joystick tactile (vecteur unitaire), prioritaire
       const dirs = input.dirs;
-      const dx = (dirs.includes('right') ? 1 : 0) - (dirs.includes('left') ? 1 : 0);
-      const dy = (dirs.includes('down') ? 1 : 0) - (dirs.includes('up') ? 1 : 0);
+      let dx = (dirs.includes('right') ? 1 : 0) - (dirs.includes('left') ? 1 : 0);
+      let dy = (dirs.includes('down') ? 1 : 0) - (dirs.includes('up') ? 1 : 0);
+      let active = dirs;
+      if (input.vec) {
+        // Presque dans l'axe : on s'y cale pour profiter de l'alignement dans les passages
+        [dx, dy] = [input.vec.x, input.vec.y];
+        if (Math.abs(dy) < 0.22) [dx, dy] = [Math.sign(dx), 0];
+        else if (Math.abs(dx) < 0.22) [dx, dy] = [0, Math.sign(dy)];
+        const h = dx > 0 ? 'right' : 'left', vv = dy > 0 ? 'down' : 'up';
+        active = !dy ? [h] : !dx ? [vv] : Math.abs(dx) > Math.abs(dy) ? [vv, h] : [h, vv];
+      }
       if (dx || dy) {
         // En diagonale, on garde le regard actuel s'il fait partie du mouvement
-        const active = dirs.filter(d => (DIRV[d][0] && DIRV[d][0] === dx) || (DIRV[d][1] && DIRV[d][1] === dy));
+        const sx = Math.sign(dx), sy = Math.sign(dy);
+        active = active.filter(d => (DIRV[d][0] && DIRV[d][0] === sx) || (DIRV[d][1] && DIRV[d][1] === sy));
         if (!active.includes(p.dir) || !(dx && dy)) p.dir = active[active.length - 1];
         p.moving = true;
         const v = PLAYER_SPEED * dt;
         if (dx && dy) {
-          move(p, playerBox, dx * v * Math.SQRT1_2, 0, true);
-          move(p, playerBox, 0, dy * v * Math.SQRT1_2, true);
+          const len = Math.hypot(dx, dy);
+          move(p, playerBox, (dx / len) * v, 0, true);
+          move(p, playerBox, 0, (dy / len) * v, true);
         } else if (dx) {
           // Alignement sur une grille de 8 px sur l'axe perpendiculaire (passages étroits)
           const off = Math.round(p.y / 8) * 8 - p.y;

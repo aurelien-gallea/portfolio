@@ -3,8 +3,8 @@ import { Sword } from 'lucide-react';
 
 // Huit secteurs de 45° autour du centre (0 = droite, sens horaire)
 const SECTORS = [['right'], ['right', 'down'], ['down'], ['down', 'left'], ['left'], ['left', 'up'], ['up'], ['up', 'right']];
-const BASE = 120;        // diamètre maximal du socle en px
-const DEADZONE = 0.28;   // en dessous, le héros ne bouge pas
+const BASE = 96;         // diamètre maximal du socle en px
+const DEADZONE = 0.15;   // en dessous, le héros ne bouge pas (quelques pixels seulement)
 
 const buzz = ms => { try { navigator.vibrate?.(ms); } catch { /* non supporté */ } };
 
@@ -19,7 +19,7 @@ export const Joystick = ({ controls }) => {
   const [dirs, setDirs] = useState([]);
   // Le socle rétrécit si la zone est plus petite (écrans bas)
   const [size, setSize] = useState(BASE);
-  const travel = size * 0.35;
+  const travel = size * 0.34;
 
   useEffect(() => {
     const ro = new ResizeObserver(([entry]) => {
@@ -35,7 +35,10 @@ export const Joystick = ({ controls }) => {
     const dist = Math.hypot(dx, dy);
     const k = dist > travel ? travel / dist : 1;
     setKnob({ x: dx * k, y: dy * k });
-    const next = dist < travel * DEADZONE ? [] : SECTORS[(Math.round(Math.atan2(dy, dx) / (Math.PI / 4)) + 8) % 8];
+    const moving = dist >= travel * DEADZONE;
+    const next = moving ? SECTORS[(Math.round(Math.atan2(dy, dx) / (Math.PI / 4)) + 8) % 8] : [];
+    // Direction analogique : le héros suit l'angle exact du pouce, à pleine vitesse
+    controls.current.vec = moving ? { x: dx / dist, y: dy / dist } : null;
     controls.current.dirs = next;
     if (next.join() !== last.current) {
       last.current = next.join();
@@ -48,12 +51,8 @@ export const Joystick = ({ controls }) => {
     if (pointer.current !== null) return;
     pointer.current = e.pointerId;
     try { e.currentTarget.setPointerCapture(e.pointerId); } catch { /* pointeur déjà relâché */ }
-    const rect = zone.current.getBoundingClientRect();
-    // Le socle reste entièrement dans la zone
-    const center = {
-      x: Math.min(Math.max(e.clientX, rect.left + size / 2), rect.right - size / 2),
-      y: Math.min(Math.max(e.clientY, rect.top + size / 2), rect.bottom - size / 2),
-    };
+    // Le socle se centre exactement sous le pouce : aucun mouvement involontaire au contact
+    const center = { x: e.clientX, y: e.clientY };
     baseRef.current = center;
     setBase(center);
     steer(e, center);
@@ -67,6 +66,7 @@ export const Joystick = ({ controls }) => {
     baseRef.current = null;
     last.current = '';
     controls.current.dirs = [];
+    controls.current.vec = null;
     setBase(null);
     setKnob({ x: 0, y: 0 });
     setDirs([]);

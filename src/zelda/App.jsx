@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowLeft, Pause, Play, Volume2, VolumeX, RefreshCw, Hammer, Smartphone, Maximize2, Minimize2 } from 'lucide-react';
+import { ArrowLeft, Pause, Play, Volume2, VolumeX, RefreshCw, Hammer, Smartphone, Maximize2, Minimize2, Swords } from 'lucide-react';
 import GameCanvas from './components/GameCanvas';
 import { Joystick, AttackButton } from './components/Controls';
 import { sfx } from './engine/audio';
@@ -85,7 +85,7 @@ const ZeldaApp = () => {
   const [muted, setMuted] = useState(sfx.muted);
   const [isTouch] = useState(isTouchDevice);
   const [landscape, setLandscape] = useState(() => window.innerWidth > window.innerHeight);
-  const controls = useRef({ dirs: [], attack: false });
+  const controls = useRef({ dirs: [], vec: null, attack: false });
   const toastTimer = useRef(null);
 
   useEffect(() => {
@@ -147,16 +147,28 @@ const ZeldaApp = () => {
 
   const toggleFullscreen = () => (document.fullscreenElement ? releaseScreen() : lockLandscape());
 
-  const start = () => {
+  // Point de reprise enregistré à l'entrée du donjon, et celui à restaurer au prochain lancement
+  const [checkpoint, setCheckpoint] = useState(null);
+  const [resumeFrom, setResumeFrom] = useState(null);
+
+  const launch = (from, intro) => {
     sfx.init();
     if (isTouch) lockLandscape();
-    controls.current = { dirs: [], attack: false };
+    controls.current = { dirs: [], vec: null, attack: false };
     setHud(INITIAL_HUD);
     setResult(null);
+    setResumeFrom(from);
     setRestartKey(k => k + 1);
     setGameState('playing');
-    showToast('Il est dangereux de partir seul… mais ton épée est prête !');
+    showToast(intro);
   };
+
+  const start = () => {
+    setCheckpoint(null);
+    launch(null, 'Il est dangereux de partir seul… mais ton épée est prête !');
+  };
+
+  const retryBoss = () => launch(checkpoint, 'Nouvelle tentative contre le Gardien. Courage !');
 
   const toggleMute = () => {
     sfx.setMuted(!sfx.muted);
@@ -207,6 +219,8 @@ const ZeldaApp = () => {
           key={restartKey}
           paused={gameState !== 'playing' || portraitBlock}
           controls={controls}
+          resume={resumeFrom}
+          onCheckpoint={setCheckpoint}
           onHud={setHud}
           onMessage={showToast}
           onGameOver={stats => { setResult(stats); setGameState('gameover'); }}
@@ -242,9 +256,17 @@ const ZeldaApp = () => {
             <p className="font-mono text-xs text-gray-400">
               ◆ {result.rupees} rubis · ⏱ {formatTime(result.time)}{result.hearts ? ` · ❤ ${result.hearts} cœurs` : ''}
             </p>
-            <div className="flex gap-2">
-              <button onClick={start} className="px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-500 font-bold text-sm flex items-center gap-2">
-                <RefreshCw size={16} /> Rejouer
+            <div className="flex flex-wrap justify-center gap-2">
+              {gameState === 'gameover' && checkpoint && (
+                <button onClick={retryBoss} className="px-4 py-2 rounded-lg bg-amber-500 hover:bg-amber-400 text-black font-bold text-sm flex items-center gap-2">
+                  <Swords size={16} /> Réessayer avant le boss
+                </button>
+              )}
+              <button
+                onClick={start}
+                className={`px-4 py-2 rounded-lg font-bold text-sm flex items-center gap-2 ${gameState === 'gameover' && checkpoint ? 'bg-white/10 hover:bg-white/20' : 'bg-emerald-600 hover:bg-emerald-500'}`}
+              >
+                <RefreshCw size={16} /> {checkpoint && gameState === 'gameover' ? 'Tout recommencer' : 'Rejouer'}
               </button>
               <button onClick={() => setGameState('menu')} className="px-4 py-2 rounded-lg bg-white/10 hover:bg-white/20 font-bold text-sm">
                 Menu
@@ -265,7 +287,7 @@ const ZeldaApp = () => {
           </div>
           <style>{'@keyframes zelda-rotate{0%,20%{transform:rotate(0)}50%,80%{transform:rotate(90deg)}100%{transform:rotate(0)}}'}</style>
           <h2 className="font-mono font-black text-xl tracking-wider">TOURNE TON TÉLÉPHONE</h2>
-          <p className="text-gray-400 text-sm max-w-xs leading-relaxed">Zelda 2D se joue à l'horizontale, avec le joystick à gauche et l'épée à droite.</p>
+          <p className="text-gray-400 text-sm max-w-xs leading-relaxed">Zelda like 2D se joue à l'horizontale, avec le joystick à gauche et l'épée à droite.</p>
           <Link to="/" className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/10 text-gray-300 border border-white/10 text-xs">
             <ArrowLeft size={16} /> Portfolio
           </Link>
@@ -277,7 +299,7 @@ const ZeldaApp = () => {
           <Link to="/" className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/10 hover:bg-white/20 text-gray-300 hover:text-white border border-white/10 text-xs transition-all">
             <ArrowLeft size={16} /> Portfolio
           </Link>
-          <h1 className="font-mono font-black tracking-widest text-emerald-400 text-sm sm:text-base">ZELDA 2D</h1>
+          <h1 className="font-mono font-black tracking-widest text-emerald-400 text-sm sm:text-base">ZELDA LIKE 2D</h1>
           <div className="flex gap-2">
             {inGame && pauseButton}
             {fullscreenButton}{muteButton}
@@ -291,7 +313,7 @@ const ZeldaApp = () => {
             <Hammer size={14} /> En cours de développement
           </div>
           <h2 className="font-mono text-4xl sm:text-6xl font-black tracking-tight text-transparent bg-clip-text bg-gradient-to-b from-amber-200 to-amber-500">
-            ZELDA 2D
+            ZELDA LIKE 2D
           </h2>
           <p className="text-gray-300 text-sm sm:text-base max-w-xl mx-auto leading-relaxed">
             Un hommage aux aventures en vue de dessus des années 80. Explore neuf contrées, affronte leurs créatures,

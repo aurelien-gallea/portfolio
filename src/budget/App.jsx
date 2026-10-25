@@ -317,27 +317,36 @@ export default function BudgetApp() {
     const f = e.target.files?.[0];
     e.target.value = '';
     if (!f) return;
-    const texte = await f.text();
+    // Les exports bancaires sont en UTF-8 ou en Windows-1252 selon la banque
+    const octets = await f.arrayBuffer();
+    let texte;
+    try {
+      texte = new TextDecoder('utf-8', { fatal: true }).decode(octets);
+    } catch {
+      texte = new TextDecoder('windows-1252').decode(octets);
+    }
 
     if (!/\.json$/i.test(f.name)) {
       try {
-        const { transactions: lues, ignorees } = importerCsv(texte);
+        const { transactions: lues, ignorees, internes } = importerCsv(texte);
+        const ecartees = [
+          internes && `${internes} virement(s) entre vos comptes ou vers votre épargne, qui ne sont ni des dépenses ni des revenus`,
+          ignorees && `${ignorees} ligne(s) illisible(s)`,
+        ].filter(Boolean);
         if (lues.length === 0) {
-          window.alert(`Aucune opération lisible dans ce fichier${ignorees ? ` (${ignorees} ligne(s) ignorée(s))` : ''}. Consultez le mode d'emploi pour les formats acceptés.`);
+          window.alert(`Aucune opération lisible dans ce fichier${ecartees.length ? ` (écartées : ${ecartees.join(', ')})` : ''}. Consultez le mode d'emploi pour les formats acceptés.`);
           return;
         }
 
         // Sur l'exemple, le relevé remplace les données de démonstration au lieu de s'y mélanger
         if (donnees.exemple) {
-          const vues = new Set();
-          const uniques = lues.filter((t) => !vues.has(empreinte(t)) && vues.add(empreinte(t)));
           if (window.confirm(
-            `${uniques.length} opération(s) trouvée(s) dans « ${f.name} ».\n\n` +
+            `${lues.length} opération(s) trouvée(s) dans « ${f.name} ».\n\n` +
             'Les données d\'exemple vont être effacées et remplacées par votre relevé.' +
-            (ignorees ? `\n(${ignorees} ligne(s) illisible(s) ignorée(s))` : '')
+            (ecartees.length ? `\n\nNon importés : ${ecartees.join(' ; ')}.` : '')
           )) {
-            setDonnees((d) => ({ ...budgetVide(d), transactions: uniques }));
-            setMois(cleMois(uniques.map((t) => t.date).sort().at(-1)));
+            setDonnees((d) => ({ ...budgetVide(d), transactions: lues }));
+            setMois(cleMois(lues.map((t) => t.date).sort().at(-1)));
           }
           return;
         }
@@ -349,12 +358,11 @@ export default function BudgetApp() {
           window.alert(`Aucune nouvelle opération à importer${doublons ? ` (${doublons} déjà présentes)` : ''}.`);
           return;
         }
-        const details = [doublons && `${doublons} doublon(s) ignoré(s)`, ignorees && `${ignorees} ligne(s) illisible(s)`]
-          .filter(Boolean).join(', ');
+        const details = [doublons && `${doublons} doublon(s) déjà présent(s)`, ...ecartees].filter(Boolean);
         if (window.confirm(
           `Ajouter ${nouvelles.length} opération(s) de « ${f.name} » à votre budget ?\n\n` +
           `Vos ${transactions.length} opération(s) actuelle(s) sont conservées : l'import ajoute, il ne remplace pas.` +
-          (details ? `\n(${details})` : '')
+          (details.length ? `\n\nNon importés : ${details.join(' ; ')}.` : '')
         )) {
           setDonnees((d) => ({ ...d, transactions: [...d.transactions, ...nouvelles] }));
           setMois(cleMois(nouvelles.map((t) => t.date).sort().at(-1)));

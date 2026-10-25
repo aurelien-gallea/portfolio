@@ -167,19 +167,43 @@ const MOTS_CLES = {
   loisirs: ['cinema', 'fnac', 'steam', 'playstation', 'concert', 'decathlon', 'cultura'],
   sante: ['pharmacie', 'medecin', 'docteur', 'dentiste', 'mutuelle', 'hopital', 'cpam'],
   abonnements: ['netflix', 'spotify', 'deezer', 'disney', 'canal', 'free', 'orange', 'sfr', 'bouygues', 'sosh', 'amazon prime', 'abonnement'],
-  shopping: ['amazon', 'zara', 'h&m', 'ikea', 'cdiscount', 'vinted', 'leroy merlin'],
+  shopping: ['amazon', 'amzn', 'amz ', 'zara', 'h&m', 'ikea', 'cdiscount', 'vinted', 'leroy merlin'],
   salaire: ['salaire', 'paie', 'virement employeur'],
   aides: ['caf', 'pole emploi', 'france travail', 'apl', 'remboursement'],
 };
 
-function devinerCategorie(texte, type) {
-  const t = sansAccent(texte);
+// Catégories fournies par les banques (BoursoBank, Crédit Agricole…) ramenées aux nôtres ; l'ordre compte
+const CATEGORIES_BANQUE = {
+  abonnements: /telephon|multimedia|internet|abonnement|streaming/,
+  restaurants: /restaurant|restauration|fast.?food/,
+  courses: /alimentation|supermarche|hypermarche|courses|epicerie/,
+  logement: /loyer|logement|habitation|electricite|energie|\bgaz\b|\beau\b|charges/,
+  transport: /carburant|transport|\bauto\b|\bmoto\b|peage|parking|stationnement|vehicule/,
+  sante: /sante|pharmacie|medecin|medical|mutuelle|optique|dentaire/,
+  shopping: /shopping|vetement|habillement|chaussure|livres|mobilier|electromenager|electronique|informatique|bricolage|jardinage|bien-etre|beaute|cadeau|equipement/,
+  loisirs: /loisir|sport|sortie|culture|spectacle|voyage|vacances|jeux|hotel/,
+  salaire: /salaire|remuneration|revenus du travail|\bpaie\b/,
+  aides: /allocation|prestation|\baides?\b|remboursement|indemnit/,
+};
+
+// Virements entre ses propres comptes ou vers l'épargne : ni une dépense ni un revenu
+const MOUVEMENT_INTERNE = /epargne|mouvements? internes?|comptes? a comptes?/;
+
+function devinerCategorie(libelle, type, categoriesBanque = []) {
   const permises = CATEGORIES[type].map((c) => c.id);
+  const banque = categoriesBanque.filter(Boolean).map(sansAccent);
   // Nom de catégorie exact (cas de notre propre export)
-  const exacte = CATEGORIES[type].find((c) => sansAccent(c.nom) === t || c.id === t);
+  const exacte = CATEGORIES[type].find((c) => banque.some((b) => sansAccent(c.nom) === b || c.id === b));
   if (exacte) return exacte.id;
+  // Le libellé (nom du commerçant) d'abord, puis la catégorie de la banque, puis sa catégorie parente
+  const texte = sansAccent(libelle);
   for (const [id, mots] of Object.entries(MOTS_CLES)) {
-    if (permises.includes(id) && mots.some((m) => t.includes(m))) return id;
+    if (permises.includes(id) && mots.some((m) => texte.includes(m))) return id;
+  }
+  for (const b of banque) {
+    for (const [id, motif] of Object.entries(CATEGORIES_BANQUE)) {
+      if (permises.includes(id) && motif.test(b)) return id;
+    }
   }
   return type === 'revenu' ? 'autre-revenu' : 'autre';
 }
@@ -229,42 +253,96 @@ function lireDate(s) {
 function lireMontant(s) {
   if (!s) return NaN;
   let n = s.replace(/[€\s  ]/g, '').replace(/EUR/i, '');
+  n = n.replace(/[−–]/g, '-');
+  // Comptabilité : "(12,50)" = -12,50
+  if (/^\(.*\)$/.test(n)) n = `-${n.slice(1, -1)}`;
+  if (!/^[+-]?[\d.,]+$/.test(n)) return NaN;
   // "1.234,56" ou "1234,56" -> virgule décimale ; "1,234.56" -> point décimal
   if (n.includes(',') && n.lastIndexOf(',') > n.lastIndexOf('.')) n = n.replace(/\./g, '').replace(',', '.');
   else n = n.replace(/,/g, '');
   return parseFloat(n);
 }
 
+// Noms de colonnes reconnus, par ordre de préférence (comparés sans accents ni majuscules)
 const COLONNES = {
-  date: ['date', 'date operation', 'date de l\'operation', 'date comptable', 'date valeur'],
-  libelle: ['libelle', 'description', 'libelle operation', 'label', 'intitule', 'detail', 'operation', 'nature'],
-  montant: ['montant', 'amount', 'valeur', 'somme'],
-  debit: ['debit', 'debits'],
-  credit: ['credit', 'credits'],
+  date: ['date operation', 'date de l\'operation', 'date comptable', 'date', 'transaction date', 'booking date', 'date valeur', 'value date'],
+  libelle: ['libelle', 'libelle operation', 'description', 'label', 'intitule', 'detail', 'operation', 'nature', 'beneficiaire', 'payee', 'merchant', 'memo'],
+  montant: ['montant', 'amount', 'somme', 'valeur', 'debit/credit', 'debit / credit', 'credit/debit'],
+  debit: ['debit', 'debits', 'sortie', 'sorties', 'paid out', 'withdrawal'],
+  credit: ['credit', 'credits', 'entree', 'entrees', 'paid in', 'deposit'],
   type: ['type'],
-  categorie: ['categorie', 'category'],
+  categorie: ['categorie', 'category', 'sous-categorie'],
+  parente: ['categorie parente', 'parent category'],
 };
+
+function trouverColonne(entete, noms) {
+  for (const n of noms) {
+    const i = entete.indexOf(n);
+    if (i !== -1) return i;
+  }
+  for (const n of noms) {
+    const i = entete.findIndex((h) => h.startsWith(n));
+    if (i !== -1) return i;
+  }
+  return -1;
+}
+
+// Colonnes dont la plupart des valeurs vérifient le test (sur un échantillon de lignes)
+function colonnesOu(donnees, test, exclues) {
+  const largeur = Math.max(...donnees.map((l) => l.length));
+  const resultat = [];
+  for (let i = 0; i < largeur; i++) {
+    if (exclues.includes(i)) continue;
+    const valeurs = donnees.map((l) => l[i]).filter(Boolean);
+    if (valeurs.length >= donnees.length * 0.8 && valeurs.filter(test).length >= valeurs.length * 0.9) resultat.push(i);
+  }
+  return resultat;
+}
+
+// Montant plausible : ni une date, ni un numéro de compte (zéros en tête)
+const estMontant = (v) => !lireDate(v) && !/^0\d{4,}$/.test(v) && !isNaN(lireMontant(v));
 
 export function importerCsv(texte) {
   const lignes = lireLignes(texte);
-  if (lignes.length < 2) throw new Error('Le fichier ne contient aucune ligne.');
+  if (lignes.length === 0) throw new Error('Le fichier ne contient aucune ligne.');
 
-  // La ligne d'en-tête est la première qui contient une colonne "date"
-  const indexEntete = lignes.findIndex((l) => l.some((c) => sansAccent(c).startsWith('date')));
-  if (indexEntete === -1) throw new Error('Colonne « date » introuvable.');
-  const entete = lignes[indexEntete].map(sansAccent);
+  // En-tête : première ligne d'au moins 3 cellules dont l'une parle de date sans en contenir une
+  // (les lignes d'introduction de certaines banques sont ainsi sautées)
+  const indexEntete = lignes.findIndex((l) =>
+    l.filter(Boolean).length >= 3 && l.some((c) => sansAccent(c).includes('date')) && !l.some((c) => lireDate(c))
+  );
+  const entete = indexEntete === -1 ? [] : lignes[indexEntete].map(sansAccent);
+  const donnees = lignes.slice(indexEntete + 1);
+  if (donnees.length === 0) throw new Error('Le fichier ne contient aucune opération.');
+  const echantillon = donnees.slice(0, 50);
+
   const col = {};
-  for (const [cle, noms] of Object.entries(COLONNES)) {
-    const i = entete.findIndex((h) => noms.includes(h));
-    col[cle] = i === -1 ? entete.findIndex((h) => noms.some((n) => h.startsWith(n))) : i;
+  for (const [cle, noms] of Object.entries(COLONNES)) col[cle] = trouverColonne(entete, noms);
+  if (col.parente === col.categorie) col.parente = -1;
+
+  // Colonnes non nommées (ou fichier sans en-tête) : on les reconnaît à leur contenu
+  if (col.date === -1) col.date = colonnesOu(echantillon, (v) => !!lireDate(v), [])[0] ?? -1;
+  if (col.montant === -1 && col.debit === -1 && col.credit === -1) {
+    const numeriques = colonnesOu(echantillon, estMontant, [col.date])
+      .filter((i) => new Set(echantillon.map((l) => l[i])).size > 1);
+    // Un solde suit souvent le montant : on préfère une colonne qui ne s'appelle pas « solde »
+    col.montant = numeriques.find((i) => !/solde|balance/.test(entete[i] ?? '')) ?? numeriques[0] ?? -1;
   }
+  if (col.libelle === -1) {
+    const utilisees = [col.date, col.montant, col.debit, col.credit];
+    const longueur = (i) => echantillon.reduce((s, l) => s + (l[i]?.length ?? 0), 0);
+    col.libelle = colonnesOu(echantillon, (v) => !lireDate(v) && isNaN(lireMontant(v)), utilisees)
+      .sort((a, b) => longueur(b) - longueur(a))[0] ?? -1;
+  }
+  if (col.date === -1) throw new Error('Aucune colonne de dates trouvée.');
   if (col.montant === -1 && col.debit === -1 && col.credit === -1) {
     throw new Error('Colonne « montant » (ou « débit » / « crédit ») introuvable.');
   }
 
   const transactions = [];
   let ignorees = 0;
-  for (const l of lignes.slice(indexEntete + 1)) {
+  let internes = 0;
+  for (const l of donnees) {
     const date = col.date >= 0 ? lireDate(l[col.date] ?? '') : null;
     let montant;
     let type;
@@ -283,15 +361,17 @@ export function importerCsv(texte) {
     montant = Math.round(Math.abs(montant) * 100) / 100;
     if (!date || !montant) { ignorees++; continue; }
 
+    const categoriesBanque = [l[col.categorie], l[col.parente]];
+    if (MOUVEMENT_INTERNE.test(sansAccent(categoriesBanque.filter(Boolean).join(' ')))) { internes++; continue; }
+
     const libelle = (col.libelle >= 0 ? l[col.libelle] : '')?.replace(/^'(?=[=+\-@])/, '').replace(/\s+/g, ' ').slice(0, 60) ?? '';
-    const indice = col.categorie >= 0 && l[col.categorie] ? l[col.categorie] : libelle;
-    const cat = devinerCategorie(indice, type);
+    const cat = devinerCategorie(libelle, type, categoriesBanque);
     transactions.push({
       id: nouvelId(), type, categorie: cat, date, montant,
       libelle: libelle || categorie(cat).nom,
     });
   }
-  return { transactions, ignorees };
+  return { transactions, ignorees, internes };
 }
 
 // Empreinte d'une opération pour éviter les doublons à l'import

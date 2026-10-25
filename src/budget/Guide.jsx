@@ -43,6 +43,7 @@ export default function Guide({ exemple, onImporter, onRevoirExemple }) {
         </p>
         <p className="m-0 text-gray-400">
           Sont compris : une colonne date (05/10/2026 ou 2026-10-05), un libellé, et soit un montant (négatif pour une dépense), soit deux colonnes débit et crédit.
+          Les colonnes sont aussi reconnues à leur contenu quand leur nom est inhabituel ou absent, et les fichiers en UTF-8 comme en Windows-1252 sont acceptés.
         </p>
       </Section>
 
@@ -55,7 +56,8 @@ export default function Guide({ exemple, onImporter, onRevoirExemple }) {
         </p>
         <p className="m-0 text-gray-400">
           Vous pouvez importer chaque mois le nouveau relevé, même s'il chevauche le précédent : les opérations déjà présentes sont ignorées.
-          Les catégories sont devinées à partir du libellé, et vous pouvez les corriger en cliquant sur le crayon d'une opération.
+          Les catégories sont devinées à partir du libellé et des catégories de votre banque, et vous pouvez les corriger en cliquant sur le crayon d'une opération.
+          Les virements entre vos comptes et vers votre épargne sont écartés : ce ne sont ni des dépenses ni des revenus.
         </p>
         {exemple && (
           <button type="button" onClick={onImporter} className="inline-flex cursor-pointer items-center gap-2 rounded-xl border-0 bg-orange-500 px-3 py-2 text-sm font-medium text-black hover:bg-orange-400">

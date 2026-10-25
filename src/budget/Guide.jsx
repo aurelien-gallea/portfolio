@@ -22,7 +22,7 @@ const Bouton = ({ icone: Icone, children }) => (
 );
 
 // Mode d'emploi : ce que fait l'appli, où vont les données, et comment importer ses relevés
-export default function Guide({ exemple, onImporter, onRevoirExemple }) {
+export default function Guide({ exemple, onImporter, onRevoirExemple, onImporterManuel }) {
   return (
     <div className="max-h-[70vh] space-y-5 overflow-y-auto pr-1">
       <Section icone={ShieldCheck} titre="Vos données restent chez vous">
@@ -44,7 +44,11 @@ export default function Guide({ exemple, onImporter, onRevoirExemple }) {
         <p className="m-0 text-gray-400">
           Sont compris : une colonne date (05/10/2026 ou 2026-10-05), un libellé, et soit un montant (négatif pour une dépense), soit deux colonnes débit et crédit.
           Les colonnes sont aussi reconnues à leur contenu quand leur nom est inhabituel ou absent, et les fichiers en UTF-8 comme en Windows-1252 sont acceptés.
+          Si le fichier reste illisible, l'appli vous demande d'indiquer vous-même quelle colonne contient la date, le libellé et le montant.
         </p>
+        <button type="button" onClick={onImporterManuel} className="cursor-pointer border-0 bg-transparent p-0 text-left text-xs text-orange-300 underline hover:text-orange-200">
+          Importer en choisissant les colonnes moi-même
+        </button>
       </Section>
 
       <Section icone={Upload} titre="2. L'importer">

@@ -339,16 +339,20 @@ function lireLignes(texte) {
   return lignes;
 }
 
-function lireDate(s) {
+// ordre : 'jma' (05/10/2026, France) ou 'mja' (10/05/2026, États-Unis)
+function lireDate(s, ordre = 'jma') {
   s = s.trim();
-  let m = s.match(/^(\d{4})-(\d{1,2})-(\d{1,2})/);
-  if (m) return `${m[1]}-${m[2].padStart(2, '0')}-${m[3].padStart(2, '0')}`;
-  m = s.match(/^(\d{1,2})[/.-](\d{1,2})[/.-](\d{2,4})/);
-  if (m) {
-    const annee = m[3].length === 2 ? `20${m[3]}` : m[3];
-    return `${annee}-${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')}`;
+  let annee, mois, jour;
+  let m = s.match(/^(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})/);
+  if (m) [, annee, mois, jour] = m;
+  else {
+    m = s.match(/^(\d{1,2})[/.-](\d{1,2})[/.-](\d{2,4})/);
+    if (!m) return null;
+    [jour, mois] = ordre === 'mja' ? [m[2], m[1]] : [m[1], m[2]];
+    annee = m[3].length === 2 ? `20${m[3]}` : m[3];
   }
-  return null;
+  if (+mois < 1 || +mois > 12 || +jour < 1 || +jour > 31) return null;
+  return `${annee}-${mois.padStart(2, '0')}-${jour.padStart(2, '0')}`;
 }
 
 function lireMontant(s) {
@@ -404,7 +408,9 @@ function colonnesOu(donnees, test, exclues) {
 // Montant plausible : ni une date, ni un numéro de compte (zéros en tête)
 const estMontant = (v) => !lireDate(v) && !/^0\d{4,}$/.test(v) && !isNaN(lireMontant(v));
 
-export function importerCsv(texte) {
+// Lecture automatique d'un relevé : lignes, ligne de la première opération et colonnes reconnues.
+// Sert de point de départ à la correspondance manuelle des colonnes quand la détection échoue.
+export function analyserCsv(texte) {
   const lignes = lireLignes(texte);
   if (lignes.length === 0) throw new Error('Le fichier ne contient aucune ligne.');
 
@@ -413,11 +419,12 @@ export function importerCsv(texte) {
   const indexEntete = lignes.findIndex((l) =>
     l.filter(Boolean).length >= 3 && l.some((c) => sansAccent(c).includes('date')) && !l.some((c) => lireDate(c))
   );
-  const entete = indexEntete === -1 ? [] : lignes[indexEntete].map(sansAccent);
-  const donnees = lignes.slice(indexEntete + 1);
-  if (donnees.length === 0) throw new Error('Le fichier ne contient aucune opération.');
-  const echantillon = donnees.slice(0, 50);
+  const debut = indexEntete + 1;
+  const col = detecterColonnes(lignes.slice(debut, debut + 50), indexEntete === -1 ? [] : lignes[indexEntete].map(sansAccent));
+  return { lignes, debut, col, formatDate: 'jma', inverser: false };
+}
 
+function detecterColonnes(echantillon, entete) {
   const col = {};
   for (const [cle, noms] of Object.entries(COLONNES)) col[cle] = trouverColonne(entete, noms);
   if (col.parente === col.categorie) col.parente = -1;
@@ -436,23 +443,40 @@ export function importerCsv(texte) {
     col.libelle = colonnesOu(echantillon, (v) => !lireDate(v) && isNaN(lireMontant(v)), utilisees)
       .sort((a, b) => longueur(b) - longueur(a))[0] ?? -1;
   }
-  if (col.date === -1) throw new Error('Aucune colonne de dates trouvée.');
-  if (col.montant === -1 && col.debit === -1 && col.credit === -1) {
-    throw new Error('Colonne « montant » (ou « débit » / « crédit ») introuvable.');
-  }
+  return col;
+}
 
+// Problème bloquant dans les réglages, sinon null
+export function erreurColonnes({ lignes, debut, col }) {
+  if (debut >= lignes.length) return 'Le fichier ne contient aucune opération.';
+  if (col.date === -1) return 'Aucune colonne de dates trouvée.';
+  if (col.montant === -1 && col.debit === -1 && col.credit === -1) return 'Colonne « montant » (ou « débit » / « crédit ») introuvable.';
+  return null;
+}
+
+// Import avec détection automatique ; lève une erreur si une colonne indispensable manque
+export function importerCsv(texte) {
+  const analyse = analyserCsv(texte);
+  const erreur = erreurColonnes(analyse);
+  if (erreur) throw new Error(erreur);
+  return convertirCsv(analyse);
+}
+
+// Conversion des lignes en opérations selon les réglages (automatiques ou choisis par l'utilisateur)
+export function convertirCsv({ lignes, debut, col, formatDate = 'jma', inverser = false }) {
   const transactions = [];
   let ignorees = 0;
   let internes = 0;
-  for (const l of donnees) {
-    const date = col.date >= 0 ? lireDate(l[col.date] ?? '') : null;
+  for (const l of lignes.slice(debut)) {
+    const date = col.date >= 0 ? lireDate(l[col.date] ?? '', formatDate) : null;
     let montant;
     let type;
     if (col.montant >= 0 && !isNaN(lireMontant(l[col.montant]))) {
-      montant = lireMontant(l[col.montant]);
+      montant = lireMontant(l[col.montant]) * (inverser ? -1 : 1);
       const typeLu = col.type >= 0 ? sansAccent(l[col.type] ?? '') : '';
-      type = typeLu.startsWith('rev') || typeLu.startsWith('cred') ? 'revenu'
-        : typeLu.startsWith('dep') || typeLu.startsWith('deb') ? 'depense'
+      // Colonne de sens : « Revenu/Dépense », « Crédit/Débit », « IN/OUT », « C/D », « +/- »…
+      type = /^(rev|cred|entree|in\b|c$|\+)/.test(typeLu) ? 'revenu'
+        : /^(dep|deb|sortie|out\b|d$|-)/.test(typeLu) ? 'depense'
         : montant < 0 ? 'depense' : 'revenu';
     } else {
       const debit = Math.abs(lireMontant(l[col.debit]) || 0);

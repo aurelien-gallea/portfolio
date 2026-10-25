@@ -6,10 +6,11 @@ import {
 } from 'lucide-react';
 import { Anneau, Historique } from './Graphiques';
 import Guide from './Guide';
+import Colonnes from './Colonnes';
 import Pistes from './conseils/Pistes';
 import {
   CATEGORIES, categorie, sousCategorie, devinerSousCategorie, charger, sauvegarder, nouvelId, cleMois, aujourdhui, decalerMois,
-  nomMois, euros, totaux, parCategorie, exporterCsv, importerCsv, empreinte, telecharger, donneesExemple,
+  nomMois, euros, totaux, parCategorie, exporterCsv, analyserCsv, erreurColonnes, convertirCsv, empreinte, telecharger, donneesExemple,
 } from './donnees';
 
 // Fonctions IA chargées à la demande : les modèles ne sont téléchargés qu'à la première utilisation
@@ -146,7 +147,7 @@ function Formulaire({ initial, onValider, onAnnuler }) {
   );
 }
 
-function Fenetre({ titre, onFermer, children }) {
+function Fenetre({ titre, onFermer, large = false, children }) {
   useEffect(() => {
     const echap = (e) => e.key === 'Escape' && onFermer();
     window.addEventListener('keydown', echap);
@@ -156,7 +157,7 @@ function Fenetre({ titre, onFermer, children }) {
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-black/70 p-0 backdrop-blur-sm sm:items-center sm:p-4" onMouseDown={onFermer}>
       <div
-        className="w-full max-w-lg rounded-t-3xl border border-white/10 bg-[#141416] p-5 shadow-2xl sm:rounded-3xl sm:p-6"
+        className={`w-full ${large ? 'max-w-3xl' : 'max-w-lg'} rounded-t-3xl border border-white/10 bg-[#141416] p-5 shadow-2xl sm:rounded-3xl sm:p-6`}
         onMouseDown={(e) => e.stopPropagation()}
       >
         <div className="mb-5 flex items-center justify-between">
@@ -263,6 +264,8 @@ export default function BudgetApp() {
   const [assistant, setAssistant] = useState(false);
   const [categorisation, setCategorisation] = useState(false);
   const [guide, setGuide] = useState(false);
+  const [colonnes, setColonnes] = useState(null); // correspondance manuelle des colonnes d'un CSV
+  const colonnesManuelles = useRef(false);
   const [categorieFiltre, setCategorieFiltre] = useState(null);
   // Sous-catégorie filtrée dans la catégorie choisie ('aucune' = opérations sans précision)
   const [sousFiltre, setSousFiltre] = useState(null);
@@ -356,10 +359,50 @@ export default function BudgetApp() {
   const supprimer = (id) =>
     setDonnees((d) => ({ ...d, transactions: d.transactions.filter((t) => t.id !== id) }));
 
+  // Ajoute (ou, sur l'exemple, substitue) les opérations lues dans un relevé, après confirmation
+  const integrer = ({ transactions: lues, ignorees, internes }, nom) => {
+    const ecartees = [
+      internes && `${internes} virement(s) entre vos comptes ou vers votre épargne, qui ne sont ni des dépenses ni des revenus`,
+      ignorees && `${ignorees} ligne(s) illisible(s)`,
+    ].filter(Boolean);
+
+    // Sur l'exemple, le relevé remplace les données de démonstration au lieu de s'y mélanger
+    if (donnees.exemple) {
+      if (window.confirm(
+        `${lues.length} opération(s) trouvée(s) dans « ${nom} ».\n\n` +
+        'Les données d\'exemple vont être effacées et remplacées par votre relevé.' +
+        (ecartees.length ? `\n\nNon importés : ${ecartees.join(' ; ')}.` : '')
+      )) {
+        setDonnees((d) => ({ ...budgetVide(d), transactions: lues }));
+        setMois(cleMois(lues.map((t) => t.date).sort().at(-1)));
+        setColonnes(null);
+      }
+      return;
+    }
+
+    const connues = new Set(transactions.map(empreinte));
+    const nouvelles = lues.filter((t) => !connues.has(empreinte(t)));
+    const doublons = lues.length - nouvelles.length;
+    if (nouvelles.length === 0) {
+      window.alert(`Aucune nouvelle opération à importer${doublons ? ` (${doublons} déjà présentes)` : ''}.`);
+      return;
+    }
+    const details = [doublons && `${doublons} doublon(s) déjà présent(s)`, ...ecartees].filter(Boolean);
+    if (window.confirm(
+      `Ajouter ${nouvelles.length} opération(s) de « ${nom} » à votre budget ?\n\n` +
+      `Vos ${transactions.length} opération(s) actuelle(s) sont conservées : l'import ajoute, il ne remplace pas.` +
+      (details.length ? `\n\nNon importés : ${details.join(' ; ')}.` : '')
+    )) {
+      setDonnees((d) => ({ ...d, transactions: [...d.transactions, ...nouvelles] }));
+      setMois(cleMois(nouvelles.map((t) => t.date).sort().at(-1)));
+      setColonnes(null);
+    }
+  };
+
   const importer = async (e) => {
     const f = e.target.files?.[0];
     e.target.value = '';
-    if (!f) return;
+    if (!f) { colonnesManuelles.current = false; return; }
     // Les exports bancaires sont en UTF-8 ou en Windows-1252 selon la banque
     const octets = await f.arrayBuffer();
     let texte;
@@ -370,49 +413,25 @@ export default function BudgetApp() {
     }
 
     if (!/\.json$/i.test(f.name)) {
+      let analyse;
       try {
-        const { transactions: lues, ignorees, internes } = importerCsv(texte);
-        const ecartees = [
-          internes && `${internes} virement(s) entre vos comptes ou vers votre épargne, qui ne sont ni des dépenses ni des revenus`,
-          ignorees && `${ignorees} ligne(s) illisible(s)`,
-        ].filter(Boolean);
-        if (lues.length === 0) {
-          window.alert(`Aucune opération lisible dans ce fichier${ecartees.length ? ` (écartées : ${ecartees.join(', ')})` : ''}. Consultez le mode d'emploi pour les formats acceptés.`);
-          return;
-        }
-
-        // Sur l'exemple, le relevé remplace les données de démonstration au lieu de s'y mélanger
-        if (donnees.exemple) {
-          if (window.confirm(
-            `${lues.length} opération(s) trouvée(s) dans « ${f.name} ».\n\n` +
-            'Les données d\'exemple vont être effacées et remplacées par votre relevé.' +
-            (ecartees.length ? `\n\nNon importés : ${ecartees.join(' ; ')}.` : '')
-          )) {
-            setDonnees((d) => ({ ...budgetVide(d), transactions: lues }));
-            setMois(cleMois(lues.map((t) => t.date).sort().at(-1)));
-          }
-          return;
-        }
-
-        const connues = new Set(transactions.map(empreinte));
-        const nouvelles = lues.filter((t) => !connues.has(empreinte(t)));
-        const doublons = lues.length - nouvelles.length;
-        if (nouvelles.length === 0) {
-          window.alert(`Aucune nouvelle opération à importer${doublons ? ` (${doublons} déjà présentes)` : ''}.`);
-          return;
-        }
-        const details = [doublons && `${doublons} doublon(s) déjà présent(s)`, ...ecartees].filter(Boolean);
-        if (window.confirm(
-          `Ajouter ${nouvelles.length} opération(s) de « ${f.name} » à votre budget ?\n\n` +
-          `Vos ${transactions.length} opération(s) actuelle(s) sont conservées : l'import ajoute, il ne remplace pas.` +
-          (details.length ? `\n\nNon importés : ${details.join(' ; ')}.` : '')
-        )) {
-          setDonnees((d) => ({ ...d, transactions: [...d.transactions, ...nouvelles] }));
-          setMois(cleMois(nouvelles.map((t) => t.date).sort().at(-1)));
-        }
+        analyse = analyserCsv(texte);
       } catch (err) {
         window.alert(`Import CSV impossible : ${err.message}`);
+        return;
       }
+      const manuel = colonnesManuelles.current;
+      colonnesManuelles.current = false;
+      const erreur = erreurColonnes(analyse);
+      const resultat = erreur ? null : convertirCsv(analyse);
+      // Détection ratée ou douteuse (plus de lignes illisibles que lues) : on propose de choisir les colonnes
+      const raison = manuel ? 'Vérifiez les colonnes reconnues.'
+        : erreur ? `Ce fichier n'a pas pu être lu automatiquement (${erreur.charAt(0).toLowerCase()}${erreur.slice(1, -1)}).`
+        : resultat.transactions.length === 0 ? 'Aucune opération lisible avec les colonnes reconnues automatiquement.'
+        : resultat.ignorees > resultat.transactions.length ? `${resultat.ignorees} ligne(s) sur ${resultat.ignorees + resultat.transactions.length} n'ont pas pu être lues.`
+        : null;
+      if (raison) setColonnes({ analyse, nom: f.name, raison });
+      else integrer(resultat, f.name);
       return;
     }
 
@@ -747,7 +766,14 @@ export default function BudgetApp() {
             exemple={!!donnees.exemple}
             onImporter={() => { setGuide(false); fichier.current?.click(); }}
             onRevoirExemple={revoirExemple}
+            onImporterManuel={() => { setGuide(false); colonnesManuelles.current = true; fichier.current?.click(); }}
           />
+        </Fenetre>
+      )}
+
+      {colonnes && (
+        <Fenetre titre="Choisir les colonnes du relevé" large onFermer={() => setColonnes(null)}>
+          <Colonnes {...colonnes} onValider={(r) => integrer(r, colonnes.nom)} onAnnuler={() => setColonnes(null)} />
         </Fenetre>
       )}
 
